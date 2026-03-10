@@ -6,11 +6,11 @@
 //! - Index blocks for binary search
 //! - Compression support
 
-use crate::{into_storage_error, Result, RTDBError, Vector, VectorId};
-use bytes::{Buf, BufMut, BytesMut};
+use crate::{Result, RTDBError, Vector, VectorId, into_storage_error};
+use bytes::{BufMut, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fs::{File, OpenOptions};
-use std::io::{self, Read, Seek, SeekFrom, Write};
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
 /// SSTable file format version
@@ -118,7 +118,7 @@ impl Block {
         true
     }
 
-    fn entry_size(id: VectorId, vector: &Vector) -> usize {
+    fn entry_size(_id: VectorId, vector: &Vector) -> usize {
         8 + // ID
         4 + vector.data.len() * 4 + // vector data
         vector.payload.as_ref().map(|p| serde_json::to_vec(p).unwrap_or_default().len()).unwrap_or(0)
@@ -422,7 +422,7 @@ impl SSTable {
     }
 
     /// Get vector by ID
-    pub fn get(&mut self, id: VectorId) -> Result<Option<Vector>> {
+    pub fn get(&self, id: VectorId) -> Result<Option<Vector>> {
         // Check range
         if id < self.meta.min_id || id > self.meta.max_id {
             return Ok(None);
@@ -436,7 +436,7 @@ impl SSTable {
 
         // Load and search block
         let entry = &self.index[block_idx];
-        let block = self.load_block(entry)?;
+        let block = self.load_block_read(entry)?;
 
         for (key, value) in block {
             if key == id {
@@ -449,7 +449,7 @@ impl SSTable {
 
     /// Scan range
     pub fn scan(
-        &mut self,
+        &self,
         start: Option<VectorId>,
         end: Option<VectorId>,
     ) -> Result<Vec<(VectorId, Vector)>> {
@@ -463,7 +463,7 @@ impl SSTable {
 
         for i in start_block..self.index.len() {
             let entry = &self.index[i];
-            let block = self.load_block(entry)?;
+            let block = self.load_block_read(entry)?;
 
             for (key, value) in block {
                 if key > end {
@@ -480,17 +480,35 @@ impl SSTable {
 
     /// Find block containing key
     fn find_block(&self, key: VectorId) -> usize {
-        self.index.binary_search_by(|e| e.key.cmp(&key))
-            .unwrap_or_else(|i| i.saturating_sub(1))
+        // Binary search on index entries
+        let mut low = 0;
+        let mut high = self.index.len();
+        
+        while low < high {
+            let mid = (low + high) / 2;
+            if self.index[mid].key <= key {
+                low = mid + 1;
+            } else {
+                high = mid;
+            }
+        }
+        
+        low.saturating_sub(1)
     }
 
     /// Load a block from file
     fn load_block(&mut self, entry: &IndexEntry) -> Result<Vec<(VectorId, Vector)>> {
-        self.file.seek(SeekFrom::Start(entry.offset))
+        self.load_block_read(entry)
+    }
+    
+    /// Load block (read-only, creates temporary file handle)
+    fn load_block_read(&self, entry: &IndexEntry) -> Result<Vec<(VectorId, Vector)>> {
+        let mut file = File::open(&self.path).map_err(into_storage_error)?;
+        file.seek(SeekFrom::Start(entry.offset))
             .map_err(into_storage_error)?;
 
         let mut buf = vec![0u8; entry.size as usize];
-        self.file.read_exact(&mut buf).map_err(into_storage_error)?;
+        file.read_exact(&mut buf).map_err(into_storage_error)?;
 
         // Decompress
         let data = match self.meta.compression {

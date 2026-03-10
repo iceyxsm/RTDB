@@ -13,7 +13,8 @@ pub mod engine;
 
 pub use engine::StorageEngine;
 pub use wal::{WAL, WALEntry};
-pub use memtable::MemTable;
+pub use memtable::{MemTable, MemTableEntry};
+pub use sstable::{SSTable, SSTableBuilder, SSTableMeta, CompressionType as SSTableCompression};
 
 use crate::{Result, RTDBError, Vector, VectorId};
 use serde::{Deserialize, Serialize};

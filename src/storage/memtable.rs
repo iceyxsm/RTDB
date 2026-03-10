@@ -3,7 +3,7 @@
 //! In-memory buffer for recent writes using lock-free skiplist
 //! for concurrent access.
 
-use crate::{into_storage_error, Result, RTDBError, Vector, VectorId};
+use crate::{Result, RTDBError, Vector, VectorId};
 use crossbeam_skiplist::SkipMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -136,7 +136,7 @@ impl MemTable {
     }
 
     /// Estimate entry size
-    fn estimate_entry_size(id: VectorId, vector: &Vector) -> usize {
+    fn estimate_entry_size(_id: VectorId, vector: &Vector) -> usize {
         // Rough estimation: ID (8) + vector data (4 * dim) + payload overhead
         let vector_size = vector.data.len() * 4;
         let payload_size = vector.payload.as_ref().map(|p| {

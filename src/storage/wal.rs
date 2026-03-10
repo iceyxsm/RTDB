@@ -3,11 +3,11 @@
 //! Provides crash recovery through append-only logs
 //! with checksum verification.
 
-use crate::{into_storage_error, Result, RTDBError};
-use bytes::{Buf, BufMut, BytesMut};
+use crate::{Result, RTDBError, into_storage_error};
+use bytes::{BufMut, BytesMut};
 use crc32c::crc32c;
 use std::fs::{File, OpenOptions};
-use std::io::{self, Read, Seek, SeekFrom, Write};
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
 /// Magic number for WAL files

@@ -18,8 +18,12 @@ pub mod telemetry;
 pub mod cli;
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use thiserror::Error;
+
+/// Convert error to storage error
+pub fn into_storage_error<E: std::fmt::Display>(e: E) -> RTDBError {
+    RTDBError::Storage(e.to_string())
+}
 
 /// Vector ID type
 pub type VectorId = u64;
