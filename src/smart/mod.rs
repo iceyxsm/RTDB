@@ -110,3 +110,84 @@ pub enum ContradictionType {
     /// Temporal conflict
     Temporal,
 }
+
+/// Smart retrieval engine that orchestrates all smart features
+pub struct SmartRetrieval {
+    /// Query intelligence
+    query_intel: query_intel::QueryIntelligence,
+    /// Query expander
+    expander: query_intel::QueryExpander,
+}
+
+impl SmartRetrieval {
+    /// Create new smart retrieval engine
+    pub fn new() -> Self {
+        Self {
+            query_intel: query_intel::QueryIntelligence::new(),
+            expander: query_intel::QueryExpander::new(),
+        }
+    }
+
+    /// Analyze a search request and enhance it with intelligence
+    pub fn analyze(&self, request: &SearchRequest) -> SmartSearchRequest {
+        // For now, we work with text queries
+        // In a real implementation, we'd convert vectors back to text or work with metadata
+        
+        SmartSearchRequest {
+            base: request.clone(),
+            intent: QueryIntent::Unknown,
+            expansions: Vec::new(),
+            plan: None,
+        }
+    }
+
+    /// Analyze text query
+    pub fn analyze_text(&self, text: &str) -> (QueryIntent, Vec<String>, Option<QueryPlan>) {
+        let intent = self.query_intel.analyze_text(text);
+        let expansions = self.expander.expand(text);
+        let plan = self.query_intel.create_plan(text, intent);
+        
+        (intent, expansions, plan)
+    }
+}
+
+impl Default for SmartRetrieval {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_smart_retrieval() {
+        let sr = SmartRetrieval::new();
+        
+        // Test text analysis
+        let (intent, expansions, plan) = sr.analyze_text("How to bake bread?");
+        assert_eq!(intent, QueryIntent::Procedural);
+        assert!(!expansions.is_empty());
+    }
+
+    #[test]
+    fn test_query_intent_variations() {
+        let sr = SmartRetrieval::new();
+
+        // Test various query types
+        let test_cases = vec![
+            ("What is machine learning?", QueryIntent::Definitional),
+            ("Why does it rain?", QueryIntent::Causal),
+            ("When was the Eiffel Tower built?", QueryIntent::Temporal),
+            ("List all prime numbers", QueryIntent::Aggregational),
+            ("Compare Python and Java", QueryIntent::Comparative),
+            ("Who is the president?", QueryIntent::Factual),
+        ];
+
+        for (query, expected) in test_cases {
+            let (intent, _, _) = sr.analyze_text(query);
+            assert_eq!(intent, expected, "Failed for query: {}", query);
+        }
+    }
+}

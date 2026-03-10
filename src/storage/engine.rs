@@ -458,6 +458,7 @@ impl StorageEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::storage::CompressionType;
     use tempfile::TempDir;
 
     #[test]
