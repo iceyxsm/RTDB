@@ -1,7 +1,7 @@
 //! Storage benchmarks
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use rtdb::storage::{StorageConfig, StorageEngine};
+use rtdb::storage::{Storage, StorageConfig, StorageEngine};
 use rtdb::{Vector, VectorId};
 use tempfile::TempDir;
 

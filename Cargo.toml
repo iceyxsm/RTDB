@@ -86,12 +86,25 @@ tokio-test = "0.4"
 criterion = { version = "0.5", features = ["async_tokio"] }
 proptest = "1.4"
 tempfile = "3.9"
+rayon = "1.8"
 
 [build-dependencies]
 tonic-build = "0.11"
 
 [[bench]]
 name = "storage_benchmark"
+harness = false
+
+[[bench]]
+name = "search_benchmark"
+harness = false
+
+[[bench]]
+name = "insert_benchmark"
+harness = false
+
+[[bench]]
+name = "mixed_benchmark"
 harness = false
 
 [profile.release]
