@@ -9,6 +9,7 @@
 
 pub mod storage;
 pub mod index;
+pub mod collection;
 pub mod api;
 pub mod smart;
 pub mod query;

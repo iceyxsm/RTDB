@@ -8,8 +8,8 @@
 //!   rtdb restore        Restore from backup
 
 use clap::{Parser, Subcommand};
-use std::process;
-use tracing::{info, error};
+use std::sync::Arc;
+use tracing::{info, warn};
 
 #[derive(Parser)]
 #[command(name = "rtdb")]
@@ -118,53 +118,70 @@ async fn main() {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Serve { config, storage, http_port, grpc_port } => {
+        Commands::Serve { config: _, storage, http_port, grpc_port } => {
             info!("Starting RTDB server");
             info!("Storage: {}", storage);
             info!("HTTP port: {}", http_port);
             info!("gRPC port: {}", grpc_port);
-            
-            // TODO: Initialize and start server
-            info!("Server started successfully");
-            
-            // Keep running
-            loop {
-                tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
+
+            // Initialize collection manager
+            let collections = match rtdb::collection::CollectionManager::new(&storage) {
+                Ok(cm) => Arc::new(cm),
+                Err(e) => {
+                    eprintln!("Failed to initialize collection manager: {}", e);
+                    std::process::exit(1);
+                }
+            };
+
+            info!("Loaded {} collections", collections.list_collections().len());
+
+            // Start REST server
+            let rest_collections = collections.clone();
+            let rest_handle = tokio::spawn(async move {
+                if let Err(e) = rtdb::api::rest::start_server(http_port, rest_collections).await {
+                    eprintln!("REST server error: {}", e);
+                }
+            });
+
+            info!("REST server listening on port {}", http_port);
+
+            // TODO: Start gRPC server
+            info!("gRPC server would listen on port {}", grpc_port);
+
+            // Wait for servers
+            if let Err(e) = rest_handle.await {
+                eprintln!("Server error: {}", e);
             }
         }
         
         Commands::Status { url } => {
             info!("Checking status at {}", url);
             // TODO: Implement status check
-            info!("Server is healthy");
+            println!("Server status check not yet implemented");
         }
         
         Commands::Migrate { from_type, from_url, to_url, dry_run } => {
             info!("Migrating from {} ({}) to {}", from_type, from_url, to_url);
             if dry_run {
-                info!("DRY RUN - No changes will be made");
+                info!("DRY RUN MODE");
             }
-            // TODO: Implement migration
-            info!("Migration complete");
+            println!("Migration not yet implemented");
         }
         
         Commands::Backup { output, url } => {
             info!("Creating backup at {} from {}", output, url);
-            // TODO: Implement backup
-            info!("Backup complete");
+            println!("Backup not yet implemented");
         }
         
         Commands::Restore { input, url } => {
             info!("Restoring from {} to {}", input, url);
-            // TODO: Implement restore
-            info!("Restore complete");
+            println!("Restore not yet implemented");
         }
         
         Commands::Bench { benchmark, vectors, dimension } => {
             info!("Running {} benchmark with {} vectors (dim={})", 
                 benchmark, vectors, dimension);
-            // TODO: Implement benchmarks
-            info!("Benchmark complete");
+            println!("Benchmarks not yet implemented");
         }
     }
 }
