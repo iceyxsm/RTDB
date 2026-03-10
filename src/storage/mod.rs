@@ -10,11 +10,13 @@ pub mod wal;
 pub mod memtable;
 pub mod sstable;
 pub mod engine;
+pub mod backup;
 
 pub use engine::StorageEngine;
 pub use wal::{WAL, WALEntry};
 pub use memtable::{MemTable, MemTableEntry};
 pub use sstable::{SSTable, SSTableBuilder, SSTableMeta, CompressionType as SSTableCompression};
+pub use backup::BackupManager;
 
 use crate::{Result, RTDBError, Vector, VectorId};
 use serde::{Deserialize, Serialize};

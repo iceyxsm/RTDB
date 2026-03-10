@@ -1,30 +1,30 @@
 //! Authentication and authorization layer
 
-
-
-/// RBAC manager
-pub struct RBAC;
-
-impl RBAC {
-    /// Create new RBAC
-    pub fn new() -> Self {
-        Self
-    }
-}
-
-impl Default for RBAC {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+pub mod rbac;
 
 /// Authentication provider
-pub struct AuthProvider;
+pub struct AuthProvider {
+    /// RBAC system
+    pub rbac: rbac::RBAC,
+}
 
 impl AuthProvider {
-    /// Create new provider
+    /// Create new auth provider
     pub fn new() -> Self {
-        Self
+        Self {
+            rbac: rbac::RBAC::new(),
+        }
+    }
+
+    /// Authenticate user (simple API key check for now)
+    pub fn authenticate(&self, api_key: &str) -> Option<String> {
+        // In production, validate against stored API keys
+        // For now, simple check
+        if api_key.is_empty() {
+            None
+        } else {
+            Some(format!("user_{}", &api_key[..8.min(api_key.len())]))
+        }
     }
 }
 
