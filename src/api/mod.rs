@@ -6,6 +6,7 @@
 //! - Weaviate (GraphQL + REST)
 
 pub mod rest;
+#[cfg(grpc_enabled)]
 pub mod grpc;
 
 use crate::Result;

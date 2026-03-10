@@ -145,12 +145,31 @@ async fn main() {
 
             info!("REST server listening on port {}", http_port);
 
-            // TODO: Start gRPC server
-            info!("gRPC server would listen on port {}", grpc_port);
+            // Start gRPC server if enabled
+            #[cfg(grpc_enabled)]
+            {
+                let grpc_collections = collections.clone();
+                let grpc_handle = tokio::spawn(async move {
+                    if let Err(e) = rtdb::api::grpc::start_server(grpc_port, grpc_collections).await {
+                        eprintln!("gRPC server error: {}", e);
+                    }
+                });
 
-            // Wait for servers
-            if let Err(e) = rest_handle.await {
-                eprintln!("Server error: {}", e);
+                info!("gRPC server listening on port {}", grpc_port);
+
+                // Wait for both servers
+                tokio::select! {
+                    _ = rest_handle => {},
+                    _ = grpc_handle => {},
+                }
+            }
+            
+            #[cfg(not(grpc_enabled))]
+            {
+                info!("gRPC not enabled (protoc not found)");
+                if let Err(e) = rest_handle.await {
+                    eprintln!("Server error: {}", e);
+                }
             }
         }
         

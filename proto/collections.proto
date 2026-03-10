@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package rtdb;
+
+option go_package = "github.com/iceyxsm/rtdb/proto";
+
+// Collection operations service
+service Collections {
+  rpc List (ListCollectionsRequest) returns (ListCollectionsResponse) {}
+  rpc Create (CreateCollectionRequest) returns (CollectionOperationResponse) {}
+  rpc Delete (DeleteCollectionRequest) returns (CollectionOperationResponse) {}
+  rpc Get (GetCollectionRequest) returns (GetCollectionResponse) {}
+}
+
+message ListCollectionsRequest {}
+
+message ListCollectionsResponse {
+  repeated CollectionDescription collections = 1;
+  double time = 2;
+}
+
+message CollectionDescription {
+  string name = 1;
+}
+
+message CreateCollectionRequest {
+  string collection_name = 1;
+  VectorParams vectors_config = 2;
+}
+
+message VectorParams {
+  uint64 size = 1;
+  Distance distance = 2;
+}
+
+enum Distance {
+  UnknownDistance = 0;
+  Cosine = 1;
+  Euclid = 2;
+  Dot = 3;
+}
+
+message DeleteCollectionRequest {
+  string collection_name = 1;
+}
+
+message GetCollectionRequest {
+  string collection_name = 1;
+}
+
+message GetCollectionResponse {
+  CollectionInfo result = 1;
+  double time = 2;
+}
+
+message CollectionInfo {
+  string name = 1;
+  uint64 vectors_count = 2;
+  CollectionConfig config = 3;
+}
+
+message CollectionConfig {
+  VectorParams params = 1;
+}
+
+message CollectionOperationResponse {
+  bool result = 1;
+  double time = 2;
+}
