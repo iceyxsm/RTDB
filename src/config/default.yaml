@@ -1,0 +1,39 @@
+# Default RTDB configuration
+# Override via rtdb.yaml or environment variables (RTDB_*)
+
+server:
+  rest_bind: "0.0.0.0:6333"
+  grpc_bind: "0.0.0.0:6334"
+  metrics_bind: "0.0.0.0:9090"
+  max_request_size_mb: 32
+  request_timeout_sec: 30
+
+storage:
+  data_dir: "./data"
+  wal_segment_size_mb: 64
+  memtable_size_mb: 64
+  compression: "zstd"
+  max_sstable_size_mb: 256
+  compaction_threads: 2
+
+index:
+  hnsw_m: 16
+  hnsw_ef_construction: 100
+  hnsw_ef_search: 64
+  enable_learned_index: true
+  build_threads: 4
+
+logging:
+  level: "info"
+  format: "pretty"
+  output: "stdout"
+
+cluster:
+  node_id: 0
+  peers: []
+  enable_raft: false
+  heartbeat_interval_ms: 100
+
+security:
+  enable_auth: false
+  enable_tls: false

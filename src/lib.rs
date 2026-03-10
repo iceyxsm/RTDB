@@ -17,6 +17,7 @@ pub mod cluster;
 pub mod auth;
 pub mod telemetry;
 pub mod cli;
+pub mod config;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -77,6 +78,10 @@ pub enum RTDBError {
     /// Authorization errors
     #[error("Authorization error: {0}")]
     Authorization(String),
+    
+    /// Configuration errors
+    #[error("Configuration error: {0}")]
+    Config(String),
 }
 
 /// Result type for RTDB operations
