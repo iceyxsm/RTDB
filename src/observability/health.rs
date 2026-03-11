@@ -470,6 +470,12 @@ impl HealthChecker {
     pub fn last_results(&self) -> HashMap<String, HealthCheckResult> {
         self.check_results.read().clone()
     }
+    
+    /// Check all health checks and return aggregated result
+    /// Alias for overall_status() for API consistency
+    pub async fn check_all(&self) -> OverallHealth {
+        self.overall_status().await
+    }
 }
 
 /// Overall health response

@@ -5,6 +5,7 @@
 use crate::config::ConfigManager;
 use crate::Result;
 use clap::{Parser, Subcommand};
+use std::sync::Arc;
 
 /// RTDB CLI arguments
 #[derive(Parser)]
@@ -151,19 +152,63 @@ impl CliHandler {
     }
 
     /// Start the server
-    async fn start(&self, daemon: bool) -> Result<()> {
+    async fn start(&self, _daemon: bool) -> Result<()> {
+        use crate::api::{ApiConfig, start_all};
+        use crate::collection::CollectionManager;
+        use crate::observability::{ObservabilitySystem, ObservabilityConfig};
+        
         let config = self.config.get().await;
         println!("Starting RTDB server...");
         println!("  REST API: {}", config.server.rest_bind);
         println!("  gRPC API: {}", config.server.grpc_bind);
+        println!("  Metrics: {}", config.server.metrics_bind);
         println!("  Data directory: {}", config.storage.data_dir);
         
-        if daemon {
-            println!("Running in daemon mode (not implemented yet)");
-        }
+        // Initialize observability
+        let obs_config = ObservabilityConfig {
+            prometheus_enabled: true,
+            prometheus_port: config.server.metrics_bind.split(':')
+                .nth(1).and_then(|p| p.parse().ok()).unwrap_or(9090),
+            health_port: 8080,
+            ..Default::default()
+        };
+        let obs_system = ObservabilitySystem::new(obs_config);
+        obs_system.init().map_err(|e| crate::RTDBError::Config(e.to_string()))?;
         
-        // In real implementation, this would spawn the server
+        // Create collection manager
+        let collections = Arc::new(CollectionManager::new(&config.storage.data_dir)?);
+        
+        // Parse REST port
+        let rest_port = config.server.rest_bind.split(':')
+            .nth(1).and_then(|p| p.parse().ok()).unwrap_or(6333);
+        
+        // Start all servers
+        let api_config = ApiConfig {
+            http_port: rest_port,
+            grpc_port: config.server.grpc_bind.split(':')
+                .nth(1).and_then(|p| p.parse().ok()).unwrap_or(6334),
+            metrics_bind: config.server.metrics_bind.clone(),
+            enable_cors: true,
+            api_key: None,
+        };
+        
+        let handle = start_all(
+            api_config,
+            collections,
+            obs_system.metrics(),
+            obs_system.health(),
+        ).await?;
+        
         println!("Server started successfully!");
+        println!("  REST API: http://0.0.0.0:{}", handle.rest_port);
+        println!("  Metrics:  http://0.0.0.0:{}/metrics", handle.metrics_port);
+        println!("  Health:   http://0.0.0.0:{}/health", handle.metrics_port);
+        
+        // Keep the main thread alive
+        tokio::signal::ctrl_c().await
+            .map_err(|e| crate::RTDBError::Io(e.to_string()))?;
+        
+        println!("Shutting down...");
         Ok(())
     }
 

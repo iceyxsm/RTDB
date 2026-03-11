@@ -14,6 +14,7 @@ pub mod health;
 pub mod tracing;
 pub mod logging;
 pub mod performance;
+pub mod server;
 
 pub use metrics::{
     MetricsCollector, VectorDbMetrics,
@@ -38,6 +39,10 @@ pub use performance::{
     CardinalityLimiter, ObservabilityPerfConfig,
     TraceBatchConfig, MetricsPerformance,
     MemoryLimitedSpanBuffer, SamplingDecision,
+};
+pub use server::{
+    ObservabilityServer, ObservabilityState,
+    observability_router,
 };
 
 use std::sync::Arc;
