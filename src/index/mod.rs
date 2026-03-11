@@ -10,6 +10,12 @@ pub mod hnsw;
 pub mod learned;
 pub mod quantization;
 pub mod distance;
+pub mod vector_index;
+
+pub use vector_index::{
+    MultiVectorIndex, FlatIndex, HnswIndex, HnswConfig, IvfConfig, PqConfig, IvfPqConfig,
+    IndexType, IndexMetrics, SearchResult, StoredVector,
+};
 
 use crate::{Result, ScoredVector, SearchRequest, Vector, VectorId};
 

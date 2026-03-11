@@ -3,6 +3,7 @@
 //! Raft consensus, sharding, replication, and cluster coordination
 
 pub mod config;
+pub mod failover;
 pub mod hash_ring;
 pub mod proto;
 pub mod raft;
@@ -48,6 +49,14 @@ pub use replication::{
     ReplicaTracker, WriteCoordinator, ReadBalancer, ReplicationManager,
     ShardReplica, ReplicaRole, ReplicationConfig, ReplicationStats,
     WriteConsistency, ReadConsistency, WriteResult, WriteCoordinator as WriteCoord,
+};
+
+// Failover exports
+pub use failover::{
+    FailoverSystem, HealthMonitor, FailoverManager, MembershipManager,
+    PhiAccrualDetector, FencingToken, FencingError, Epoch,
+    NodeHealth, NodeHealthInfo, Heartbeat, FailoverAction, FailoverEvent,
+    FailoverConfig, FailoverPolicy, MembershipStatus, ClusterMember,
 };
 
 use std::sync::Arc;

@@ -2,6 +2,17 @@
 
 use crate::Result;
 
+/// Similarity metric for vector comparison
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SimilarityMetric {
+    /// Cosine similarity (normalized dot product)
+    Cosine,
+    /// Euclidean distance (L2)
+    Euclidean,
+    /// Dot product
+    DotProduct,
+}
+
 /// Compute L2 distance (no SIMD - baseline)
 pub fn l2_distance(a: &[f32], b: &[f32]) -> Result<f32> {
     if a.len() != b.len() {
