@@ -169,7 +169,9 @@ impl QueryIntelligence {
     /// Extract entities from text using simple heuristics
     pub fn extract_entities(&self, text: &str) -> Vec<String> {
         let mut entities = Vec::new();
-        let words: Vec<&str> = text.split_whitespace().collect();
+        // Strip punctuation for word boundaries but preserve original for extraction
+        let clean_text: String = text.chars().map(|c| if c.is_alphanumeric() || c.is_whitespace() { c } else { ' ' }).collect();
+        let words: Vec<&str> = clean_text.split_whitespace().collect();
 
         // Look for capitalized phrases (potential named entities)
         let mut i = 0;

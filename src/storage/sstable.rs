@@ -286,20 +286,23 @@ impl SSTableBuilder {
         self.file.write_all(&index_data).map_err(into_storage_error)?;
         self.position += index_data.len() as u64;
 
-        // Write footer
+        // Update and write meta first
+        self.meta.entry_count = self.entry_count;
+        let meta_bytes = self.meta.encode();
+        let meta_offset = self.position;
+        self.file.write_all(&meta_bytes).map_err(into_storage_error)?;
+        self.position += meta_bytes.len() as u64;
+
+        // Write footer (fixed size, at known offset from end)
         let footer = Footer {
             index_offset,
             index_size: index_data.len() as u64,
-            meta_offset: self.position,
+            meta_offset,
         };
         self.file.write_all(&footer.encode()).map_err(into_storage_error)?;
+        self.position += 24;
 
-        // Update and write meta
-        self.meta.entry_count = self.entry_count;
-        let meta_bytes = self.meta.encode();
-        self.file.write_all(&meta_bytes).map_err(into_storage_error)?;
-
-        // Write trailer
+        // Write trailer (8 bytes - magic + version)
         self.file.write_all(&SSTABLE_MAGIC.to_le_bytes())
             .map_err(into_storage_error)?;
         self.file.write_all(&SSTABLE_VERSION.to_le_bytes())
@@ -400,8 +403,16 @@ impl SSTable {
         file.read_exact(&mut footer_buf).map_err(into_storage_error)?;
         let footer = Footer::decode(&footer_buf)?;
 
-        // Read meta
-        let meta_size = (file_size - 8) - footer.meta_offset;
+        // Read meta (ensure we don't underflow)
+        // Footer is 24 bytes, trailer is 8 bytes, both at end
+        let meta_end = file_size - 32; // Footer (24) + Trailer (8)
+        let meta_size = if footer.meta_offset < meta_end {
+            (meta_end - footer.meta_offset) as usize
+        } else {
+            return Err(RTDBError::Storage(format!(
+                "Invalid meta_offset: {} >= {}", footer.meta_offset, meta_end
+            )));
+        };
         file.seek(SeekFrom::Start(footer.meta_offset)).map_err(into_storage_error)?;
         let mut meta_buf = vec![0u8; meta_size as usize];
         file.read_exact(&mut meta_buf).map_err(into_storage_error)?;

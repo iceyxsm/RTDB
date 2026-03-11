@@ -152,11 +152,12 @@ impl WAL {
                 .open(&file_path)
                 .map_err(into_storage_error)?;
             
-            // Write WAL header
-            let mut header = Vec::new();
+            // Write WAL header (exactly 16 bytes)
+            let mut header = Vec::with_capacity(HEADER_SIZE);
             header.put_u32_le(WAL_MAGIC);
             header.put_u16_le(WAL_VERSION);
             header.put_u64_le(0); // Reserved
+            header.put_u16_le(0); // Padding to 16 bytes
             
             file.write_all(&header).map_err(into_storage_error)?;
             file.sync_all().map_err(into_storage_error)?;
@@ -241,11 +242,12 @@ impl WAL {
             .open(&new_path)
             .map_err(into_storage_error)?;
 
-        // Write header
-        let mut header = Vec::new();
+        // Write header (exactly 16 bytes)
+        let mut header = Vec::with_capacity(HEADER_SIZE);
         header.put_u32_le(WAL_MAGIC);
         header.put_u16_le(WAL_VERSION);
         header.put_u64_le(0); // Reserved
+        header.put_u16_le(0); // Padding
         
         new_file.write_all(&header).map_err(into_storage_error)?;
         new_file.sync_all().map_err(into_storage_error)?;

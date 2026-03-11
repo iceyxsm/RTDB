@@ -115,12 +115,12 @@ impl MemTable {
     ) -> Vec<(VectorId, Vector)> {
         let mut results = Vec::new();
 
-        let iter = match start {
+        let mut iter = match start {
             Some(start_id) => self.entries.lower_bound(std::ops::Bound::Included(start_id)),
             None => self.entries.front(),
         };
 
-        for entry in iter {
+        while let Some(entry) = iter {
             if let Some(end_id) = end {
                 if entry.key() > end_id {
                     break;
@@ -130,6 +130,8 @@ impl MemTable {
             if let MemTableEntry::Put(vector) = entry.value() {
                 results.push((*entry.key(), vector.clone()));
             }
+            
+            iter = entry.next();
         }
 
         results
