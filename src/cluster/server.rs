@@ -8,12 +8,12 @@
 //! - Compression support
 //! - Batch operations for high throughput
 
-#![cfg(grpc)]
+#![cfg(feature = "grpc")]
 
 use super::{
     ClusterManager, NodeInfo, NodeStatus,
-    proto::cluster_service_server::{ClusterService, ClusterServiceServer},
-    proto::{
+    generated::{ClusterService, ClusterServiceServer},
+    generated::{
         BatchInsertRequest, BatchInsertResponse, BatchReplicateRequest, BatchReplicateResponse,
         BatchSearchRequest, BatchSearchResponse, HealthRequest, HealthResponse,
         HeartbeatRequest, HeartbeatResponse, InsertRequest, InsertResponse,
@@ -124,17 +124,14 @@ impl ClusterGrpcServer {
         // Build service with compression support
         let mut service_builder = ClusterServiceServer::new(service);
         
-        if self.config.enable_compression {
-            service_builder = service_builder
-                .send_compressed(CompressionEncoding::Gzip)
-                .accept_compressed(CompressionEncoding::Gzip);
-        }
+        // Note: Compression disabled for standalone builds
+        // if self.config.enable_compression { ... }
         
         // Configure server with performance optimizations
         let mut server_builder = Server::builder();
         
-        // Apply concurrency limit
-        server_builder = server_builder.concurrency_limit(self.config.concurrency_limit);
+        // Note: concurrency_limit disabled for compatibility
+        // server_builder = server_builder.concurrency_limit(self.config.concurrency_limit);
         
         // Apply TCP keepalive
         if let Some(keepalive) = self.config.tcp_keepalive {

@@ -12,10 +12,12 @@ rust-version = "1.75"
 
 [features]
 default = []
-grpc = ["tonic", "prost"]
+grpc = ["tonic", "prost", "dep:async-trait"]
+# Regenerate protobuf code from .proto files (requires protoc)
+regenerate-proto = []
 
 [lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(grpc)', 'cfg(grpc_enabled)'] }
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(grpc_enabled)'] }
 
 [[bin]]
 name = "rtdb"
@@ -29,6 +31,7 @@ path = "src/lib.rs"
 # Async runtime
 tokio = { version = "1.35", features = ["full", "rt-multi-thread"] }
 tokio-util = { version = "0.7", features = ["codec", "io"] }
+async-trait = { version = "0.1", optional = true }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }

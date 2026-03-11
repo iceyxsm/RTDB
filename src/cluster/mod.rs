@@ -7,16 +7,20 @@ pub mod hash_ring;
 pub mod proto;
 pub mod raft;
 
-#[cfg(grpc)]
+// Pre-generated protobuf code - always available when grpc feature is enabled, no protoc required
+#[cfg(feature = "grpc")]
+pub mod generated;
+
+#[cfg(feature = "grpc")]
 pub mod client;
-#[cfg(grpc)]
+#[cfg(feature = "grpc")]
 pub mod server;
 
-#[cfg(grpc)]
+#[cfg(feature = "grpc")]
 pub use client::ClusterClient;
 pub use config::{ClusterConfig, ClusterState, ClusterTopology, NodeInfo, NodeStatus, ShardId};
 pub use hash_ring::{HashRing, ShardRouter};
-#[cfg(grpc)]
+#[cfg(feature = "grpc")]
 pub use server::ClusterGrpcServer;
 
 use std::sync::Arc;

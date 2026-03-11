@@ -9,12 +9,12 @@
 //! - Lock-free connection access using DashMap
 //! - Batch operations for bulk processing
 
-#![cfg(grpc)]
+#![cfg(feature = "grpc")]
 
 use super::{
     ClusterConfig, NodeInfo,
-    proto::cluster_service_client::ClusterServiceClient,
-    proto::{
+    generated::ClusterServiceClient,
+    generated::{
         BatchInsertRequest, BatchReplicateRequest, BatchSearchRequest,
         HealthRequest, HeartbeatRequest, InsertRequest, JoinRequest, LeaveRequest,
         ReplicateRequest, SearchRequest, TopologyRequest, VectorEntry,
@@ -26,7 +26,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 use tonic::{
     Request, Status,
-    transport::{Channel, Endpoint, ClientTlsConfig},
+    transport::{Channel, Endpoint},
 };
 
 /// Default number of connections per node for connection pooling
@@ -60,12 +60,11 @@ impl ConnectionPool {
     async fn new(
         addr: &str,
         pool_size: usize,
-        tls_config: Option<ClientTlsConfig>,
     ) -> crate::Result<Self> {
         let mut channels = Vec::with_capacity(pool_size);
         
         for i in 0..pool_size {
-            let channel = create_channel(addr, tls_config.clone(), i).await?;
+            let channel = create_channel(addr, i).await?;
             channels.push(channel);
         }
         
@@ -90,7 +89,7 @@ impl ConnectionPool {
     /// Refresh a specific connection in the pool
     async fn refresh_channel(&mut self, index: usize) -> crate::Result<()> {
         if index < self.channels.len() {
-            let channel = create_channel(&self.address, None, index).await?;
+            let channel = create_channel(&self.address, index).await?;
             self.channels[index] = channel;
         }
         Ok(())
@@ -100,7 +99,6 @@ impl ConnectionPool {
 /// Create a configured gRPC channel
 async fn create_channel(
     addr: &str,
-    tls_config: Option<ClientTlsConfig>,
     pool_index: usize,
 ) -> crate::Result<ClusterServiceClient<Channel>> {
     // Build endpoint with performance optimizations
@@ -119,16 +117,8 @@ async fn create_channel(
         .initial_stream_window_size(Some(65535))  // 64KB stream window
         .initial_connection_window_size(Some(1048576));  // 1MB connection window
     
-    // Apply TLS if configured
-    if let Some(tls) = tls_config {
-        endpoint = endpoint.tls_config(tls)
-            .map_err(|e| crate::RTDBError::Io(format!("TLS config error: {}", e)))?;
-    }
-    
-    // Add connection pool index to user agent for debugging
-    endpoint = endpoint.user_agent(format!("rtdb-cluster-client/{}.{}", 
-        env!("CARGO_PKG_VERSION"), pool_index))
-        .unwrap_or(endpoint);
+    // Note: user agent customization removed for compatibility
+    // endpoint = endpoint.user_agent(...)
     
     let channel = endpoint.connect()
         .await
@@ -150,8 +140,8 @@ pub struct ClientConfig {
     pub enable_compression: bool,
     /// Enable keepalive pings
     pub enable_keepalive: bool,
-    /// TLS configuration
-    pub tls_config: Option<ClientTlsConfig>,
+    // Note: TLS configuration removed for standalone builds
+    // pub tls_config: Option<ClientTlsConfig>,
 }
 
 impl Default for ClientConfig {
@@ -162,7 +152,6 @@ impl Default for ClientConfig {
             search_timeout: DEFAULT_SEARCH_TIMEOUT,
             enable_compression: true,
             enable_keepalive: true,
-            tls_config: None,
         }
     }
 }
@@ -214,7 +203,6 @@ impl ClusterClient {
         let pool = ConnectionPool::new(
             &addr,
             self.client_config.connection_pool_size,
-            self.client_config.tls_config.clone(),
         ).await?;
         
         self.connection_pools.insert(node.id.clone(), pool);

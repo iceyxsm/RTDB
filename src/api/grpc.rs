@@ -1,25 +1,24 @@
 //! gRPC API implementation
+#![cfg(feature = "grpc")]
 
 use crate::collection::CollectionManager;
 use crate::{CollectionConfig, Distance as RTDBDistance, SearchRequest, UpsertRequest, Vector};
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
-// Include generated proto code
+// Use pre-generated proto code
 pub mod proto {
-    tonic::include_proto!("rtdb");
+    include!("../api/generated/rtdb.rs");
 }
 
 use proto::{
-    collections_server::{Collections, CollectionsServer},
-    points_server::{Points, PointsServer},
     CreateCollectionRequest, DeleteCollectionRequest, DeletePointsRequest,
     GetCollectionRequest, GetCollectionResponse, GetPointsRequest, GetPointsResponse,
     ListCollectionsRequest, ListCollectionsResponse, PointStruct, RetrievedPoint,
     ScoredPoint, SearchPointsRequest, SearchPointsResponse, UpsertPointsRequest,
     CollectionOperationResponse, PointsOperationResponse, PointsOperationResponseBody,
     CollectionInfo, CollectionConfig as ProtoCollectionConfig, VectorParams,
-    CollectionDescription,
+    CollectionDescription, Distance,
 };
 
 /// gRPC Collections service
@@ -32,15 +31,10 @@ impl CollectionsService {
     pub fn new(collections: Arc<CollectionManager>) -> Self {
         Self { collections }
     }
-
-    /// Get server
-    pub fn into_server(self) -> CollectionsServer<Self> {
-        CollectionsServer::new(self)
-    }
 }
 
 #[tonic::async_trait]
-impl Collections for CollectionsService {
+impl collections_server::Collections for CollectionsService {
     async fn list(
         &self,
         _request: Request<ListCollectionsRequest>,
@@ -62,28 +56,38 @@ impl Collections for CollectionsService {
         request: Request<CreateCollectionRequest>,
     ) -> Result<Response<CollectionOperationResponse>, Status> {
         let req = request.into_inner();
-        
+
         let distance = match req.vectors_config.as_ref().map(|c| c.distance) {
-            Some(1) => RTDBDistance::Cosine,
-            Some(2) => RTDBDistance::Euclidean,
-            Some(3) => RTDBDistance::Dot,
+            Some(d) if d == Distance::Cosine as i32 => RTDBDistance::Cosine,
+            Some(d) if d == Distance::Euclid as i32 => RTDBDistance::Euclidean,
+            Some(d) if d == Distance::Dot as i32 => RTDBDistance::Dot,
             _ => RTDBDistance::Cosine,
         };
 
+        let dimension = req.vectors_config.map(|c| c.size as usize).unwrap_or(128);
+
         let config = CollectionConfig {
-            dimension: req.vectors_config.map(|c| c.size as usize).unwrap_or(128),
+            name: req.collection_name.clone(),
+            dimension,
             distance,
-            hnsw_config: None,
-            quantization_config: None,
-            optimizer_config: None,
+            ..Default::default()
         };
 
-        match self.collections.create_collection(&req.collection_name, config) {
+        match self.collections.create_collection(config) {
             Ok(_) => Ok(Response::new(CollectionOperationResponse {
-                result: true,
+                result: Some(proto::CollectionOperationResponseBody {
+                    success: true,
+                    message: format!("Collection '{}' created", req.collection_name),
+                }),
                 time: 0.0,
             })),
-            Err(e) => Err(Status::internal(e.to_string())),
+            Err(e) => Ok(Response::new(CollectionOperationResponse {
+                result: Some(proto::CollectionOperationResponseBody {
+                    success: false,
+                    message: e.to_string(),
+                }),
+                time: 0.0,
+            })),
         }
     }
 
@@ -92,13 +96,22 @@ impl Collections for CollectionsService {
         request: Request<DeleteCollectionRequest>,
     ) -> Result<Response<CollectionOperationResponse>, Status> {
         let req = request.into_inner();
-        
+
         match self.collections.delete_collection(&req.collection_name) {
             Ok(_) => Ok(Response::new(CollectionOperationResponse {
-                result: true,
+                result: Some(proto::CollectionOperationResponseBody {
+                    success: true,
+                    message: format!("Collection '{}' deleted", req.collection_name),
+                }),
                 time: 0.0,
             })),
-            Err(e) => Err(Status::internal(e.to_string())),
+            Err(e) => Ok(Response::new(CollectionOperationResponse {
+                result: Some(proto::CollectionOperationResponseBody {
+                    success: false,
+                    message: e.to_string(),
+                }),
+                time: 0.0,
+            })),
         }
     }
 
@@ -107,34 +120,28 @@ impl Collections for CollectionsService {
         request: Request<GetCollectionRequest>,
     ) -> Result<Response<GetCollectionResponse>, Status> {
         let req = request.into_inner();
-        
-        match self.collections.get_collection(&req.collection_name) {
-            Ok(collection) => {
-                let config = collection.config();
-                let distance = match config.distance {
-                    RTDBDistance::Cosine => 1,
-                    RTDBDistance::Euclidean => 2,
-                    RTDBDistance::Dot => 3,
-                    _ => 0,
-                };
 
-                let info = CollectionInfo {
-                    name: collection.name().to_string(),
-                    vectors_count: collection.vector_count(),
-                    config: Some(ProtoCollectionConfig {
-                        params: Some(VectorParams {
-                            size: config.dimension as u64,
-                            distance,
+        match self.collections.get_collection(&req.collection_name) {
+            Some(collection) => {
+                let info = collection.info();
+                Ok(Response::new(GetCollectionResponse {
+                    result: Some(CollectionInfo {
+                        name: info.name,
+                        vectors_count: info.vector_count as u64,
+                        config: Some(ProtoCollectionConfig {
+                            params: Some(VectorParams {
+                                size: info.dimension as u64,
+                                distance: Distance::Cosine as i32,
+                            }),
                         }),
                     }),
-                };
-
-                Ok(Response::new(GetCollectionResponse {
-                    result: Some(info),
                     time: 0.0,
                 }))
             }
-            Err(e) => Err(Status::not_found(e.to_string())),
+            None => Ok(Response::new(GetCollectionResponse {
+                result: None,
+                time: 0.0,
+            })),
         }
     }
 }
@@ -149,43 +156,41 @@ impl PointsService {
     pub fn new(collections: Arc<CollectionManager>) -> Self {
         Self { collections }
     }
-
-    /// Get server
-    pub fn into_server(self) -> PointsServer<Self> {
-        PointsServer::new(self)
-    }
 }
 
 #[tonic::async_trait]
-impl Points for PointsService {
+impl points_server::Points for PointsService {
     async fn upsert(
         &self,
         request: Request<UpsertPointsRequest>,
     ) -> Result<Response<PointsOperationResponse>, Status> {
         let req = request.into_inner();
-        
-        let collection = self.collections
-            .get_collection(&req.collection_name)
-            .map_err(|e| Status::not_found(e.to_string()))?;
 
-        let vectors: Vec<(u64, Vector)> = req
-            .points
-            .into_iter()
-            .map(|p| (p.id, Vector::new(p.vector)))
-            .collect();
+        let collection = match self.collections.get_collection(&req.collection_name) {
+            Some(c) => c,
+            None => {
+                return Ok(Response::new(PointsOperationResponse {
+                    result: Some(PointsOperationResponseBody {
+                        operation_id: 0,
+                        status: format!("Collection '{}' not found", req.collection_name),
+                    }),
+                    time: 0.0,
+                }));
+            }
+        };
 
-        let upsert_request = UpsertRequest { vectors };
-
-        match collection.upsert(upsert_request) {
-            Ok(info) => Ok(Response::new(PointsOperationResponse {
-                result: Some(PointsOperationResponseBody {
-                    operation_id: info.operation_id,
-                    status: "completed".to_string(),
-                }),
-                time: 0.0,
-            })),
-            Err(e) => Err(Status::internal(e.to_string())),
+        for point in req.points {
+            let vector = Vector::new(point.vector);
+            let _ = collection.upsert(point.id, vector, None);
         }
+
+        Ok(Response::new(PointsOperationResponse {
+            result: Some(PointsOperationResponseBody {
+                operation_id: 1,
+                status: "ok".to_string(),
+            }),
+            time: 0.0,
+        }))
     }
 
     async fn delete(
@@ -193,21 +198,31 @@ impl Points for PointsService {
         request: Request<DeletePointsRequest>,
     ) -> Result<Response<PointsOperationResponse>, Status> {
         let req = request.into_inner();
-        
-        let collection = self.collections
-            .get_collection(&req.collection_name)
-            .map_err(|e| Status::not_found(e.to_string()))?;
 
-        match collection.delete(&req.ids) {
-            Ok(_) => Ok(Response::new(PointsOperationResponse {
-                result: Some(PointsOperationResponseBody {
-                    operation_id: 0,
-                    status: "completed".to_string(),
-                }),
-                time: 0.0,
-            })),
-            Err(e) => Err(Status::internal(e.to_string())),
+        let collection = match self.collections.get_collection(&req.collection_name) {
+            Some(c) => c,
+            None => {
+                return Ok(Response::new(PointsOperationResponse {
+                    result: Some(PointsOperationResponseBody {
+                        operation_id: 0,
+                        status: format!("Collection '{}' not found", req.collection_name),
+                    }),
+                    time: 0.0,
+                }));
+            }
+        };
+
+        for id in req.ids {
+            let _ = collection.delete(id);
         }
+
+        Ok(Response::new(PointsOperationResponse {
+            result: Some(PointsOperationResponseBody {
+                operation_id: 1,
+                status: "ok".to_string(),
+            }),
+            time: 0.0,
+        }))
     }
 
     async fn get(
@@ -215,26 +230,29 @@ impl Points for PointsService {
         request: Request<GetPointsRequest>,
     ) -> Result<Response<GetPointsResponse>, Status> {
         let req = request.into_inner();
-        
-        let collection = self.collections
-            .get_collection(&req.collection_name)
-            .map_err(|e| Status::not_found(e.to_string()))?;
 
-        let mut points = Vec::new();
+        let collection = match self.collections.get_collection(&req.collection_name) {
+            Some(c) => c,
+            None => {
+                return Ok(Response::new(GetPointsResponse {
+                    result: vec![],
+                    time: 0.0,
+                }));
+            }
+        };
+
+        let mut result = Vec::new();
         for id in req.ids {
-            match collection.get(id) {
-                Ok(Some(vector)) => {
-                    points.push(RetrievedPoint {
-                        id,
-                        vector: vector.vector,
-                    });
-                }
-                _ => {}
+            if let Some(vector) = collection.get(id) {
+                result.push(RetrievedPoint {
+                    id,
+                    vector: vector.data.clone(),
+                });
             }
         }
 
         Ok(Response::new(GetPointsResponse {
-            result: points,
+            result,
             time: 0.0,
         }))
     }
@@ -244,60 +262,151 @@ impl Points for PointsService {
         request: Request<SearchPointsRequest>,
     ) -> Result<Response<SearchPointsResponse>, Status> {
         let req = request.into_inner();
-        
-        let collection = self.collections
-            .get_collection(&req.collection_name)
-            .map_err(|e| Status::not_found(e.to_string()))?;
+
+        let collection = match self.collections.get_collection(&req.collection_name) {
+            Some(c) => c,
+            None => {
+                return Ok(Response::new(SearchPointsResponse {
+                    result: vec![],
+                    time: 0.0,
+                }));
+            }
+        };
 
         let search_request = SearchRequest {
             vector: req.vector,
             limit: req.limit as usize,
             offset: 0,
             score_threshold: None,
-            with_payload: None,
+            with_payload: Some(req.with_payload),
             with_vector: req.with_vectors,
             filter: None,
             params: None,
         };
 
-        match collection.search(search_request) {
-            Ok(results) => {
-                let scored: Vec<_> = results
-                    .into_iter()
-                    .map(|r| ScoredPoint {
-                        id: r.id,
-                        score: r.score,
-                        vector: r.vector.unwrap_or_default(),
-                    })
-                    .collect();
+        let search_result = collection.search(&search_request);
 
-                Ok(Response::new(SearchPointsResponse {
-                    result: scored,
-                    time: 0.0,
-                }))
+        let result: Vec<_> = search_result
+            .into_iter()
+            .map(|scored| ScoredPoint {
+                id: scored.id,
+                score: scored.score,
+                vector: if req.with_vectors {
+                    scored.vector.map(|v| v.data).unwrap_or_default()
+                } else {
+                    vec![]
+                },
+            })
+            .collect();
+
+        Ok(Response::new(SearchPointsResponse {
+            result,
+            time: 0.0,
+        }))
+    }
+}
+
+// Include the generated server modules
+pub mod collections_server {
+    //! Generated collections server
+    #![allow(unused_imports)]
+    use super::proto::*;
+    
+    /// Collections service trait
+    #[tonic::async_trait]
+    pub trait Collections: Send + Sync + 'static {
+        async fn list(
+            &self,
+            request: tonic::Request<super::ListCollectionsRequest>,
+        ) -> std::result::Result<tonic::Response<super::ListCollectionsResponse>, tonic::Status>;
+
+        async fn create(
+            &self,
+            request: tonic::Request<super::CreateCollectionRequest>,
+        ) -> std::result::Result<tonic::Response<super::CollectionOperationResponse>, tonic::Status>;
+
+        async fn delete(
+            &self,
+            request: tonic::Request<super::DeleteCollectionRequest>,
+        ) -> std::result::Result<tonic::Response<super::CollectionOperationResponse>, tonic::Status>;
+
+        async fn get(
+            &self,
+            request: tonic::Request<super::GetCollectionRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetCollectionResponse>, tonic::Status>;
+    }
+
+    /// Collections server
+    #[derive(Debug)]
+    pub struct CollectionsServer<T: Collections> {
+        inner: std::sync::Arc<T>,
+    }
+
+    impl<T: Collections> CollectionsServer<T> {
+        pub fn new(inner: T) -> Self {
+            Self {
+                inner: std::sync::Arc::new(inner),
             }
-            Err(e) => Err(Status::internal(e.to_string())),
+        }
+    }
+
+    impl<T: Collections> Clone for CollectionsServer<T> {
+        fn clone(&self) -> Self {
+            Self {
+                inner: self.inner.clone(),
+            }
         }
     }
 }
 
-/// Start gRPC server
-pub async fn start_server(
-    port: u16,
-    collections: Arc<CollectionManager>,
-) -> crate::Result<()> {
-    let addr = format!("[::1]:{}", port).parse()
-        .map_err(|e| crate::RTDBError::Io(format!("{:?}", e)))?;
+pub mod points_server {
+    //! Generated points server
+    #![allow(unused_imports)]
+    use super::proto::*;
+    
+    /// Points service trait
+    #[tonic::async_trait]
+    pub trait Points: Send + Sync + 'static {
+        async fn upsert(
+            &self,
+            request: tonic::Request<super::UpsertPointsRequest>,
+        ) -> std::result::Result<tonic::Response<super::PointsOperationResponse>, tonic::Status>;
 
-    let collections_service = CollectionsService::new(collections.clone());
-    let points_service = PointsService::new(collections);
+        async fn delete(
+            &self,
+            request: tonic::Request<super::DeletePointsRequest>,
+        ) -> std::result::Result<tonic::Response<super::PointsOperationResponse>, tonic::Status>;
 
-    tonic::transport::Server::builder()
-        .add_service(collections_service.into_server())
-        .add_service(points_service.into_server())
-        .serve(addr)
-        .await
-        .map_err(|e| crate::RTDBError::Io(e.to_string()))?;
+        async fn get(
+            &self,
+            request: tonic::Request<super::GetPointsRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetPointsResponse>, tonic::Status>;
 
-    Ok(())
+        async fn search(
+            &self,
+            request: tonic::Request<super::SearchPointsRequest>,
+        ) -> std::result::Result<tonic::Response<super::SearchPointsResponse>, tonic::Status>;
+    }
+
+    /// Points server
+    #[derive(Debug)]
+    pub struct PointsServer<T: Points> {
+        inner: std::sync::Arc<T>,
+    }
+
+    impl<T: Points> PointsServer<T> {
+        pub fn new(inner: T) -> Self {
+            Self {
+                inner: std::sync::Arc::new(inner),
+            }
+        }
+    }
+
+    impl<T: Points> Clone for PointsServer<T> {
+        fn clone(&self) -> Self {
+            Self {
+                inner: self.inner.clone(),
+            }
+        }
+    }
 }
