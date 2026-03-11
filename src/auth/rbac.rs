@@ -1,307 +1,273 @@
 //! Role-Based Access Control (RBAC)
+//!
+//! Implements permission-based access control with predefined roles.
 
-use crate::{Result, RTDBError};
-use dashmap::DashMap;
-use serde::{Deserialize, Serialize};
-
-/// RBAC manager
-pub struct RBAC {
-    /// Roles defined in the system
-    roles: DashMap<String, Role>,
-    /// User to role mappings
-    user_roles: DashMap<String, Vec<String>>,
-    /// Resource permissions
-    #[allow(dead_code)]
-    resource_permissions: DashMap<String, Vec<Permission>>,
-}
-
-/// Role definition
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Role {
-    /// Role name
-    pub name: String,
-    /// Role description
-    pub description: String,
-    /// Permissions granted by this role
-    pub permissions: Vec<Permission>,
-}
-
-/// Permission for an action on a resource
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct Permission {
-    /// Resource type (collection, namespace, etc.)
-    pub resource: String,
-    /// Action (create, read, update, delete, search)
-    pub action: Action,
-    /// Optional resource name (None = all resources of this type)
-    pub resource_name: Option<String>,
-}
-
-/// Available actions
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-pub enum Action {
-    /// Create new resources
-    Create,
-    /// Read existing resources
-    Read,
-    /// Update existing resources
-    Update,
-    /// Delete resources
-    Delete,
-    /// Search/query resources
+/// Permissions for vector database operations
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Permission {
+    // Collection management
+    CreateCollection,
+    DeleteCollection,
+    ListCollections,
+    GetCollectionInfo,
+    
+    // Vector operations
+    InsertVectors,
+    DeleteVectors,
     Search,
-    /// Admin operations
+    Retrieve,
+    
+    // Index operations
+    CreateIndex,
+    DeleteIndex,
+    OptimizeIndex,
+    
+    // Cluster operations
+    ClusterAdmin,
+    ViewClusterStatus,
+    
+    // System operations
+    SystemAdmin,
+    ViewMetrics,
+    ViewLogs,
+}
+
+/// Predefined roles with associated permissions
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Role {
+    /// Full access to all operations
     Admin,
+    /// Can create collections, insert/search vectors
+    Writer,
+    /// Read-only access (search, retrieve)
+    Reader,
 }
 
-impl RBAC {
-    /// Create new RBAC system with default roles
+impl Role {
+    /// Check if this role has the specified permission
+    pub fn has_permission(&self, permission: Permission) -> bool {
+        match self {
+            Role::Admin => true, // Admin has all permissions
+            Role::Writer => Self::writer_permissions().contains(&permission),
+            Role::Reader => Self::reader_permissions().contains(&permission),
+        }
+    }
+    
+    /// Get all permissions for the Writer role
+    fn writer_permissions() -> &'static [Permission] {
+        use Permission::*;
+        &[
+            CreateCollection,
+            ListCollections,
+            GetCollectionInfo,
+            InsertVectors,
+            DeleteVectors,
+            Search,
+            Retrieve,
+            ViewMetrics,
+        ]
+    }
+    
+    /// Get all permissions for the Reader role
+    fn reader_permissions() -> &'static [Permission] {
+        use Permission::*;
+        &[
+            ListCollections,
+            GetCollectionInfo,
+            Search,
+            Retrieve,
+            ViewMetrics,
+        ]
+    }
+    
+    /// Get human-readable role name
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Role::Admin => "admin",
+            Role::Writer => "writer",
+            Role::Reader => "reader",
+        }
+    }
+    
+    /// Parse role from string
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "admin" => Some(Role::Admin),
+            "writer" => Some(Role::Writer),
+            "reader" => Some(Role::Reader),
+            _ => None,
+        }
+    }
+}
+
+impl std::fmt::Display for Role {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+/// Access control for resource-level permissions
+#[derive(Debug, Clone)]
+pub struct AccessControl {
+    /// Default role for unauthenticated users (if any)
+    pub default_role: Option<Role>,
+    /// Collection-level access rules
+    pub collection_rules: std::collections::HashMap<String, Vec<Role>>,
+}
+
+impl AccessControl {
+    /// Create new access control
     pub fn new() -> Self {
-        let rbac = Self {
-            roles: DashMap::new(),
-            user_roles: DashMap::new(),
-            resource_permissions: DashMap::new(),
-        };
-
-        // Create default roles
-        rbac.create_default_roles();
-        
-        rbac
+        Self {
+            default_role: None,
+            collection_rules: std::collections::HashMap::new(),
+        }
     }
-
-    /// Create default roles
-    fn create_default_roles(&self) {
-        // Admin role - full access
-        let admin_role = Role {
-            name: "admin".to_string(),
-            description: "Full access to all resources".to_string(),
-            permissions: vec![
-                Permission {
-                    resource: "*".to_string(),
-                    action: Action::Admin,
-                    resource_name: None,
-                },
-            ],
-        };
-        self.roles.insert("admin".to_string(), admin_role);
-
-        // Writer role - can read, write, search
-        let writer_role = Role {
-            name: "writer".to_string(),
-            description: "Can create, read, update, and search".to_string(),
-            permissions: vec![
-                Permission {
-                    resource: "collection".to_string(),
-                    action: Action::Create,
-                    resource_name: None,
-                },
-                Permission {
-                    resource: "collection".to_string(),
-                    action: Action::Read,
-                    resource_name: None,
-                },
-                Permission {
-                    resource: "collection".to_string(),
-                    action: Action::Update,
-                    resource_name: None,
-                },
-                Permission {
-                    resource: "collection".to_string(),
-                    action: Action::Search,
-                    resource_name: None,
-                },
-            ],
-        };
-        self.roles.insert("writer".to_string(), writer_role);
-
-        // Reader role - read and search only
-        let reader_role = Role {
-            name: "reader".to_string(),
-            description: "Can read and search only".to_string(),
-            permissions: vec![
-                Permission {
-                    resource: "collection".to_string(),
-                    action: Action::Read,
-                    resource_name: None,
-                },
-                Permission {
-                    resource: "collection".to_string(),
-                    action: Action::Search,
-                    resource_name: None,
-                },
-            ],
-        };
-        self.roles.insert("reader".to_string(), reader_role);
+    
+    /// Set default role for unauthenticated users
+    pub fn with_default_role(mut self, role: Role) -> Self {
+        self.default_role = Some(role);
+        self
     }
-
-    /// Create custom role
-    pub fn create_role(&self, role: Role) -> Result<()> {
-        if self.roles.contains_key(&role.name) {
-            return Err(RTDBError::Authorization(
-                format!("Role '{}' already exists", role.name)
-            ));
+    
+    /// Grant access to a collection for specific roles
+    pub fn grant_collection_access(&mut self, collection: impl Into<String>, roles: Vec<Role>) {
+        self.collection_rules.insert(collection.into(), roles);
+    }
+    
+    /// Check if role can access collection
+    pub fn can_access_collection(&self, collection: &str, role: Role) -> bool {
+        // Admin always has access
+        if role == Role::Admin {
+            return true;
         }
         
-        self.roles.insert(role.name.clone(), role);
-        Ok(())
-    }
-
-    /// Assign role to user
-    pub fn assign_role(&self, user: &str, role: &str) -> Result<()> {
-        if !self.roles.contains_key(role) {
-            return Err(RTDBError::Authorization(
-                format!("Role '{}' does not exist", role)
-            ));
+        // Check collection-specific rules
+        match self.collection_rules.get(collection) {
+            Some(allowed_roles) => allowed_roles.contains(&role),
+            None => true, // No restrictions = allow all
         }
-
-        self.user_roles
-            .entry(user.to_string())
-            .and_modify(|roles| roles.push(role.to_string()))
-            .or_insert_with(|| vec![role.to_string()]);
-        
-        Ok(())
-    }
-
-    /// Check if user has permission
-    pub fn check_permission(
-        &self,
-        user: &str,
-        resource: &str,
-        action: Action,
-        resource_name: Option<&str>,
-    ) -> bool {
-        // Get user's roles
-        let user_roles = match self.user_roles.get(user) {
-            Some(roles) => roles.clone(),
-            None => return false,
-        };
-
-        // Check each role
-        for role_name in &user_roles {
-            if let Some(role) = self.roles.get(role_name) {
-                for permission in &role.permissions {
-                    // Check if permission matches
-                    if self.permission_matches(permission, resource, action, resource_name) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        false
-    }
-
-    /// Check if permission matches request
-    fn permission_matches(
-        &self,
-        permission: &Permission,
-        resource: &str,
-        action: Action,
-        resource_name: Option<&str>,
-    ) -> bool {
-        // Check resource type (wildcards allowed)
-        if permission.resource != "*" && permission.resource != resource {
-            return false;
-        }
-
-        // Check action
-        if permission.action != action && permission.action != Action::Admin {
-            return false;
-        }
-
-        // Check resource name if specified
-        if let Some(perm_name) = &permission.resource_name {
-            if let Some(req_name) = resource_name {
-                if perm_name != req_name {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-        }
-
-        true
-    }
-
-    /// Get user roles
-    pub fn get_user_roles(&self, user: &str) -> Vec<String> {
-        self.user_roles
-            .get(user)
-            .map(|r| r.clone())
-            .unwrap_or_default()
     }
 }
 
-impl Default for RBAC {
+impl Default for AccessControl {
     fn default() -> Self {
         Self::new()
     }
 }
 
+/// Permission checker for specific operations
+pub struct PermissionChecker;
+
+impl PermissionChecker {
+    /// Check if user can perform collection operation
+    pub fn check_collection_op(role: Role, op: CollectionOperation) -> bool {
+        let permission = match op {
+            CollectionOperation::Create => Permission::CreateCollection,
+            CollectionOperation::Delete => Permission::DeleteCollection,
+            CollectionOperation::List => Permission::ListCollections,
+            CollectionOperation::GetInfo => Permission::GetCollectionInfo,
+        };
+        role.has_permission(permission)
+    }
+    
+    /// Check if user can perform vector operation
+    pub fn check_vector_op(role: Role, op: VectorOperation) -> bool {
+        let permission = match op {
+            VectorOperation::Insert => Permission::InsertVectors,
+            VectorOperation::Delete => Permission::DeleteVectors,
+            VectorOperation::Search => Permission::Search,
+            VectorOperation::Retrieve => Permission::Retrieve,
+        };
+        role.has_permission(permission)
+    }
+}
+
+/// Collection operations
+#[derive(Debug, Clone, Copy)]
+pub enum CollectionOperation {
+    Create,
+    Delete,
+    List,
+    GetInfo,
+}
+
+/// Vector operations
+#[derive(Debug, Clone, Copy)]
+pub enum VectorOperation {
+    Insert,
+    Delete,
+    Search,
+    Retrieve,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    
     #[test]
-    fn test_rbac_defaults() {
-        let rbac = RBAC::new();
-        
-        // Assign admin role
-        assert!(rbac.assign_role("alice", "admin").is_ok());
-        
-        // Check admin has all permissions
-        assert!(rbac.check_permission("alice", "collection", Action::Create, None));
-        assert!(rbac.check_permission("alice", "collection", Action::Delete, None));
+    fn test_admin_has_all_permissions() {
+        let admin = Role::Admin;
+        assert!(admin.has_permission(Permission::CreateCollection));
+        assert!(admin.has_permission(Permission::DeleteCollection));
+        assert!(admin.has_permission(Permission::SystemAdmin));
+        assert!(admin.has_permission(Permission::ClusterAdmin));
     }
-
+    
+    #[test]
+    fn test_writer_permissions() {
+        let writer = Role::Writer;
+        assert!(writer.has_permission(Permission::CreateCollection));
+        assert!(writer.has_permission(Permission::InsertVectors));
+        assert!(writer.has_permission(Permission::Search));
+        assert!(!writer.has_permission(Permission::DeleteCollection));
+        assert!(!writer.has_permission(Permission::SystemAdmin));
+    }
+    
     #[test]
     fn test_reader_permissions() {
-        let rbac = RBAC::new();
-        
-        rbac.assign_role("bob", "reader").unwrap();
-        
-        // Reader can read and search
-        assert!(rbac.check_permission("bob", "collection", Action::Read, None));
-        assert!(rbac.check_permission("bob", "collection", Action::Search, None));
-        
-        // Reader cannot create or delete
-        assert!(!rbac.check_permission("bob", "collection", Action::Create, None));
-        assert!(!rbac.check_permission("bob", "collection", Action::Delete, None));
+        let reader = Role::Reader;
+        assert!(reader.has_permission(Permission::Search));
+        assert!(reader.has_permission(Permission::Retrieve));
+        assert!(reader.has_permission(Permission::ListCollections));
+        assert!(!reader.has_permission(Permission::CreateCollection));
+        assert!(!reader.has_permission(Permission::InsertVectors));
     }
-
+    
     #[test]
-    fn test_custom_role() {
-        let rbac = RBAC::new();
+    fn test_access_control_collection() {
+        let mut ac = AccessControl::new();
+        ac.grant_collection_access("public", vec![Role::Reader, Role::Writer, Role::Admin]);
+        ac.grant_collection_access("private", vec![Role::Admin]);
         
-        let custom_role = Role {
-            name: "custom".to_string(),
-            description: "Custom role".to_string(),
-            permissions: vec![
-                Permission {
-                    resource: "collection".to_string(),
-                    action: Action::Read,
-                    resource_name: Some("specific_collection".to_string()),
-                },
-            ],
-        };
+        assert!(ac.can_access_collection("public", Role::Reader));
+        assert!(ac.can_access_collection("public", Role::Writer));
+        assert!(ac.can_access_collection("public", Role::Admin));
         
-        rbac.create_role(custom_role).unwrap();
-        rbac.assign_role("charlie", "custom").unwrap();
+        assert!(!ac.can_access_collection("private", Role::Reader));
+        assert!(!ac.can_access_collection("private", Role::Writer));
+        assert!(ac.can_access_collection("private", Role::Admin));
         
-        // Can read specific collection
-        assert!(rbac.check_permission(
-            "charlie",
-            "collection",
-            Action::Read,
-            Some("specific_collection")
-        ));
+        // No rules = allow all
+        assert!(ac.can_access_collection("unrestricted", Role::Reader));
+    }
+    
+    #[test]
+    fn test_role_parse() {
+        assert_eq!(Role::from_str("admin"), Some(Role::Admin));
+        assert_eq!(Role::from_str("Admin"), Some(Role::Admin));
+        assert_eq!(Role::from_str("ADMIN"), Some(Role::Admin));
+        assert_eq!(Role::from_str("writer"), Some(Role::Writer));
+        assert_eq!(Role::from_str("reader"), Some(Role::Reader));
+        assert_eq!(Role::from_str("invalid"), None);
+    }
+    
+    #[test]
+    fn test_permission_checker() {
+        assert!(PermissionChecker::check_collection_op(Role::Writer, CollectionOperation::Create));
+        assert!(!PermissionChecker::check_collection_op(Role::Reader, CollectionOperation::Create));
         
-        // Cannot read other collections
-        assert!(!rbac.check_permission(
-            "charlie",
-            "collection",
-            Action::Read,
-            Some("other_collection")
-        ));
+        assert!(PermissionChecker::check_vector_op(Role::Reader, VectorOperation::Search));
+        assert!(!PermissionChecker::check_vector_op(Role::Reader, VectorOperation::Insert));
     }
 }
