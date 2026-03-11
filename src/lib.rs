@@ -72,6 +72,14 @@ pub enum RTDBError {
     #[error("IO error: {0}")]
     Io(String),
     
+    /// Consensus errors
+    #[error("Consensus error: {0}")]
+    Consensus(String),
+    
+    /// Configuration errors
+    #[error("Configuration error: {0}")]
+    Configuration(String),
+    
     /// Serialization errors
     #[error("Serialization error: {0}")]
     Serialization(String),
@@ -87,6 +95,12 @@ pub enum RTDBError {
     /// Configuration errors
     #[error("Configuration error: {0}")]
     Config(String),
+}
+
+impl From<std::io::Error> for RTDBError {
+    fn from(err: std::io::Error) -> Self {
+        RTDBError::Io(err.to_string())
+    }
 }
 
 /// Result type for RTDB operations

@@ -393,13 +393,15 @@ RTDB is a next-generation vector database written in Rust that:
 
 ### 3.1 High Availability & Clustering
 
-#### 3.1.1 Consensus & Replication
-- [ ] **Raft Consensus Implementation**
-  - [ ] Leader election
-  - [ ] Log replication
-  - [ ] Snapshot management
-  - [ ] Membership changes (add/remove nodes)
-  - [ ] PreVote and CheckQuorum for stability
+#### 3.1.1 Consensus & Replication (COMPLETED )
+- [x] **Raft Consensus Implementation**
+  - [x] Leader election with randomized timeouts
+  - [x] Log replication with flow control
+  - [x] Snapshot management (create/install)
+  - [x] Membership changes (joint consensus)
+  - [x] PreVote and CheckQuorum for stability
+  - [x] Read index for linearizable reads
+  - [x] Async runtime with Ready pattern (TiKV/etcd design)
   
 - [ ] **Data Replication**
   - [ ] Synchronous replication (for durability)
@@ -407,7 +409,7 @@ RTDB is a next-generation vector database written in Rust that:
   - [ ] Quorum-based writes (configurable)
   - [ ] Read replicas for query scaling
   
-- [x] **Sharding Strategy** (COMPLETED ✅)
+- [x] **Sharding Strategy** (COMPLETED)
   - [x] Hash-based sharding (256 virtual shards)
   - [x] Consistent hashing with 150 virtual nodes
   - [ ] Range-based sharding
@@ -425,7 +427,7 @@ RTDB is a next-generation vector database written in Rust that:
   - [ ] Epoch-based validation
   - [ ] Majority quorum enforcement
 
-#### 3.1.3 Inter-Node Communication (COMPLETED ✅)
+#### 3.1.3 Inter-Node Communication (COMPLETED )
 - [x] **High-Performance gRPC Layer**
   - [x] Protocol Buffer definitions (cluster.proto)
   - [x] Service: JoinCluster, LeaveCluster, Heartbeat, GetTopology

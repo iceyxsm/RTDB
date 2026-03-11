@@ -37,7 +37,7 @@ pub struct ClusterManager {
     /// Shard router for distributed queries
     router: ShardRouter,
     /// Local Raft node (if in cluster mode)
-    raft_node: Option<raft::RaftNode>,
+    raft_node: Option<raft::node::RaftNode>,
 }
 
 impl ClusterManager {
@@ -223,7 +223,7 @@ impl ClusterManager {
     }
 
     /// Get mutable access to Raft node
-    pub fn raft_node_mut(&mut self) -> Option<&mut raft::RaftNode> {
+    pub fn raft_node_mut(&mut self) -> Option<&mut raft::node::RaftNode> {
         self.raft_node.as_mut()
     }
 }
