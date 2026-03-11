@@ -41,6 +41,7 @@ const REMOTE_TIMEOUT: Duration = Duration::from_secs(5);
 const MAX_CONCURRENT_SCATTER: usize = 100;
 
 /// Storage router for distributed vector operations
+#[derive(Clone)]
 pub struct StorageRouter {
     /// Local collection manager for direct storage access
     collections: Arc<RwLock<CollectionManager>>,
