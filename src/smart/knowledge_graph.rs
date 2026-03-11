@@ -31,12 +31,19 @@ pub struct Entity {
 /// Entity types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EntityType {
+    /// Person entity
     Person,
+    /// Organization entity
     Organization,
+    /// Location entity
     Location,
+    /// Concept entity
     Concept,
+    /// Product entity
     Product,
+    /// Event entity
     Event,
+    /// Unknown entity type
     Unknown,
 }
 
@@ -56,12 +63,19 @@ pub struct Relation {
 /// Predicate types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PredicateType {
+    /// Is-a relationship
     IsA,
+    /// Part-of relationship
     PartOf,
+    /// Located-in relationship
     LocatedIn,
+    /// Works-for relationship
     WorksFor,
+    /// Creates relationship
     Creates,
+    /// Causes relationship
     Causes,
+    /// Mentions relationship
     Mentions,
 }
 

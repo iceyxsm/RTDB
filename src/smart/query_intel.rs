@@ -3,8 +3,8 @@
 //! Intent classification, query expansion, and decomposition
 //! without using AI/ML models - using pattern matching, statistics, and heuristics
 
-use super::{QueryIntent, QueryPlan, SmartSearchRequest, StepType};
-use crate::{Result, SearchRequest};
+use super::{QueryIntent, QueryPlan, StepType};
+
 
 /// Query Intelligence Engine
 pub struct QueryIntelligence {

@@ -166,7 +166,7 @@ mod tests {
         let sr = SmartRetrieval::new();
         
         // Test text analysis
-        let (intent, expansions, plan) = sr.analyze_text("How to bake bread?");
+        let (intent, expansions, _plan) = sr.analyze_text("How to bake bread?");
         assert_eq!(intent, QueryIntent::Procedural);
         assert!(!expansions.is_empty());
     }

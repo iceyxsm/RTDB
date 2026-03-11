@@ -5,7 +5,7 @@
 
 use crate::{
     CollectionConfig, HnswConfig, Result, RTDBError,
-    ScoredVector, SearchRequest, UpsertRequest, Vector, VectorId,
+    ScoredVector, SearchRequest, UpsertRequest, VectorId,
     index::{VectorIndex, hnsw::HNSWIndex},
     storage::{StorageEngine, Storage, StorageConfig},
 };
@@ -393,6 +393,7 @@ pub struct RetrievedVector {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Vector;
     use tempfile::TempDir;
 
     #[test]

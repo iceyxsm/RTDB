@@ -3,13 +3,16 @@
 use crate::{Result, RTDBError};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
+
 
 /// Raft node state
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NodeState {
+    /// Follower state - receives log entries from leader
     Follower,
+    /// Candidate state - running for election
     Candidate,
+    /// Leader state - handles all client requests
     Leader,
 }
 
@@ -26,14 +29,19 @@ pub struct RaftNode {
     /// Log entries
     log: Vec<LogEntry>,
     /// Commit index
+    #[allow(dead_code)]
     commit_index: u64,
     /// Last applied index
+    #[allow(dead_code)]
     last_applied: u64,
     /// Next index for each peer (leader only)
+    #[allow(dead_code)]
     next_index: HashMap<String, u64>,
     /// Match index for each peer (leader only)
+    #[allow(dead_code)]
     match_index: HashMap<String, u64>,
     /// Cluster members
+    #[allow(dead_code)]
     peers: Vec<String>,
 }
 
@@ -53,21 +61,28 @@ pub struct LogEntry {
 pub enum Command {
     /// Upsert vectors
     Upsert {
+        /// Collection name
         collection: String,
+        /// Vector data (id, vector pairs)
         vectors: Vec<(u64, Vec<f32>)>,
     },
     /// Delete vectors
     Delete {
+        /// Collection name
         collection: String,
+        /// Vector IDs to delete
         ids: Vec<u64>,
     },
     /// Create collection
     CreateCollection {
+        /// Collection name
         name: String,
+        /// Vector dimension
         dimension: usize,
     },
     /// Delete collection
     DeleteCollection {
+        /// Collection name
         name: String,
     },
 }

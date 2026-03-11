@@ -66,13 +66,18 @@ pub enum CompressionType {
 pub enum Record {
     /// Insert or update a vector
     Put {
+        /// Vector ID
         id: VectorId,
+        /// Vector data
         vector: Vector,
+        /// Timestamp
         timestamp: u64,
     },
     /// Delete a vector
     Delete {
+        /// Vector ID
         id: VectorId,
+        /// Timestamp
         timestamp: u64,
     },
 }

@@ -74,7 +74,7 @@ impl HNSWIndex {
                     break;
                 }
             }
-            let current_f32 = dist.0;
+            let _current_f32 = dist.0;
 
             if let Some(layer) = self.layers.get(layer_idx) {
                 if let Some(neighbors) = layer.edges.get(&current) {

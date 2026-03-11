@@ -11,6 +11,7 @@ pub struct RBAC {
     /// User to role mappings
     user_roles: DashMap<String, Vec<String>>,
     /// Resource permissions
+    #[allow(dead_code)]
     resource_permissions: DashMap<String, Vec<Permission>>,
 }
 
@@ -39,11 +40,17 @@ pub struct Permission {
 /// Available actions
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Action {
+    /// Create new resources
     Create,
+    /// Read existing resources
     Read,
+    /// Update existing resources
     Update,
+    /// Delete resources
     Delete,
+    /// Search/query resources
     Search,
+    /// Admin operations
     Admin,
 }
 

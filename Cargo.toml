@@ -10,6 +10,9 @@ keywords = ["vector-database", "rag", "search", "embedding", "ann"]
 categories = ["database", "data-structures"]
 rust-version = "1.75"
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(grpc_enabled)'] }
+
 [[bin]]
 name = "rtdb"
 path = "src/main.rs"

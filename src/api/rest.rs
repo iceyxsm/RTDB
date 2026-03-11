@@ -7,7 +7,7 @@ use crate::{
 use axum::{
     extract::{Path, State},
     response::Json,
-    routing::{delete, get, post, put},
+    routing::{get, post, put},
     Router,
 };
 use serde::Serialize;
@@ -56,6 +56,7 @@ async fn health_check() -> Json<HealthResponse> {
 
 /// Collections list response
 #[derive(Serialize)]
+#[allow(dead_code)]
 struct CollectionsResponse {
     collections: Vec<CollectionDescription>,
 }
@@ -183,6 +184,7 @@ struct UpsertPointsRequest {
 
 /// Upsert operation response
 #[derive(Serialize)]
+#[allow(dead_code)]
 struct UpsertResponse {
     operation_id: u64,
     status: String,

@@ -2,7 +2,7 @@
 //! 
 //! Piecewise linear index for O(1) routing
 
-use crate::{Result, VectorId};
+use crate::Result;
 
 /// Piecewise Linear Index (Learned Index)
 pub struct LearnedIndex {

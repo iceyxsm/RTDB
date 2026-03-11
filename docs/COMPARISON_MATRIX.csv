@@ -1,0 +1,28 @@
+Feature,RTDB,Qdrant,Milvus,Weaviate,Pinecone,LanceDB
+Architecture,LSM+Hybrid Index,HNSW,HNSW+GPU,HNSW+Inverted,HNSW,Columnar
+Standalone,Yes,Yes,No (Docker),Yes,No (Cloud),Yes
+Query Latency (P99),<5ms,~10ms,~20ms,~15ms,~20ms,~50ms
+Memory/1M vectors,~500MB,~700MB,~1GB,~1.5GB,~800MB,~400MB
+Max Dimension,Unlimited,65536,32768,65536,20000,Unlimited
+Distance Metrics,4,5,11,3,1,4
+Metadata Filtering,Yes,Yes,Yes,Yes,Yes,Yes
+Hybrid Search,Yes,Yes,Yes,Yes,No,Yes
+Replication,Raft,Raft,K8s,Raft,Managed,None
+Sharding,Consistent Hash,Ring,Range,Ring,Managed,None
+ACID,Yes,Yes,No,No,Partial,No
+Backup,Hot,Hot,Cold,Hot,Managed,No
+Binary Size,~15MB,~100MB,~500MB,~200MB,N/A,~50MB
+Startup Time,<100ms,~2s,~10s,~3s,N/A,<50ms
+API REST,Yes,Yes,Yes,Yes,Yes,No
+API gRPC,Yes,Yes,Yes,Yes,Yes,Yes
+SDK Languages,5+,6+,5+,6+,8+,4+
+Self-Hosted,Yes,Yes,Yes,Yes,No,Yes
+Open Source,Yes,Yes,Yes,Yes,No,Yes
+Cloud Native,No,Yes,Yes,Yes,Yes,No
+GPU Support,No,No,Yes,No,No,No
+Quantization,PQ/BQ,Scalar,Scalar,None,Scalar,None
+Query Intelligence,Yes (Zero-AI),No,No,No,No,No
+Knowledge Graph,Yes,No,No,Yes,No,No
+Multi-Modal,No,No,Yes,Yes,No,No
+Cost/1M vectors/month,HW only,~$30,~$50,~$40,~$70,Free
+Best For,Edge/IoT,General,Large Scale,Semantic Search,Quick Start,Analytics

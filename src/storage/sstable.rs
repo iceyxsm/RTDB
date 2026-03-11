@@ -18,8 +18,10 @@ const SSTABLE_VERSION: u32 = 1;
 /// Magic number
 const SSTABLE_MAGIC: u32 = 0x53535442; // "SSTB"
 /// Default block size
+#[allow(dead_code)]
 const DEFAULT_BLOCK_SIZE: usize = 4 * 1024;
 /// Index interval (every N entries)
+#[allow(dead_code)]
 const INDEX_INTERVAL: usize = 16;
 
 /// SSTable metadata
@@ -361,6 +363,7 @@ impl Footer {
 /// SSTable reader for querying
 pub struct SSTable {
     /// File handle
+    #[allow(dead_code)]
     file: File,
     /// Table metadata
     pub meta: SSTableMeta,
@@ -508,6 +511,7 @@ impl SSTable {
     }
 
     /// Load a block from file
+    #[allow(dead_code)]
     fn load_block(&mut self, entry: &IndexEntry) -> Result<Vec<(VectorId, Vector)>> {
         self.load_block_read(entry)
     }

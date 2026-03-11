@@ -278,7 +278,7 @@ impl StorageEngine {
             .unwrap()
             .as_micros();
 
-        let output_path = next_level_path.join(format!("{:020}.sst", timestamp));
+        let _output_path = next_level_path.join(format!("{:020}.sst", timestamp));
 
         // TODO: Implement actual merge
         // For now, just move files
@@ -372,7 +372,7 @@ impl Storage for StorageEngine {
         for level in levels.iter() {
             for table in level.iter().rev() {
                 let path = table.path().to_path_buf();
-                let mut table = SSTable::open(&path)?;
+                let table = SSTable::open(&path)?;
                 let entries = table.scan(start, end)?;
 
                 for (id, vector) in entries {

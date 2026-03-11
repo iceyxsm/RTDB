@@ -229,7 +229,7 @@ impl MemTableManager {
 
     /// Rotate memtable (make active immutable, create new)
     pub fn rotate(&self) -> ImmutableMemTable {
-        let new_active = Arc::new(MemTable::new(self.size_threshold));
+        let _new_active = Arc::new(MemTable::new(self.size_threshold));
         let old_active = std::mem::replace(
             unsafe { &mut *(Arc::as_ptr(&self.active) as *mut MemTable) },
             MemTable::new(self.size_threshold)

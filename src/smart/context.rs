@@ -7,12 +7,14 @@ use crate::{Result, VectorId};
 /// Hierarchical index for multi-granularity storage
 pub struct HierarchicalIndex {
     /// Level configurations
+    #[allow(dead_code)]
     levels: Vec<Level>,
 }
 
 /// Single level in hierarchy
 struct Level {
     /// Granularity type
+    #[allow(dead_code)]
     granularity: Granularity,
 }
 

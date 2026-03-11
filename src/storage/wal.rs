@@ -107,6 +107,7 @@ pub struct WAL {
     /// Current file size
     current_size: u64,
     /// Write buffer
+    #[allow(dead_code)]
     buffer: BytesMut,
 }
 
@@ -350,7 +351,7 @@ impl WAL {
     }
 
     /// Flush and close WAL
-    pub fn close(mut self) -> Result<()> {
+    pub fn close(self) -> Result<()> {
         self.current_file.sync_all().map_err(into_storage_error)?;
         Ok(())
     }

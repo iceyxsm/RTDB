@@ -61,7 +61,12 @@ pub enum RTDBError {
     
     /// Invalid vector dimension
     #[error("Invalid vector dimension: expected {expected}, got {actual}")]
-    InvalidDimension { expected: usize, actual: usize },
+    InvalidDimension { 
+        /// Expected dimension
+        expected: usize, 
+        /// Actual dimension received
+        actual: usize 
+    },
     
     /// IO errors
     #[error("IO error: {0}")]
