@@ -29,29 +29,29 @@ cargo test --lib
 
 | Database | Latency | Relative |
 |----------|---------|----------|
-| **RTDB** | **<5ms** | **1.0x** |
-| Qdrant | ~10ms | 2.0x |
-| Weaviate | ~15ms | 3.0x |
-| Milvus | ~20ms | 4.0x |
+| **RTDB** | **<5ms**| **1.0x** |
+| Qdrant   |  ~10ms  |   2.0x   |
+| Weaviate |  ~15ms  |   3.0x   |
+| Milvus   |  ~20ms  |   4.0x   |
 
 ### Memory Efficiency
 
 | Database | Memory/1M vectors | Relative |
 |----------|-------------------|----------|
-| LanceDB | 400MB | 0.8x |
-| **RTDB** | **500MB** | **1.0x** |
-| Qdrant | 700MB | 1.4x |
-| Pinecone | 800MB | 1.6x |
-| Milvus | 1GB | 2.0x |
-| Weaviate | 1.5GB | 3.0x |
+| LanceDB  | 400MB             |   0.8x   |
+| **RTDB** | **500MB**         | **1.0x** |
+| Qdrant   | 700MB             |   1.4x   |
+| Pinecone | 800MB             |   1.6x   |
+| Milvus   | 1GB               |   2.0x   |
+| Weaviate | 1.5GB             |   3.0x   |
 
 ### Distance Computation (128d vectors)
 
-| Metric | Latency | Throughput |
-|--------|---------|------------|
-| Euclidean | 112 ns | 1.15 Gelem/s |
-| Dot Product | 99 ns | 1.29 Gelem/s |
-| Cosine | 419 ns | 306 Melem/s |
+| Metric      | Latency | Throughput   |
+|-------------|---------|--------------|
+| Euclidean   | 112 ns  | 1.15 Gelem/s |
+| Dot Product | 99 ns   | 1.29 Gelem/s |
+| Cosine      | 419 ns  | 306 Melem/s  |
 
 See [BENCHMARKS.md](BENCHMARKS.md) for full details.
 

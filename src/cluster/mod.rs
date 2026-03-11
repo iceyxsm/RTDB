@@ -4,10 +4,20 @@
 
 pub mod config;
 pub mod hash_ring;
+pub mod proto;
 pub mod raft;
 
+#[cfg(grpc)]
+pub mod client;
+#[cfg(grpc)]
+pub mod server;
+
+#[cfg(grpc)]
+pub use client::ClusterClient;
 pub use config::{ClusterConfig, ClusterState, ClusterTopology, NodeInfo, NodeStatus, ShardId};
 pub use hash_ring::{HashRing, ShardRouter};
+#[cfg(grpc)]
+pub use server::ClusterGrpcServer;
 
 use std::sync::Arc;
 use parking_lot::RwLock;
