@@ -15,6 +15,8 @@ pub mod generated;
 pub mod client;
 #[cfg(feature = "grpc")]
 pub mod server;
+#[cfg(feature = "grpc")]
+pub mod storage_router;
 
 #[cfg(feature = "grpc")]
 pub use client::ClusterClient;
@@ -22,6 +24,8 @@ pub use config::{ClusterConfig, ClusterState, ClusterTopology, NodeInfo, NodeSta
 pub use hash_ring::{HashRing, ShardRouter};
 #[cfg(feature = "grpc")]
 pub use server::ClusterGrpcServer;
+#[cfg(feature = "grpc")]
+pub use storage_router::{StorageRouter, ScoredResult, BatchInsertResult};
 
 use std::sync::Arc;
 use parking_lot::RwLock;
