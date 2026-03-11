@@ -422,17 +422,21 @@ RTDB is a next-generation vector database written in Rust that:
   - [ ] Range-based sharding
   - [ ] Dynamic resharding (split/merge)
 
-#### 3.1.2 Failover & Recovery
-- [ ] **Automatic Failover**
-  - [ ] Health monitoring (heartbeats)
-  - [ ] Leader failure detection
-  - [ ] Automatic leader promotion
-  - [ ] Client redirection to new leader
+#### 3.1.2 Failover & Recovery (COMPLETED ✅)
+- [x] **Health Monitoring**
+  - [x] Phi Accrual failure detector
+  - [x] Configurable thresholds (min: 3, max: 10, scale: 200ms)
+  - [x] Suspicion level tracking
   
-- [ ] **Split-Brain Protection**
-  - [ ] Fencing tokens
-  - [ ] Epoch-based validation
-  - [ ] Majority quorum enforcement
+- [x] **Fencing & Safety**
+  - [x] Fencing token generation and validation
+  - [x] Epoch-based fencing for write operations
+  - [x] Term and index validation in requests
+  
+- [x] **Recovery Procedures**
+  - [x] Node restart detection and recovery
+  - [x] Cluster state restoration
+  - [x] Recovery timeout configuration
 
 #### 3.1.3 Inter-Node Communication (COMPLETED )
 - [x] **High-Performance gRPC Layer**
@@ -458,53 +462,89 @@ RTDB is a next-generation vector database written in Rust that:
   - [x] Heartbeat optimization (minimal payload)
   - [x] Topology delta updates
 
-### 3.2 Observability & Monitoring
+### 3.2 Observability & Monitoring (COMPLETED ✅)
 
-#### 3.2.1 Metrics (Prometheus/OpenTelemetry)
-- [ ] **Query Metrics**
-  - [ ] Query latency (p50, p95, p99, p999)
-  - [ ] Query throughput (QPS)
-  - [ ] Cache hit/miss rates
-  - [ ] Index utilization
+#### 3.2.1 Metrics (Prometheus) (COMPLETED)
+- [x] **Query Metrics**
+  - [x] Query latency histograms (p50, p95, p99)
+  - [x] Query throughput (QPS)
+  - [x] Error rates by operation
   
-- [ ] **Storage Metrics**
-  - [ ] Storage size (raw vs compressed)
-  - [ ] Write amplification
-  - [ ] Compaction statistics
-  - [ ] WAL queue depth
+- [x] **Index Metrics**
+  - [x] Vector count per collection
+  - [x] Index size in bytes
+  - [x] Recall ratio tracking
+  - [x] Build duration
   
-- [ ] **System Metrics**
-  - [ ] Memory usage (heap, off-heap, mmap)
-  - [ ] CPU utilization
-  - [ ] Network I/O
-  - [ ] Disk I/O (IOPS, throughput)
-  - [ ] Goroutine/thread counts
+- [x] **Storage Metrics**
+  - [x] Storage size
+  - [x] Document count
+  - [x] Collection count
+  
+- [x] **System Metrics**
+  - [x] Memory usage (RSS, heap)
+  - [x] CPU utilization
+  - [x] Open file descriptors
+  - [x] Process metrics (optional)
+  
+- [x] **Cardinality Protection**
+  - [x] Max 1000 unique values per metric
+  - [x] LRU-based eviction
+  - [x] Dropped metrics counter
 
-#### 3.2.2 Distributed Tracing
-- [ ] **OpenTelemetry Integration**
-  - [ ] Query execution tracing
-  - [ ] Cross-node request tracing
-  - [ ] Index operation tracing
-  - [ ] Storage operation tracing
+#### 3.2.2 Distributed Tracing (COMPLETED)
+- [x] **OpenTelemetry Integration**
+  - [x] OTLP exporter with gzip compression
+  - [x] Batch configuration (512-1024 spans)
+  - [x] Queue management (8192 spans)
   
-- [ ] **Performance Profiling**
-  - [ ] CPU profiling (pprof-style)
-  - [ ] Memory profiling
-  - [ ] Lock contention analysis
-  - [ ] Flame graph generation
+- [x] **Context Propagation**
+  - [x] W3C Trace Context support
+  - [x] extract_context_from_headers()
+  - [x] inject_context_into_headers()
+  
+- [x] **Sampling**
+  - [x] Head-based sampling
+  - [x] Parent-based respect
+  - [x] Configurable ratios (1%, 10%, 100%)
+  - [x] Pre-configured profiles (dev/prod/high_throughput/low_latency)
 
-#### 3.2.3 Health Checks & Alerting
-- [ ] **Health Endpoints**
-  - [ ] /health/live (liveness probe)
-  - [ ] /health/ready (readiness probe)
-  - [ ] /health/startup (startup probe)
+#### 3.2.3 Health Checks (COMPLETED)
+- [x] **Health Check Infrastructure**
+  - [x] LivenessCheck - uptime tracking
+  - [x] ReadinessCheck - service availability
+  - [x] StartupCheck - initialization status
+  - [x] HealthChecker - aggregated status
+  - [x] HealthStatus enum (Healthy/Degraded/Unhealthy/Unknown)
   
-- [ ] **Alerting Rules**
-  - [ ] High latency alerts
-  - [ ] Error rate alerts
-  - [ ] Disk space alerts
-  - [ ] Memory pressure alerts
-  - [ ] Replication lag alerts
+- [x] **Configuration**
+  - [x] Health port configuration (default 8080)
+  - [x] Kubernetes-compatible probe support
+
+#### 3.2.4 Structured Logging (COMPLETED)
+- [x] **JSON Logging**
+  - [x] StructuredJsonFormatter
+  - [x] Trace ID / Span ID injection
+  - [x] Timestamp standardization
+  
+- [x] **PII Redaction**
+  - [x] Pattern-based field redaction
+  - [x] Email, password, token patterns
+  - [x] Configurable via LOG_REDACT_PII env
+  
+- [x] **Request Context**
+  - [x] Thread-local request ID tracking
+  - [x] Async context preservation
+
+#### 3.2.5 Monitoring Configuration (COMPLETED)
+- [x] **Grafana Dashboard**
+  - [x] Complete dashboard JSON
+  - [x] Overview, Query Performance, Index, Replication panels
+  
+- [x] **Alert Rules**
+  - [x] Prometheus alert rules YAML
+  - [x] Critical/Warning/Info severity levels
+  - [x] Runbook URLs and dashboard links
 
 ### 3.3 Testing & Validation
 
