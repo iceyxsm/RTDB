@@ -13,6 +13,7 @@ pub mod metrics;
 pub mod health;
 pub mod tracing;
 pub mod logging;
+pub mod performance;
 
 pub use metrics::{
     MetricsCollector, VectorDbMetrics,
@@ -32,6 +33,11 @@ pub use logging::{
     LogConfig, LogFormat,
     set_request_id, get_request_id, generate_request_id,
     PreserveContext,
+};
+pub use performance::{
+    CardinalityLimiter, ObservabilityPerfConfig,
+    TraceBatchConfig, MetricsPerformance,
+    MemoryLimitedSpanBuffer, SamplingDecision,
 };
 
 use std::sync::Arc;
