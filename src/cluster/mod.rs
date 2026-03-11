@@ -6,6 +6,7 @@ pub mod config;
 pub mod hash_ring;
 pub mod proto;
 pub mod raft;
+pub mod replication;
 
 #[cfg(feature = "grpc")]
 pub mod raft_transport;
@@ -41,6 +42,13 @@ pub use raft_transport::RaftTransport;
 pub use raft_apply::{RaftStateMachine, StateMachineCommand};
 #[cfg(feature = "grpc")]
 pub use raft_service::{RaftRuntimeManager, LeaderDiscovery, RaftClusterIntegration, RaftMessageHandler};
+
+// Replication exports
+pub use replication::{
+    ReplicaTracker, WriteCoordinator, ReadBalancer, ReplicationManager,
+    ShardReplica, ReplicaRole, ReplicationConfig, ReplicationStats,
+    WriteConsistency, ReadConsistency, WriteResult, WriteCoordinator as WriteCoord,
+};
 
 use std::sync::Arc;
 use parking_lot::RwLock;
