@@ -69,6 +69,8 @@ pub enum NodeStatus {
     Suspect,
     /// Node is offline
     Offline,
+    /// Node is gracefully leaving
+    Leaving,
 }
 
 /// Shard identifier (virtual bucket)

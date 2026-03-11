@@ -3,6 +3,7 @@ syntax = "proto3";
 package cluster;
 
 // Cluster service for inter-node communication
+// Optimized for high-performance distributed vector database operations
 service ClusterService {
     // Node joins cluster
     rpc JoinCluster(JoinRequest) returns (JoinResponse);
@@ -19,11 +20,23 @@ service ClusterService {
     // Forward vector search request
     rpc Search(SearchRequest) returns (SearchResponse);
     
+    // Batch search for scatter-gather queries
+    rpc BatchSearch(BatchSearchRequest) returns (BatchSearchResponse);
+    
     // Forward vector insert
     rpc Insert(InsertRequest) returns (InsertResponse);
     
+    // Batch insert for bulk operations
+    rpc BatchInsert(BatchInsertRequest) returns (BatchInsertResponse);
+    
     // Replicate data to follower
     rpc Replicate(ReplicateRequest) returns (ReplicateResponse);
+    
+    // Batch replicate for efficient replication
+    rpc BatchReplicate(BatchReplicateRequest) returns (BatchReplicateResponse);
+    
+    // Stream replicate for continuous replication (high-throughput)
+    rpc StreamReplicate(stream ReplicateRequest) returns (ReplicateResponse);
 }
 
 // Join cluster request
@@ -31,28 +44,35 @@ message JoinRequest {
     string node_id = 1;
     string address = 2;
     uint64 capacity = 3;
+    bytes metadata = 4;  // Optional node metadata
 }
 
 message JoinResponse {
     bool success = 1;
     string error = 2;
     Topology topology = 3;
+    bytes config = 4;  // Serialized cluster configuration
 }
 
 // Leave cluster request
 message LeaveRequest {
     string node_id = 1;
+    bool graceful = 2;  // True for graceful shutdown
 }
 
 message LeaveResponse {
     bool success = 1;
+    string message = 2;
 }
 
 // Get topology request
-message TopologyRequest {}
+message TopologyRequest {
+    bool include_shard_mappings = 1;
+}
 
 message TopologyResponse {
     Topology topology = 1;
+    uint64 server_timestamp = 2;
 }
 
 // Topology information
@@ -60,6 +80,7 @@ message Topology {
     uint64 version = 1;
     repeated Node nodes = 2;
     repeated ShardMapping shard_mapping = 3;
+    uint64 timestamp = 4;
 }
 
 message Node {
@@ -68,7 +89,9 @@ message Node {
     NodeStatus status = 3;
     uint64 capacity = 4;
     uint64 load = 5;
-    repeated uint32 shards = 6;
+    repeated uint32 shards = 6 [packed = true];  // Packed encoding for efficiency
+    uint64 last_heartbeat = 7;
+    bytes metadata = 8;
 }
 
 enum NodeStatus {
@@ -76,6 +99,7 @@ enum NodeStatus {
     ACTIVE = 1;
     SUSPECT = 2;
     OFFLINE = 3;
+    LEAVING = 4;
 }
 
 message ShardMapping {
@@ -84,60 +108,151 @@ message ShardMapping {
     repeated string replica_nodes = 3;
 }
 
-// Heartbeat
+// Heartbeat - optimized for minimal size
 message HeartbeatRequest {
     string node_id = 1;
     uint64 timestamp = 2;
     uint64 load = 3;
+    repeated uint32 shards = 4 [packed = true];
+    bytes metrics = 5;  // Serialized NodeMetrics
 }
 
 message HeartbeatResponse {
     bool acknowledged = 1;
     uint64 server_timestamp = 2;
+    Topology topology = 3;  // Optional: only if topology changed
+    bool topology_changed = 4;
 }
 
-// Search request
+// Search request - uses bytes for zero-copy vector transfer
 message SearchRequest {
     string collection = 1;
-    repeated float vector = 2;
+    // Vector data as bytes for efficient transfer (4 bytes per f32)
+    bytes vector = 2;
     uint32 top_k = 3;
     float score_threshold = 4;
+    bytes filter = 5;  // Serialized search filter
+    uint64 request_id = 6;  // For tracing/debugging
 }
 
 message SearchResponse {
     repeated ScoredVector results = 1;
     string error = 2;
+    uint64 search_time_us = 3;  // Search execution time in microseconds
+    uint64 request_id = 4;
+}
+
+// Batch search for scatter-gather operations
+message BatchSearchRequest {
+    string collection = 1;
+    repeated bytes vectors = 2;  // Multiple query vectors
+    uint32 top_k = 3;
+    float score_threshold = 4;
+    bytes filter = 5;
+    uint64 request_id = 6;
+}
+
+message BatchSearchResponse {
+    repeated SearchResult results = 1;  // One result per query vector
+    string error = 2;
+    uint64 total_time_us = 3;
+    uint64 request_id = 4;
+}
+
+message SearchResult {
+    repeated ScoredVector vectors = 1;
 }
 
 message ScoredVector {
     uint64 id = 1;
     float score = 2;
     bytes payload = 3;
+    uint64 version = 4;  // Vector version for consistency
 }
 
 // Insert request
 message InsertRequest {
     string collection = 1;
     uint64 id = 2;
-    repeated float vector = 3;
+    bytes vector = 3;  // Vector data as bytes (4 bytes per f32)
     bytes payload = 4;
+    uint64 timestamp = 5;
+    uint64 request_id = 6;
 }
 
 message InsertResponse {
     bool success = 1;
     string error = 2;
+    uint64 insert_time_us = 3;
+    uint64 request_id = 4;
+}
+
+// Batch insert for bulk operations
+message BatchInsertRequest {
+    string collection = 1;
+    repeated VectorEntry entries = 2;
+    uint64 request_id = 3;
+}
+
+message VectorEntry {
+    uint64 id = 1;
+    bytes vector = 2;
+    bytes payload = 3;
+    uint64 timestamp = 4;
+}
+
+message BatchInsertResponse {
+    bool success = 1;
+    string error = 2;
+    uint32 inserted_count = 3;
+    repeated uint64 failed_ids = 4;
+    uint64 total_time_us = 5;
+    uint64 request_id = 6;
 }
 
 // Replication request
 message ReplicateRequest {
     string collection = 1;
     uint64 id = 2;
-    repeated float vector = 3;
+    bytes vector = 3;
     bytes payload = 4;
     uint64 timestamp = 5;
+    uint64 sequence_number = 6;  // For ordering in Raft/log replication
+    bool is_delete = 7;  // Tombstone marker
 }
 
 message ReplicateResponse {
     bool success = 1;
     uint64 replicated_at = 2;
+    uint64 applied_sequence = 3;
+    string error = 4;
+}
+
+// Batch replicate for efficient replication
+message BatchReplicateRequest {
+    string collection = 1;
+    repeated ReplicateRequest entries = 2;
+    uint64 base_sequence = 3;
+}
+
+message BatchReplicateResponse {
+    bool success = 1;
+    uint64 replicated_at = 2;
+    uint64 highest_applied_sequence = 3;
+    uint32 applied_count = 4;
+    string error = 5;
+}
+
+// Health check (lightweight)
+message HealthRequest {}
+
+message HealthResponse {
+    enum Status {
+        UNKNOWN = 0;
+        SERVING = 1;
+        NOT_SERVING = 2;
+    }
+    Status status = 1;
+    string node_id = 2;
+    uint64 uptime_seconds = 3;
 }

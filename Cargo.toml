@@ -114,6 +114,11 @@ harness = false
 name = "mixed_benchmark"
 harness = false
 
+[[bench]]
+name = "grpc_benchmark"
+harness = false
+required-features = ["grpc"]
+
 [profile.release]
 opt-level = 3
 lto = "fat"

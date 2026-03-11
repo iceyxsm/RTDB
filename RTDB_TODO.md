@@ -407,11 +407,11 @@ RTDB is a next-generation vector database written in Rust that:
   - [ ] Quorum-based writes (configurable)
   - [ ] Read replicas for query scaling
   
-- [ ] **Sharding Strategy**
-  - [ ] Hash-based sharding
+- [x] **Sharding Strategy** (COMPLETED ✅)
+  - [x] Hash-based sharding (256 virtual shards)
+  - [x] Consistent hashing with 150 virtual nodes
   - [ ] Range-based sharding
   - [ ] Dynamic resharding (split/merge)
-  - [ ] Consistent hashing for load balancing
 
 #### 3.1.2 Failover & Recovery
 - [ ] **Automatic Failover**
@@ -424,6 +424,30 @@ RTDB is a next-generation vector database written in Rust that:
   - [ ] Fencing tokens
   - [ ] Epoch-based validation
   - [ ] Majority quorum enforcement
+
+#### 3.1.3 Inter-Node Communication (COMPLETED ✅)
+- [x] **High-Performance gRPC Layer**
+  - [x] Protocol Buffer definitions (cluster.proto)
+  - [x] Service: JoinCluster, LeaveCluster, Heartbeat, GetTopology
+  - [x] Service: Search, Insert, Replicate (forwarding)
+  - [x] Connection pooling (4 channels/node, round-robin)
+  - [x] HTTP/2 keepalive configuration (30s interval)
+  - [x] TCP window sizing (64KB stream, 1MB connection)
+  - [x] Gzip compression support
+  - [x] Configurable timeouts (operation-specific)
+  - [x] Request ID tracking for distributed tracing
+  
+- [x] **Batch Operations**
+  - [x] BatchSearch - scatter-gather queries
+  - [x] BatchInsert - bulk vector insertion
+  - [x] BatchReplicate - efficient replication
+  - [x] StreamReplicate - continuous streaming
+  
+- [x] **Optimized Protocol**
+  - [x] Binary vector encoding (bytes vs repeated float)
+  - [x] Packed encoding for shard lists
+  - [x] Heartbeat optimization (minimal payload)
+  - [x] Topology delta updates
 
 ### 3.2 Observability & Monitoring
 
