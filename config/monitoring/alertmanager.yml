@@ -1,0 +1,211 @@
+# AlertManager Configuration for RTDB
+# Routes alerts to appropriate notification channels based on severity
+
+global:
+  # The default SMTP sender
+  smtp_smarthost: 'smtp.example.com:587'
+  smtp_from: 'alerts@rtdb.example.com'
+  smtp_auth_username: 'alerts@rtdb.example.com'
+  smtp_auth_password: '${SMTP_PASSWORD}'
+  
+  # Slack API configuration
+  slack_api_url: '${SLACK_WEBHOOK_URL}'
+  
+  # Resolve timeout
+  resolve_timeout: 5m
+
+# Templates for notification formatting
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Route configuration - determines where alerts are sent
+route:
+  # Default receiver
+  receiver: 'default'
+  
+  # How long to wait before sending notification about new alerts
+  group_wait: 30s
+  
+  # How long to wait before sending updated notification
+  group_interval: 5m
+  
+  # How long to wait before resolving an alert
+  repeat_interval: 4h
+  
+  # Group alerts by these labels
+  group_by: ['alertname', 'cluster', 'service', 'severity']
+  
+  # Nested routes
+  routes:
+    # Critical alerts go to PagerDuty immediately
+    - match:
+        severity: critical
+      receiver: 'pagerduty-critical'
+      continue: true
+      group_wait: 0s
+      repeat_interval: 1h
+    
+    # Warning alerts go to Slack
+    - match:
+        severity: warning
+      receiver: 'slack-warnings'
+      continue: true
+      group_wait: 1m
+      repeat_interval: 2h
+    
+    # Info alerts only go to logging
+    - match:
+        severity: info
+      receiver: 'null'
+      continue: false
+    
+    # Replication issues go to specific Slack channel
+    - match:
+        component: replication
+        severity: critical
+      receiver: 'slack-replication'
+      continue: true
+    
+    # Resource alerts during business hours only
+    - match:
+        component: resources
+      receiver: 'slack-resources'
+      group_wait: 5m
+      repeat_interval: 8h
+      mute_time_intervals:
+        - non_business_hours
+
+# Inhibit rules - suppress less severe alerts when more severe ones fire
+inhibit_rules:
+  # Inhibit warning alerts if critical is firing for same service
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'cluster', 'service']
+  
+  # Inhibit info alerts if warning is firing
+  - source_match:
+      severity: 'warning'
+    target_match:
+      severity: 'info'
+    equal: ['alertname', 'cluster', 'service']
+
+# Receiver configurations
+receivers:
+  # Default receiver (Slack general channel)
+  - name: 'default'
+    slack_configs:
+      - channel: '#alerts'
+        send_resolved: true
+        title: '{{ template "slack.title" . }}'
+        text: '{{ template "slack.text" . }}'
+        actions:
+          - type: button
+            text: 'View Dashboard'
+            url: '{{ .CommonAnnotations.dashboard_url }}'
+          - type: button
+            text: 'Runbook'
+            url: '{{ .CommonAnnotations.runbook_url }}'
+
+  # Critical alerts - PagerDuty
+  - name: 'pagerduty-critical'
+    pagerduty_configs:
+      - service_key: '${PAGERDUTY_SERVICE_KEY}'
+        description: '{{ .GroupLabels.alertname }}: {{ .CommonAnnotations.summary }}'
+        severity: critical
+        details:
+          firing: '{{ template "pagerduty.details" . }}'
+          dashboard: '{{ .CommonAnnotations.dashboard_url }}'
+          runbook: '{{ .CommonAnnotations.runbook_url }}'
+
+  # Warning alerts - Slack
+  - name: 'slack-warnings'
+    slack_configs:
+      - channel: '#warnings'
+        send_resolved: true
+        color: 'warning'
+        title: '⚠️ {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *{{ .Annotations.summary }}*
+          {{ .Annotations.description }}
+          {{ end }}
+
+  # Replication alerts - dedicated channel
+  - name: 'slack-replication'
+    slack_configs:
+      - channel: '#replication-alerts'
+        send_resolved: true
+        color: 'danger'
+        title: '🔄 Replication Issue: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *{{ .Annotations.summary }}*
+          Source: {{ .Labels.source_node }}
+          Target: {{ .Labels.target_node }}
+          {{ .Annotations.description }}
+          {{ end }}
+
+  # Resource alerts - ops channel
+  - name: 'slack-resources'
+    slack_configs:
+      - channel: '#ops-resources'
+        send_resolved: true
+        color: '{{ if eq .CommonLabels.severity "critical" }}danger{{ else }}warning{{ end }}'
+        title: '💾 {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *{{ .Annotations.summary }}*
+          Instance: {{ .Labels.instance }}
+          Value: {{ .Value }}
+          {{ end }}
+
+  # Email for all alerts (backup)
+  - name: 'email-alerts'
+    email_configs:
+      - to: 'oncall@rtdb.example.com'
+        send_resolved: true
+        subject: '[RTDB Alert] {{ .GroupLabels.alertname }} - {{ .CommonAnnotations.summary }}'
+        html: '{{ template "email.html" . }}'
+
+  # Null receiver (discards alerts)
+  - name: 'null'
+
+# Time intervals for routing
+mute_time_intervals:
+  - name: non_business_hours
+    time_intervals:
+      - times:
+          - start_time: '18:00'
+            end_time: '09:00'
+        weekdays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
+      - weekdays: ['saturday', 'sunday']
+
+# Custom templates
+templates:
+  - name: slack.title
+    template: |
+      {{ if eq .CommonLabels.severity "critical" }}🚨{{ else }}⚠️{{ end }} 
+      {{ .GroupLabels.alertname }} - {{ .CommonAnnotations.summary }}
+  
+  - name: slack.text
+    template: |
+      {{ range .Alerts }}
+      *{{ .Annotations.summary }}*
+      {{ .Annotations.description }}
+      
+      *Labels:*
+      {{ range .Labels.SortedPairs }}• {{ .Name }}: {{ .Value }}
+      {{ end }}
+      {{ end }}
+  
+  - name: pagerduty.details
+    template: |
+      {{ range .Alerts }}
+      Alert: {{ .Labels.alertname }}
+      Severity: {{ .Labels.severity }}
+      Instance: {{ .Labels.instance }}
+      Description: {{ .Annotations.description }}
+      ---
+      {{ end }}

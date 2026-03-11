@@ -5,11 +5,14 @@
 //! - OpenTelemetry distributed tracing
 //! - Health check endpoints (liveness, readiness, startup)
 //! - Vector database-specific metrics (QPS, latency percentiles, recall)
+//! - Structured logging with trace correlation
 //!
 //! Inspired by best practices from Qdrant, Milvus, and Weaviate.
 
 pub mod metrics;
 pub mod health;
+pub mod tracing;
+pub mod logging;
 
 pub use metrics::{
     MetricsCollector, VectorDbMetrics,
@@ -18,6 +21,17 @@ pub use metrics::{
 pub use health::{
     HealthChecker, HealthStatus, HealthCheck,
     LivenessCheck, ReadinessCheck, StartupCheck,
+};
+pub use tracing::{
+    init_tracing, shutdown_tracing,
+    current_trace_id, current_span_id,
+    TracingConfig,
+};
+pub use logging::{
+    init_logging, init_observability,
+    LogConfig, LogFormat,
+    set_request_id, get_request_id, generate_request_id,
+    PreserveContext,
 };
 
 use std::sync::Arc;

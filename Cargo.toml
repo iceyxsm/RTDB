@@ -70,9 +70,19 @@ anyhow = "1.0"
 # Logging and metrics
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tracing-opentelemetry = "0.23"
+tracing-log = "0.2"
 metrics = "0.22"
 metrics-exporter-prometheus = "0.13"
 prometheus = { version = "0.13", features = ["process"] }
+
+# OpenTelemetry
+opentelemetry = "0.23"
+opentelemetry_sdk = { version = "0.23", features = ["rt-tokio"] }
+opentelemetry-otlp = "0.16"
+
+# Hostname detection
+hostname = "0.4"
 
 # Configuration
 config = { version = "0.14", default-features = false, features = ["yaml"] }

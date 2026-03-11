@@ -1,0 +1,314 @@
+# RTDB Vector Database - Prometheus Alert Rules
+# Based on industry best practices from Qdrant, Milvus, Weaviate
+#
+# Severity levels:
+#   - critical: Page immediately, service degradation/outage
+#   - warning:  Notify on-call, potential issue requiring attention
+#   - info:     Log for analysis, no immediate action required
+#
+# Installation: Copy to /etc/prometheus/rules/ or equivalent
+
+groups:
+  # ============================================================================
+  # Query Performance Alerts
+  # ============================================================================
+  - name: rtdb_query_performance
+    interval: 30s
+    rules:
+      # Critical: P99 latency exceeds 1 second for 5 minutes
+      - alert: RTDBHighLatencyCritical
+        expr: |
+          histogram_quantile(0.99, 
+            sum(rate(rtdb_query_duration_seconds_bucket[5m])) by (le, operation)
+          ) > 1.0
+        for: 5m
+        labels:
+          severity: critical
+          component: query
+        annotations:
+          summary: "RTDB query latency critical - P99 > 1s"
+          description: |
+            Query operation {{ $labels.operation }} has P99 latency of {{ $value | humanizeDuration }}
+            for more than 5 minutes. This indicates severe performance degradation.
+          runbook_url: "https://wiki.example.com/runbooks/rtdb-high-latency"
+          dashboard_url: "https://grafana.example.com/d/rtdb-production"
+
+      # Warning: P95 latency exceeds 500ms for 10 minutes
+      - alert: RTDBHighLatencyWarning
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(rtdb_query_duration_seconds_bucket[5m])) by (le, operation)
+          ) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          component: query
+        annotations:
+          summary: "RTDB query latency elevated - P95 > 500ms"
+          description: |
+            Query operation {{ $labels.operation }} has P95 latency of {{ $value | humanizeDuration }}.
+            Consider investigating index configuration or resource allocation.
+
+      # Critical: Error rate exceeds 5% for 2 minutes
+      - alert: RTDBHighErrorRate
+        expr: |
+          sum(rate(rtdb_query_errors_total[2m])) by (operation, error_type)
+          /
+          sum(rate(rtdb_queries_total[2m])) by (operation) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          component: query
+        annotations:
+          summary: "RTDB error rate critical - {{ $value | humanizePercentage }} errors"
+          description: |
+            Error rate for {{ $labels.operation }} is {{ $value | humanizePercentage }}.
+            Error type: {{ $labels.error_type }}
+
+      # Warning: Error rate exceeds 1% for 5 minutes
+      - alert: RTDBElevatedErrorRate
+        expr: |
+          sum(rate(rtdb_query_errors_total[5m])) by (operation)
+          /
+          sum(rate(rtdb_queries_total[5m])) by (operation) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          component: query
+        annotations:
+          summary: "RTDB error rate elevated"
+          description: "Error rate for {{ $labels.operation }} is {{ $value | humanizePercentage }}"
+
+  # ============================================================================
+  # Resource Utilization Alerts
+  # ============================================================================
+  - name: rtdb_resources
+    interval: 30s
+    rules:
+      # Critical: Memory usage exceeds 90% for 5 minutes
+      - alert: RTDBHighMemoryCritical
+        expr: |
+          (rtdb_system_memory_usage_bytes / rtdb_system_memory_total_bytes) > 0.90
+        for: 5m
+        labels:
+          severity: critical
+          component: resources
+        annotations:
+          summary: "RTDB memory usage critical"
+          description: |
+            Memory usage is {{ $value | humanizePercentage }} for more than 5 minutes.
+            Risk of OOM kills and service disruption.
+
+      # Warning: Memory usage exceeds 85% for 10 minutes
+      - alert: RTDBHighMemoryWarning
+        expr: |
+          (rtdb_system_memory_usage_bytes / rtdb_system_memory_total_bytes) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          component: resources
+        annotations:
+          summary: "RTDB memory usage high"
+          description: "Memory usage is {{ $value | humanizePercentage }}. Consider scaling resources."
+
+      # Warning: Disk usage exceeds 80% for 15 minutes
+      - alert: RTDBHighDiskUsage
+        expr: |
+          (rtdb_system_disk_usage_bytes / rtdb_system_disk_total_bytes) > 0.80
+        for: 15m
+        labels:
+          severity: warning
+          component: resources
+        annotations:
+          summary: "RTDB disk usage high"
+          description: "Disk usage is {{ $value | humanizePercentage }}. Plan for storage expansion."
+
+      # Critical: Disk usage exceeds 90% for 5 minutes
+      - alert: RTDBCriticalDiskUsage
+        expr: |
+          (rtdb_system_disk_usage_bytes / rtdb_system_disk_total_bytes) > 0.90
+        for: 5m
+        labels:
+          severity: critical
+          component: resources
+        annotations:
+          summary: "RTDB disk usage critical"
+          description: "Disk usage is {{ $value | humanizePercentage }}. Immediate action required to prevent data loss."
+
+      # Warning: Open file descriptors approaching limit
+      - alert: RTDBHighOpenFiles
+        expr: rtdb_system_open_files > 10000
+        for: 5m
+        labels:
+          severity: warning
+          component: resources
+        annotations:
+          summary: "RTDB high open file count"
+          description: "Open file descriptors: {{ $value }}. Check for file handle leaks."
+
+  # ============================================================================
+  # Index Health Alerts
+  # ============================================================================
+  - name: rtdb_index_health
+    interval: 1m
+    rules:
+      # Warning: Index recall drops below 90% (approximate search quality)
+      - alert: RTDBLowIndexRecall
+        expr: rtdb_index_recall < 0.90
+        for: 5m
+        labels:
+          severity: warning
+          component: index
+        annotations:
+          summary: "RTDB index recall degraded"
+          description: |
+            Index recall for {{ $labels.collection }}/{{ $labels.index_type }} 
+            is {{ $value | humanizePercentage }}. Consider rebuilding index with higher ef parameters.
+
+      # Critical: Index recall drops below 80%
+      - alert: RTDBCriticalIndexRecall
+        expr: rtdb_index_recall < 0.80
+        for: 2m
+        labels:
+          severity: critical
+          component: index
+        annotations:
+          summary: "RTDB index recall critically low"
+          description: |
+            Index recall for {{ $labels.collection }}/{{ $labels.index_type }} 
+            is {{ $value | humanizePercentage }}. Search quality severely impacted.
+
+      # Info: Index build duration unusually long (> 1 hour)
+      - alert: RTDBLongIndexBuild
+        expr: |
+          histogram_quantile(0.99, 
+            sum(rate(rtdb_index_build_duration_seconds_bucket[1h])) by (le)
+          ) > 3600
+        for: 0m
+        labels:
+          severity: info
+          component: index
+        annotations:
+          summary: "RTDB index build taking unusually long"
+          description: "Index build P99 duration exceeds 1 hour. Monitor resource availability."
+
+  # ============================================================================
+  # Replication & Cluster Health Alerts
+  # ============================================================================
+  - name: rtdb_replication
+    interval: 30s
+    rules:
+      # Critical: Replication lag exceeds 30 seconds for 2 minutes
+      - alert: RTDBHighReplicationLag
+        expr: rtdb_replication_lag_seconds > 30
+        for: 2m
+        labels:
+          severity: critical
+          component: replication
+        annotations:
+          summary: "RTDB replication lag critical"
+          description: |
+            Replication lag from {{ $labels.source_node }} to {{ $labels.target_node }} 
+            is {{ $value | humanizeDuration }}. Risk of data inconsistency on failover.
+
+      # Warning: Replication lag exceeds 10 seconds for 5 minutes
+      - alert: RTDBElevatedReplicationLag
+        expr: rtdb_replication_lag_seconds > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: replication
+        annotations:
+          summary: "RTDB replication lag elevated"
+          description: |
+            Replication lag from {{ $labels.source_node }} to {{ $labels.target_node }} 
+            is {{ $value | humanizeDuration }}. Monitor network and disk I/O.
+
+      # Critical: No quorum - less than half nodes healthy
+      - alert: RTDBNoQuorum
+        expr: |
+          sum(up{job=~"rtdb.*"}) by (job) 
+          < 
+          (count(up{job=~"rtdb.*"}) by (job) / 2)
+        for: 1m
+        labels:
+          severity: critical
+          component: cluster
+        annotations:
+          summary: "RTDB cluster quorum lost"
+          description: |
+            Cluster has lost quorum. Only {{ $value }} nodes are healthy.
+            Write operations will fail. Immediate recovery required.
+
+  # ============================================================================
+  # Service Health Alerts
+  # ============================================================================
+  - name: rtdb_service_health
+    interval: 30s
+    rules:
+      # Critical: Instance down for 1 minute
+      - alert: RTDBInstanceDown
+        expr: up{job=~"rtdb.*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: health
+        annotations:
+          summary: "RTDB instance down"
+          description: "Instance {{ $labels.instance }} has been down for more than 1 minute."
+
+      # Warning: High connection count approaching limit
+      - alert: RTDBHighConnections
+        expr: rtdb_connections_active > 1000
+        for: 5m
+        labels:
+          severity: warning
+          component: connections
+        annotations:
+          summary: "RTDB high connection count"
+          description: "Active connections: {{ $value }}. Consider increasing connection pool limits."
+
+      # Info: Service startup detected
+      - alert: RTDBServiceStarted
+        expr: |
+          changes(process_start_time_seconds{job=~"rtdb.*"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: info
+          component: health
+        annotations:
+          summary: "RTDB service started"
+          description: "Instance {{ $labels.instance }} has started or restarted."
+
+  # ============================================================================
+  # Storage Alerts
+  # ============================================================================
+  - name: rtdb_storage
+    interval: 1m
+    rules:
+      # Warning: Storage growth rate unusually high (> 10GB/hour)
+      - alert: RTDBRapidStorageGrowth
+        expr: |
+          deriv(rtdb_storage_size_bytes[1h]) > 10e9
+        for: 10m
+        labels:
+          severity: warning
+          component: storage
+        annotations:
+          summary: "RTDB rapid storage growth"
+          description: |
+            Storage is growing at {{ $value | humanizeBytes }} per hour.
+            Investigate for unexpected data growth or compaction issues.
+
+      # Info: Collection approaching size limit
+      - alert: RTDBLargeCollection
+        expr: rtdb_index_vector_count > 10000000
+        for: 0m
+        labels:
+          severity: info
+          component: storage
+        annotations:
+          summary: "RTDB large collection detected"
+          description: |
+            Collection {{ $labels.collection }} has {{ $value | humanize }} vectors.
+            Consider sharding or partitioning strategies.
