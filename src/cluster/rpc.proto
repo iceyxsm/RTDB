@@ -37,6 +37,26 @@ service ClusterService {
     
     // Stream replicate for continuous replication (high-throughput)
     rpc StreamReplicate(stream ReplicateRequest) returns (ReplicateResponse);
+    
+    // ==================== Raft Consensus RPCs ====================
+    
+    // Raft AppendEntries RPC - replicate log entries
+    rpc RaftAppendEntries(RaftAppendEntriesRequest) returns (RaftAppendEntriesResponse);
+    
+    // Raft RequestVote RPC - request votes during election
+    rpc RaftRequestVote(RaftRequestVoteRequest) returns (RaftRequestVoteResponse);
+    
+    // Raft InstallSnapshot RPC - send snapshots to slow followers
+    rpc RaftInstallSnapshot(stream RaftInstallSnapshotRequest) returns (RaftInstallSnapshotResponse);
+    
+    // Raft PreVote RPC - pre-vote to prevent term disruption
+    rpc RaftPreVote(RaftRequestVoteRequest) returns (RaftRequestVoteResponse);
+    
+    // Raft TimeoutNow RPC - force leader election (for leader transfer)
+    rpc RaftTimeoutNow(RaftTimeoutNowRequest) returns (RaftTimeoutNowResponse);
+    
+    // Generic Raft message (for batched/pipelined sending)
+    rpc RaftMessage(RaftMessageRequest) returns (RaftMessageResponse);
 }
 
 // Join cluster request
@@ -92,6 +112,7 @@ message Node {
     repeated uint32 shards = 6 [packed = true];  // Packed encoding for efficiency
     uint64 last_heartbeat = 7;
     bytes metadata = 8;
+    bool is_learner = 9;  // Raft learner node (non-voting)
 }
 
 enum NodeStatus {
@@ -115,6 +136,8 @@ message HeartbeatRequest {
     uint64 load = 3;
     repeated uint32 shards = 4 [packed = true];
     bytes metrics = 5;  // Serialized NodeMetrics
+    uint64 raft_term = 6;  // Current Raft term
+    string raft_role = 7;  // leader/follower/candidate
 }
 
 message HeartbeatResponse {
@@ -255,4 +278,98 @@ message HealthResponse {
     Status status = 1;
     string node_id = 2;
     uint64 uptime_seconds = 3;
+}
+
+// ==================== Raft Consensus Messages ====================
+
+// Raft log entry
+message RaftLogEntry {
+    uint64 index = 1;      // Log index (1-based)
+    uint64 term = 2;       // Term when entry was created
+    bytes data = 3;        // Command data
+    uint32 entry_type = 4; // 0=Normal, 1=ConfigChange
+}
+
+// AppendEntries request
+message RaftAppendEntriesRequest {
+    uint64 term = 1;              // Leader's term
+    uint64 leader_id = 2;         // Leader ID (NodeId)
+    uint64 prev_log_index = 3;    // Index of log entry immediately preceding new ones
+    uint64 prev_log_term = 4;     // Term of prev_log_index entry
+    repeated RaftLogEntry entries = 5;  // Log entries to store (empty for heartbeat)
+    uint64 leader_commit = 6;     // Leader's commit index
+}
+
+message RaftAppendEntriesResponse {
+    uint64 term = 1;          // Current term, for leader to update itself
+    bool success = 2;         // True if follower contained entry matching prev_log_index and prev_log_term
+    uint64 match_index = 3;   // Index of highest log entry known to be replicated
+    uint64 reject_hint = 4;   // Hint for log synchronization (if rejected)
+}
+
+// RequestVote request
+message RaftRequestVoteRequest {
+    uint64 term = 1;              // Candidate's term
+    uint64 candidate_id = 2;      // Candidate requesting vote
+    uint64 last_log_index = 3;    // Index of candidate's last log entry
+    uint64 last_log_term = 4;     // Term of candidate's last log entry
+    bool is_pre_vote = 5;         // True if this is a pre-vote request
+}
+
+message RaftRequestVoteResponse {
+    uint64 term = 1;          // Current term, for candidate to update itself
+    bool vote_granted = 2;    // True means candidate received vote
+}
+
+// InstallSnapshot request (streaming)
+message RaftInstallSnapshotRequest {
+    // First message: metadata
+    message SnapshotMetadata {
+        uint64 term = 1;
+        uint64 leader_id = 2;
+        uint64 last_included_index = 3;
+        uint64 last_included_term = 4;
+        bytes configuration = 5;  // Serialized ConfState
+    }
+    
+    // Data chunk
+    message SnapshotData {
+        bytes data = 1;
+        uint32 chunk_index = 2;   // Index of this chunk (0-based)
+        bool is_last = 3;         // True if this is the last chunk
+    }
+    
+    oneof content {
+        SnapshotMetadata metadata = 1;
+        SnapshotData chunk = 2;
+    }
+}
+
+message RaftInstallSnapshotResponse {
+    uint64 term = 1;
+    bool success = 2;
+}
+
+// TimeoutNow request (for leader transfer)
+message RaftTimeoutNowRequest {
+    uint64 term = 1;
+    uint64 from = 2;  // Node ID requesting timeout
+}
+
+message RaftTimeoutNowResponse {
+    bool success = 1;
+}
+
+// Generic Raft message (for efficient batching)
+message RaftMessageRequest {
+    uint32 msg_type = 1;      // 0=Heartbeat, 1=AppendEntries, 2=AppendResponse, 3=RequestVote, etc.
+    uint64 from = 2;          // Sender node ID
+    uint64 to = 3;            // Recipient node ID
+    uint64 term = 4;          // Term
+    bytes payload = 5;        // Serialized message-specific data
+}
+
+message RaftMessageResponse {
+    bool accepted = 1;
+    string error = 2;
 }

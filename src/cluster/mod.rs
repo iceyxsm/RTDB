@@ -7,6 +7,11 @@ pub mod hash_ring;
 pub mod proto;
 pub mod raft;
 
+#[cfg(feature = "grpc")]
+pub mod raft_transport;
+#[cfg(feature = "grpc")]
+pub mod raft_apply;
+
 // Pre-generated protobuf code - always available when grpc feature is enabled, no protoc required
 #[cfg(feature = "grpc")]
 pub mod generated;
@@ -26,6 +31,12 @@ pub use hash_ring::{HashRing, ShardRouter};
 pub use server::ClusterGrpcServer;
 #[cfg(feature = "grpc")]
 pub use storage_router::{StorageRouter, ScoredResult, BatchInsertResult};
+
+// Raft integration exports
+#[cfg(feature = "grpc")]
+pub use raft_transport::RaftTransport;
+#[cfg(feature = "grpc")]
+pub use raft_apply::{RaftStateMachine, StateMachineCommand};
 
 use std::sync::Arc;
 use parking_lot::RwLock;
