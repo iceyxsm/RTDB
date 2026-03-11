@@ -20,7 +20,7 @@ use super::{
         JoinRequest, JoinResponse, LeaveRequest, LeaveResponse,
         ReplicateRequest, ReplicateResponse, SearchRequest, SearchResponse,
         SearchResult, Topology as ProtoTopology, TopologyRequest, TopologyResponse,
-        Node as ProtoNode, NodeStatus as ProtoNodeStatus, ScoredVector,
+        Node as ProtoNode, NodeStatus as ProtoNodeStatus,
     },
 };
 use std::net::SocketAddr;
@@ -31,7 +31,7 @@ use tonic::{
     Request, Response, Status,
     transport::Server,
 };
-use tonic::codec::CompressionEncoding;
+// use tonic::codec::CompressionEncoding;
 
 /// Default concurrency limit for the server
 const DEFAULT_CONCURRENCY_LIMIT: usize = 1024;
@@ -122,7 +122,7 @@ impl ClusterGrpcServer {
         );
         
         // Build service with compression support
-        let mut service_builder = ClusterServiceServer::new(service);
+        let service_builder = ClusterServiceServer::new(service);
         
         // Note: Compression disabled for standalone builds
         // if self.config.enable_compression { ... }
@@ -381,7 +381,7 @@ impl ClusterService for ClusterServiceImpl {
         );
         
         let mut inserted_count = 0u32;
-        let mut failed_ids = Vec::new();
+        let failed_ids = Vec::new();
         
         for entry in &req.entries {
             let _vector = bytes_to_vector(&entry.vector);
@@ -503,7 +503,7 @@ impl ClusterService for ClusterServiceImpl {
     ) -> Result<Response<HealthResponse>, Status> {
         // Get node ID from cluster config
         let node_id = {
-            let cluster = self.cluster.read().await;
+            let _cluster = self.cluster.read().await;
             // Assuming ClusterManager has a way to get local node ID
             // For now, return empty string
             String::new()

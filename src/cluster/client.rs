@@ -16,7 +16,7 @@ use super::{
     generated::ClusterServiceClient,
     generated::{
         BatchInsertRequest, BatchReplicateRequest, BatchSearchRequest,
-        HealthRequest, HeartbeatRequest, InsertRequest, JoinRequest, LeaveRequest,
+        HealthRequest, HeartbeatRequest, InsertRequest, JoinRequest,
         ReplicateRequest, SearchRequest, TopologyRequest, VectorEntry,
     },
 };
@@ -25,7 +25,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 use tonic::{
-    Request, Status,
+    Request,
     transport::{Channel, Endpoint},
 };
 
@@ -99,7 +99,7 @@ impl ConnectionPool {
 /// Create a configured gRPC channel
 async fn create_channel(
     addr: &str,
-    pool_index: usize,
+    _pool_index: usize,
 ) -> crate::Result<ClusterServiceClient<Channel>> {
     // Build endpoint with performance optimizations
     let mut endpoint = Endpoint::from_shared(format!("http://{}", addr))

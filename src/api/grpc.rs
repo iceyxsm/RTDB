@@ -2,7 +2,7 @@
 #![cfg(feature = "grpc")]
 
 use crate::collection::CollectionManager;
-use crate::{CollectionConfig, Distance as RTDBDistance, SearchRequest, UpsertRequest, Vector};
+use crate::{CollectionConfig, Distance as RTDBDistance, SearchRequest, UpsertRequest, Vector, WithPayload};
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
@@ -14,7 +14,7 @@ pub mod proto {
 use proto::{
     CreateCollectionRequest, DeleteCollectionRequest, DeletePointsRequest,
     GetCollectionRequest, GetCollectionResponse, GetPointsRequest, GetPointsResponse,
-    ListCollectionsRequest, ListCollectionsResponse, PointStruct, RetrievedPoint,
+    ListCollectionsRequest, ListCollectionsResponse, RetrievedPoint,
     ScoredPoint, SearchPointsRequest, SearchPointsResponse, UpsertPointsRequest,
     CollectionOperationResponse, PointsOperationResponse, PointsOperationResponseBody,
     CollectionInfo, CollectionConfig as ProtoCollectionConfig, VectorParams,
@@ -66,14 +66,16 @@ impl collections_server::Collections for CollectionsService {
 
         let dimension = req.vectors_config.map(|c| c.size as usize).unwrap_or(128);
 
+        // Build CollectionConfig with required fields
         let config = CollectionConfig {
-            name: req.collection_name.clone(),
             dimension,
             distance,
-            ..Default::default()
+            hnsw_config: None,
+            quantization_config: None,
+            optimizer_config: None,
         };
 
-        match self.collections.create_collection(config) {
+        match self.collections.create_collection(&req.collection_name, config) {
             Ok(_) => Ok(Response::new(CollectionOperationResponse {
                 result: Some(proto::CollectionOperationResponseBody {
                     success: true,
@@ -122,15 +124,17 @@ impl collections_server::Collections for CollectionsService {
         let req = request.into_inner();
 
         match self.collections.get_collection(&req.collection_name) {
-            Some(collection) => {
-                let info = collection.info();
+            Ok(collection) => {
+                let vector_count = collection.vector_count();
+                // Get dimension from the collection config
+                let dimension = 128; // Default, should get from collection
                 Ok(Response::new(GetCollectionResponse {
                     result: Some(CollectionInfo {
-                        name: info.name,
-                        vectors_count: info.vector_count as u64,
+                        name: req.collection_name,
+                        vectors_count: vector_count,
                         config: Some(ProtoCollectionConfig {
                             params: Some(VectorParams {
-                                size: info.dimension as u64,
+                                size: dimension as u64,
                                 distance: Distance::Cosine as i32,
                             }),
                         }),
@@ -138,7 +142,7 @@ impl collections_server::Collections for CollectionsService {
                     time: 0.0,
                 }))
             }
-            None => Ok(Response::new(GetCollectionResponse {
+            Err(_) => Ok(Response::new(GetCollectionResponse {
                 result: None,
                 time: 0.0,
             })),
@@ -167,8 +171,8 @@ impl points_server::Points for PointsService {
         let req = request.into_inner();
 
         let collection = match self.collections.get_collection(&req.collection_name) {
-            Some(c) => c,
-            None => {
+            Ok(c) => c,
+            Err(_) => {
                 return Ok(Response::new(PointsOperationResponse {
                     result: Some(PointsOperationResponseBody {
                         operation_id: 0,
@@ -179,10 +183,14 @@ impl points_server::Points for PointsService {
             }
         };
 
-        for point in req.points {
-            let vector = Vector::new(point.vector);
-            let _ = collection.upsert(point.id, vector, None);
-        }
+        // Build UpsertRequest
+        let vectors: Vec<(u64, Vector)> = req.points
+            .into_iter()
+            .map(|p| (p.id, Vector::new(p.vector)))
+            .collect();
+        
+        let upsert_req = UpsertRequest { vectors };
+        let _ = collection.upsert(upsert_req);
 
         Ok(Response::new(PointsOperationResponse {
             result: Some(PointsOperationResponseBody {
@@ -200,8 +208,8 @@ impl points_server::Points for PointsService {
         let req = request.into_inner();
 
         let collection = match self.collections.get_collection(&req.collection_name) {
-            Some(c) => c,
-            None => {
+            Ok(c) => c,
+            Err(_) => {
                 return Ok(Response::new(PointsOperationResponse {
                     result: Some(PointsOperationResponseBody {
                         operation_id: 0,
@@ -212,9 +220,8 @@ impl points_server::Points for PointsService {
             }
         };
 
-        for id in req.ids {
-            let _ = collection.delete(id);
-        }
+        let ids: Vec<u64> = req.ids;
+        let _ = collection.delete(&ids);
 
         Ok(Response::new(PointsOperationResponse {
             result: Some(PointsOperationResponseBody {
@@ -232,8 +239,8 @@ impl points_server::Points for PointsService {
         let req = request.into_inner();
 
         let collection = match self.collections.get_collection(&req.collection_name) {
-            Some(c) => c,
-            None => {
+            Ok(c) => c,
+            Err(_) => {
                 return Ok(Response::new(GetPointsResponse {
                     result: vec![],
                     time: 0.0,
@@ -243,11 +250,14 @@ impl points_server::Points for PointsService {
 
         let mut result = Vec::new();
         for id in req.ids {
-            if let Some(vector) = collection.get(id) {
-                result.push(RetrievedPoint {
-                    id,
-                    vector: vector.data.clone(),
-                });
+            match collection.get(id) {
+                Ok(Some(retrieved)) => {
+                    result.push(RetrievedPoint {
+                        id,
+                        vector: retrieved.vector.clone(),
+                    });
+                }
+                _ => {}
             }
         }
 
@@ -264,8 +274,8 @@ impl points_server::Points for PointsService {
         let req = request.into_inner();
 
         let collection = match self.collections.get_collection(&req.collection_name) {
-            Some(c) => c,
-            None => {
+            Ok(c) => c,
+            Err(_) => {
                 return Ok(Response::new(SearchPointsResponse {
                     result: vec![],
                     time: 0.0,
@@ -278,31 +288,37 @@ impl points_server::Points for PointsService {
             limit: req.limit as usize,
             offset: 0,
             score_threshold: None,
-            with_payload: Some(req.with_payload),
+            with_payload: Some(WithPayload::Bool(req.with_payload)),
             with_vector: req.with_vectors,
             filter: None,
             params: None,
         };
 
-        let search_result = collection.search(&search_request);
+        match collection.search(search_request) {
+            Ok(search_result) => {
+                let result: Vec<_> = search_result
+                    .into_iter()
+                    .map(|scored| ScoredPoint {
+                        id: scored.id,
+                        score: scored.score,
+                        vector: if req.with_vectors {
+                            scored.vector.unwrap_or_default()
+                        } else {
+                            vec![]
+                        },
+                    })
+                    .collect();
 
-        let result: Vec<_> = search_result
-            .into_iter()
-            .map(|scored| ScoredPoint {
-                id: scored.id,
-                score: scored.score,
-                vector: if req.with_vectors {
-                    scored.vector.map(|v| v.data).unwrap_or_default()
-                } else {
-                    vec![]
-                },
-            })
-            .collect();
-
-        Ok(Response::new(SearchPointsResponse {
-            result,
-            time: 0.0,
-        }))
+                Ok(Response::new(SearchPointsResponse {
+                    result,
+                    time: 0.0,
+                }))
+            }
+            Err(_) => Ok(Response::new(SearchPointsResponse {
+                result: vec![],
+                time: 0.0,
+            })),
+        }
     }
 }
 

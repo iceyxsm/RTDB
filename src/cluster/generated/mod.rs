@@ -8,6 +8,8 @@
 // 2. Run: cargo build --features regenerate-proto
 // 3. Check in the updated files
 
+#![allow(missing_docs)]
+
 // Message types
 pub mod cluster;
 

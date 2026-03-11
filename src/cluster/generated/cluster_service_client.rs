@@ -45,24 +45,8 @@ pub mod cluster_service_client {
             Self { inner }
         }
 
-        pub fn with_interceptor<F>(
-            inner: T,
-            interceptor: F,
-        ) -> ClusterServiceClient<InterceptedService<T, F>>
-        where
-            F: tonic::service::Interceptor,
-            T::ResponseBody: Default,
-            T: tonic::codegen::Service<
-                http::Request<tonic::body::BoxBody>,
-                Response = http::Response<
-                    <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
-                >,
-            >,
-            <T as tonic::codegen::Service<http::Request<tonic::body::BoxBody>>>::Error:
-                Into<StdError> + Send + Sync,
-        {
-            ClusterServiceClient::new(InterceptedService::new(inner, interceptor))
-        }
+        // Note: with_interceptor removed for tonic 0.11 compatibility
+        // Use tower middleware instead
 
         /// Compress requests with the given encoding.
         pub fn send_compressed(mut self, encoding: CompressionEncoding) -> Self {
