@@ -104,7 +104,7 @@
 ## Target Use Cases
 
 | Use Case         | RTDB Fit | Notes                                    |
-|------------------|----------|------------------------------------------|
+|------------------|------------|----------------------------------------|
 | Edge/IoT Devices | ★★★★★    | Small binary, low memory               |
 | Real-time Apps   | ★★★★      | <5ms P99 latency                      |
 | Embedded Systems | ★★★★★    | Zero dependencies                      |

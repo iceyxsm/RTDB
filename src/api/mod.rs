@@ -6,6 +6,7 @@
 //! - Weaviate (GraphQL + REST)
 
 pub mod rest;
+pub mod qdrant_compat;
 #[cfg(feature = "grpc")]
 pub mod grpc;
 
@@ -57,7 +58,9 @@ pub async fn start_all(
     metrics: Arc<MetricsCollector>,
     health: Arc<HealthChecker>,
 ) -> Result<ServerHandle> {
-    // Start observability server in background
+    use crate::observability::server::ObservabilityServer;
+    
+    // Start observability server in background on dedicated port
     let obs_server = ObservabilityServer::new(
         metrics.clone(),
         health.clone(),
@@ -72,12 +75,23 @@ pub async fn start_all(
         .and_then(|p| p.parse().ok())
         .unwrap_or(9090);
     
-    // Start REST server
+    // Start REST server with Qdrant-compatible API
     let rest_handle = tokio::spawn({
         let collections = collections.clone();
         let port = config.http_port;
         async move {
-            if let Err(e) = rest::start_server(port, collections).await {
+            let state = qdrant_compat::QdrantState::new(collections);
+            let app = qdrant_compat::create_qdrant_router(state);
+            
+            let listener = match tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await {
+                Ok(l) => l,
+                Err(e) => {
+                    tracing::error!(error = %e, "Failed to bind REST server");
+                    return;
+                }
+            };
+            
+            if let Err(e) = axum::serve(listener, app).await {
                 tracing::error!(error = %e, "REST server error");
             }
         }
