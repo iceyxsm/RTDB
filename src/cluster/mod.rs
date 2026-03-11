@@ -11,6 +11,8 @@ pub mod raft;
 pub mod raft_transport;
 #[cfg(feature = "grpc")]
 pub mod raft_apply;
+#[cfg(feature = "grpc")]
+pub mod raft_service;
 
 // Pre-generated protobuf code - always available when grpc feature is enabled, no protoc required
 #[cfg(feature = "grpc")]
@@ -37,6 +39,8 @@ pub use storage_router::{StorageRouter, ScoredResult, BatchInsertResult};
 pub use raft_transport::RaftTransport;
 #[cfg(feature = "grpc")]
 pub use raft_apply::{RaftStateMachine, StateMachineCommand};
+#[cfg(feature = "grpc")]
+pub use raft_service::{RaftRuntimeManager, LeaderDiscovery, RaftClusterIntegration, RaftMessageHandler};
 
 use std::sync::Arc;
 use parking_lot::RwLock;
