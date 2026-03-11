@@ -18,6 +18,7 @@ pub mod auth;
 pub mod telemetry;
 pub mod cli;
 pub mod config;
+pub mod observability;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;

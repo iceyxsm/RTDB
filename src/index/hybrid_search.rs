@@ -12,14 +12,16 @@
 //! - Set membership: `status IN ("active", "pending")`
 //! - Boolean: `is_published = true`
 
-use crate::index::vector_index::{SearchResult, StoredVector, VectorIndex};
+use crate::index::vector_index::SearchResult;
+use crate::index::VectorIndex;
+use parking_lot::RwLock;
 use crate::{RTDBError, Result};
 use dashmap::DashMap;
-use parking_lot::RwLock;
+
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
-use tracing::{debug, info, trace};
+use tracing::info;
 
 // ============================================================================
 // Filter Types
@@ -383,9 +385,9 @@ pub enum SearchStrategy {
 }
 
 /// Hybrid search engine combining vector and metadata search
-pub struct HybridSearchEngine {
+pub struct HybridSearchEngine<I: VectorIndex> {
     /// Underlying vector index
-    vector_index: Arc<VectorIndex>,
+    vector_index: Arc<RwLock<I>>,
     /// Metadata index for filtering
     metadata_index: MetadataIndex,
     /// Query cache
@@ -396,8 +398,8 @@ pub struct HybridSearchEngine {
 
 use std::sync::Arc;
 
-impl HybridSearchEngine {
-    pub fn new(vector_index: Arc<VectorIndex>) -> Self {
+impl<I: VectorIndex> HybridSearchEngine<I> {
+    pub fn new(vector_index: Arc<RwLock<I>>) -> Self {
         Self {
             vector_index,
             metadata_index: MetadataIndex::new(),
@@ -408,8 +410,9 @@ impl HybridSearchEngine {
 
     /// Insert vector with metadata
     pub fn insert(&self, id: u64, vector: Vec<f32>, metadata: HashMap<String, String>) -> Result<()> {
-        // Insert into vector index
-        self.vector_index.insert(id, vector, metadata.clone())?;
+        // Insert into vector index using the trait method
+        let v = crate::Vector::with_payload(vector, serde_json::Map::new());
+        self.vector_index.write().add(id as crate::VectorId, &v)?;
         
         // Index metadata
         self.metadata_index.index(id, &metadata);
@@ -421,6 +424,18 @@ impl HybridSearchEngine {
     }
 
     /// Search with optional metadata filter
+    /// Helper to perform vector search using the trait
+    fn do_vector_search(&self, query: &[f32], k: usize) -> Result<Vec<SearchResult>> {
+        use crate::SearchRequest;
+        let request = SearchRequest::new(query.to_vec(), k);
+        let scored = self.vector_index.read().search(&request)?;
+        Ok(scored.into_iter().map(|s| SearchResult {
+            id: s.id,
+            distance: 1.0 - s.score, // Convert score to distance
+            vector: None,
+        }).collect())
+    }
+
     pub fn search(
         &self,
         query: &[f32],
@@ -433,22 +448,23 @@ impl HybridSearchEngine {
             return Ok(cached);
         }
         
+        let filter_ref = filter.as_ref();
         let results = match strategy {
-            SearchStrategy::PreFilter => self.pre_filter_search(query, k, filter),
-            SearchStrategy::PostFilter => self.post_filter_search(query, k, filter),
+            SearchStrategy::PreFilter => self.pre_filter_search(query, k, filter_ref),
+            SearchStrategy::PostFilter => self.post_filter_search(query, k, filter_ref),
             SearchStrategy::Auto => {
                 // Auto-select based on filter selectivity
                 if let Some(ref f) = filter {
                     let selectivity = self.metadata_index.estimate_selectivity(f);
                     if selectivity < 0.1 {
                         // Highly selective, use pre-filter
-                        self.pre_filter_search(query, k, filter)
+                        self.pre_filter_search(query, k, filter_ref)
                     } else {
                         // Not selective, use post-filter
-                        self.post_filter_search(query, k, filter)
+                        self.post_filter_search(query, k, filter_ref)
                     }
                 } else {
-                    self.vector_index.search(query, k)
+                    self.do_vector_search(query, k)
                 }
             }
         }?;
@@ -464,10 +480,10 @@ impl HybridSearchEngine {
         &self,
         query: &[f32],
         k: usize,
-        filter: Option<FilterCondition>,
+        filter: Option<&FilterCondition>,
     ) -> Result<Vec<SearchResult>> {
         let Some(filter) = filter else {
-            return self.vector_index.search(query, k);
+            return self.do_vector_search(query, k);
         };
         
         // Get candidate IDs from metadata index
@@ -480,7 +496,7 @@ impl HybridSearchEngine {
         
         // For now, do brute force search on candidates
         // In production, this would use a filtered vector search
-        let all_results = self.vector_index.search(query, k * 10)?;
+        let all_results = self.do_vector_search(query, k * 10)?;
         
         // Filter to only candidates
         let filtered: Vec<_> = all_results
@@ -497,15 +513,15 @@ impl HybridSearchEngine {
         &self,
         query: &[f32],
         k: usize,
-        filter: Option<FilterCondition>,
+        filter: Option<&FilterCondition>,
     ) -> Result<Vec<SearchResult>> {
         let Some(filter) = filter else {
-            return self.vector_index.search(query, k);
+            return self.do_vector_search(query, k);
         };
         
         // Get more results to allow for filtering
         let search_k = k * 10;
-        let candidates = self.vector_index.search(query, search_k)?;
+        let candidates = self.do_vector_search(query, search_k)?;
         
         // Apply filter
         let mut results = Vec::new();

@@ -12,7 +12,7 @@ rust-version = "1.75"
 
 [features]
 default = []
-grpc = ["tonic", "prost", "dep:async-trait"]
+grpc = ["tonic", "prost", "dep:warp"]
 # Regenerate protobuf code from .proto files (requires protoc)
 regenerate-proto = []
 
@@ -31,7 +31,7 @@ path = "src/lib.rs"
 # Async runtime
 tokio = { version = "1.35", features = ["full", "rt-multi-thread"] }
 tokio-util = { version = "0.7", features = ["codec", "io"] }
-async-trait = { version = "0.1", optional = true }
+async-trait = { version = "0.1" }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -42,6 +42,7 @@ prost-types = "0.12"
 
 # HTTP/gRPC
 axum = { version = "0.7", features = ["http2", "tokio"] }
+warp = { version = "0.3", optional = true }
 tonic = { version = "0.11", features = ["transport", "codegen", "prost"], optional = true }
 tower = { version = "0.4", features = ["full"] }
 hyper = { version = "1.1", features = ["full"] }
@@ -71,6 +72,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 metrics = "0.22"
 metrics-exporter-prometheus = "0.13"
+prometheus = { version = "0.13", features = ["process"] }
 
 # Configuration
 config = { version = "0.14", default-features = false, features = ["yaml"] }

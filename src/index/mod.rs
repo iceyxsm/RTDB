@@ -11,10 +11,16 @@ pub mod learned;
 pub mod quantization;
 pub mod distance;
 pub mod vector_index;
+pub mod hybrid_search;
 
 pub use vector_index::{
     MultiVectorIndex, FlatIndex, HnswIndex, HnswConfig, IvfConfig, PqConfig, IvfPqConfig,
     IndexType, IndexMetrics, SearchResult, StoredVector,
+};
+
+pub use hybrid_search::{
+    HybridSearchEngine, FilterCondition, MetadataIndex, QueryCache, SearchStrategy,
+    CacheStats,
 };
 
 use crate::{Result, ScoredVector, SearchRequest, Vector, VectorId};
