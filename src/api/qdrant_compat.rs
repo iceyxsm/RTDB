@@ -6,6 +6,7 @@
 use axum::{
     extract::{Path, State},
     http::StatusCode,
+    response::IntoResponse,
     routing::{delete, get, post, put},
     Json, Router,
 };
@@ -347,7 +348,7 @@ pub struct CreateIndexRequest {
 
 async fn create_index(
     Path(name): Path<String>,
-    State(state): State<QdrantState>,
+    State(_state): State<QdrantState>,
     Json(_request): Json<CreateIndexRequest>,
 ) -> Json<ApiResponse<bool>> {
     let start = std::time::Instant::now();
@@ -359,7 +360,7 @@ async fn create_index(
 
 async fn delete_index(
     Path((name, field_name)): Path<(String, String)>,
-    State(state): State<QdrantState>,
+    State(_state): State<QdrantState>,
 ) -> Json<ApiResponse<bool>> {
     let start = std::time::Instant::now();
     
@@ -859,9 +860,9 @@ pub struct ScrollResponse {
 }
 
 async fn scroll_points(
-    Path(name): Path<String>,
-    State(state): State<QdrantState>,
-    Json(request): Json<ScrollRequest>,
+    Path(_name): Path<String>,
+    State(_state): State<QdrantState>,
+    Json(_request): Json<ScrollRequest>,
 ) -> Json<ApiResponse<ScrollResponse>> {
     let start = std::time::Instant::now();
     
@@ -1011,7 +1012,7 @@ async fn create_snapshot(
 
 async fn download_snapshot(
     Path((name, snapshot_name)): Path<(String, String)>,
-    State(state): State<QdrantState>,
+    State(_state): State<QdrantState>,
 ) -> impl IntoResponse {
     use axum::body::Body;
     use tokio::fs::File;
@@ -1126,7 +1127,7 @@ async fn download_full_snapshot(
     for collection in collections {
         let snapshots = state.snapshot_manager.list_snapshots(&collection).await;
         if snapshots.iter().any(|s| s.name == snapshot_name) {
-            return download_snapshot(Path((collection, snapshot_name)), State(state)).await.into_response();
+            return download_snapshot(Path((collection, snapshot_name)), State(state.clone())).await.into_response();
         }
     }
     

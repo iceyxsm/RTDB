@@ -7,7 +7,7 @@ use super::raft::types::{Message, MessageType};
 use super::raft::RaftCommand;
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
-use tracing::{error, trace, warn};
+use tracing::{debug, error, trace, warn};
 
 /// Raft runtime manager
 /// 
