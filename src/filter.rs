@@ -6,9 +6,8 @@
 //! - Payload filtering with nested key support
 //! - Optimized evaluation order
 
-use crate::{Condition, FieldCondition, Filter, HasIdCondition, Match, MatchValue, Range, Vector, VectorId};
+use crate::{Condition, FieldCondition, Filter, Match, MatchValue, Range, Vector, VectorId};
 use serde_json::Value;
-use std::collections::HashMap;
 
 /// Filter evaluator for applying filters to vectors
 pub struct FilterEvaluator;
@@ -16,7 +15,7 @@ pub struct FilterEvaluator;
 impl FilterEvaluator {
     /// Apply filter to a vector, returns true if vector matches
     pub fn matches(filter: &Filter, id: VectorId, vector: &Vector) -> bool {
-        let mut result = true;
+        let result = true;
 
         // Evaluate MUST conditions (AND logic)
         if let Some(must) = &filter.must {

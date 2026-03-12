@@ -447,8 +447,8 @@ impl MetricsCollector {
     }
     
     /// Record generic operation with metrics
-    pub fn record_operation(&self, name: &str, duration: Duration, success: bool) {
-        let status = if success { "success" } else { "error" };
+    pub fn record_operation(&self, name: &str, _duration: Duration, success: bool) {
+        let _status = if success { "success" } else { "error" };
         
         // Create operation-specific metrics on first use
         let _ = self.counter(
@@ -459,8 +459,8 @@ impl MetricsCollector {
         });
         
         // Record duration if histogram exists
-        let histogram_name = format!("rtdb_{}_duration_seconds", name);
-        let labels = ["status"];
+        let _histogram_name = format!("rtdb_{}_duration_seconds", name);
+        let _labels = ["status"];
     }
     
     /// Collect system metrics (CPU, memory, etc.)

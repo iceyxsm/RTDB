@@ -12,15 +12,12 @@
 //! - Public endpoint exclusion (health, metrics)
 
 use axum::{
-    extract::{Request, State},
     http::{header, StatusCode},
-    middleware::Next,
     response::{IntoResponse, Response},
     Json,
 };
 use serde_json::json;
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tracing::{debug, warn};
 
@@ -146,7 +143,7 @@ impl AuthContext {
     }
     
     /// Check if user can access collection
-    pub fn can_access_collection(&self, collection: &str) -> bool {
+    pub fn can_access_collection(&self, _collection: &str) -> bool {
         // Admin can access all
         if self.role == Role::Admin {
             return true;

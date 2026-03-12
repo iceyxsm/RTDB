@@ -173,10 +173,10 @@ impl RaftTransport {
     /// Send Raft message via cluster client
     async fn send_raft_message(
         &self,
-        address: &str,
-        to: NodeId,
-        data: Vec<u8>,
-        msg_type: MessageType,
+        _address: &str,
+        _to: NodeId,
+        _data: Vec<u8>,
+        _msg_type: MessageType,
     ) -> crate::Result<()> {
         // Use the cluster client's internal mechanism to send Raft messages
         // This will be implemented via the cluster.proto RaftMessage RPC
@@ -184,19 +184,7 @@ impl RaftTransport {
         // For now, we'll use the existing gRPC client mechanism
         // The actual implementation depends on the generated proto code
         
-        // Convert MessageType to proto message type
-        let proto_msg_type = match msg_type {
-            MessageType::Heartbeat => 0,
-            MessageType::AppendEntries => 1,
-            MessageType::AppendResponse => 2,
-            MessageType::RequestVote => 3,
-            MessageType::VoteResponse => 4,
-            MessageType::RequestPreVote => 5,
-            MessageType::PreVoteResponse => 6,
-            MessageType::InstallSnapshot => 7,
-            MessageType::SnapshotResponse => 8,
-            MessageType::TimeoutNow => 9,
-        };
+        // TODO: Implement actual message sending via gRPC
 
         // TODO: Implement actual gRPC call once proto is updated
         // For now, this is a placeholder that simulates success

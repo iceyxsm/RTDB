@@ -145,7 +145,7 @@ impl MmapVectorStorage {
         
         // For now, scan to find count (look for first zero vector or use stored metadata)
         // In production, this should be stored in a separate metadata file
-        let capacity = mmap.len() / vector_size;
+        let _capacity = mmap.len() / vector_size;
         
         Ok(Self {
             config: MmapStorageConfig {
@@ -274,7 +274,7 @@ impl DiskANNIndex {
         // Start from entry point
         candidates.push((OrderedFloat(0.0), self.entry_point));
         
-        while let Some((dist, node_id)) = candidates.pop() {
+        while let Some((_dist, node_id)) = candidates.pop() {
             if !visited.insert(node_id) {
                 continue;
             }

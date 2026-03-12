@@ -130,14 +130,14 @@ impl<T: Transport, A: Apply> RaftRuntime<T, A> {
                 
                 match raft.propose(data) {
                     Ok(index) => {
-                        let term = raft.term();
+                        let _term = raft.term();
                         self.pending_proposals.push((index, respond_to));
                         
                         // Generate ready immediately
                         drop(raft);
                         self.process_ready().await?;
                     }
-                    Err(e) => {
+                    Err(_e) => {
                         // Not leader - send error
                         let leader_id = raft.leader_id();
                         let _ = respond_to.send(ProposeResult {
@@ -159,7 +159,7 @@ impl<T: Transport, A: Apply> RaftRuntime<T, A> {
                     Ok(_) => {
                         // Will be completed when commit advances
                         let index = raft.commit_index();
-                        let term = raft.term();
+                        let _term = raft.term();
                         self.pending_reads.push((index, respond_to));
                         
                         // Send heartbeats to advance commit
@@ -456,7 +456,7 @@ impl<T: Transport, A: Apply> RaftRuntime<T, A> {
         // Get snapshot data from state machine
         let (index, data) = self.apply.snapshot().await?;
         
-        let mut raft = self.raft.write().await;
+        let raft = self.raft.write().await;
         let conf_state = raft.conf_state().clone();
         drop(raft);
         

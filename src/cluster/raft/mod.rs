@@ -52,7 +52,6 @@ pub use storage::{MemStorage, FileStorage};
 pub use runtime::RaftRuntime;
 
 use tokio::sync::{mpsc, oneshot};
-use tracing::{debug, error, info, warn};
 
 /// Propose a command to the Raft cluster
 #[cfg(feature = "grpc")]

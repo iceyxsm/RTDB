@@ -13,7 +13,6 @@
 
 use opentelemetry::{
     global,
-    propagation::TextMapPropagator,
     trace::TraceContextExt,
     Context, KeyValue,
 };

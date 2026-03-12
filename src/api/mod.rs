@@ -79,7 +79,7 @@ pub async fn start_all(
         .unwrap_or(9090);
     
     // Start REST server with Qdrant-compatible API
-    let rest_handle = tokio::spawn({
+    let _rest_handle = tokio::spawn({
         let collections = collections.clone();
         let port = config.http_port;
         async move {

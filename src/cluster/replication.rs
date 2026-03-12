@@ -38,7 +38,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tracing::{debug, info, trace, warn};
+use tracing::{info, trace};
 
 /// Replication factor for a shard
 pub type ReplicationFactor = usize;
@@ -508,12 +508,6 @@ impl<C: ReplicationClient> WriteCoordinator<C> {
         let mut failed_nodes = Vec::new();
 
         if required_acks > 1 && !followers.is_empty() {
-            // Collect follower info before spawning tasks
-            let follower_infos: Vec<_> = followers
-                .iter()
-                .map(|f| f.node_id.clone())
-                .collect();
-
             // Replicate to followers concurrently
             let mut tasks = Vec::new();
             for follower in followers {
@@ -527,10 +521,8 @@ impl<C: ReplicationClient> WriteCoordinator<C> {
             }
 
             // Wait for acknowledgments
-            let mut completed = 0;
             for task in tasks {
                 let (node_id, result) = task.await;
-                completed += 1;
                 
                 if result.is_ok() {
                     ack_count += 1;

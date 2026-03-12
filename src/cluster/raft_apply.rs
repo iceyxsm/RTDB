@@ -158,10 +158,6 @@ impl RaftStateMachine {
                 // Config changes are handled by the Raft module itself
                 // We just need to persist the new configuration
             }
-            
-            _ => {
-                warn!("Unknown entry type: {:?}", entry.entry_type);
-            }
         }
 
         // Update last applied
@@ -259,7 +255,7 @@ impl RaftStateMachine {
     async fn apply_delete_collection(&self, name: String) -> Result<()> {
         info!(collection = %name, "Deleting collection via Raft");
 
-        let mut collections = self.collections.write().await;
+        let collections = self.collections.write().await;
         collections.delete_collection(&name)?;
         
         info!("Collection {} deleted successfully", name);

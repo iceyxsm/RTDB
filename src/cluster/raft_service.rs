@@ -9,7 +9,7 @@ use super::raft::types::{Message, MessageType};
 use super::raft::RaftCommand;
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
-use tracing::{debug, error, trace, warn};
+use tracing::{debug, trace, warn};
 
 /// Raft runtime manager
 /// 
@@ -233,7 +233,7 @@ impl RaftMessageHandler {
         to: u64,
         term: u64,
         prev_log_index: u64,
-        prev_log_term: u64,
+        _prev_log_term: u64,
         entries: Vec<super::raft::types::LogEntry>,
         leader_commit: u64,
     ) -> Message {
@@ -258,7 +258,7 @@ impl RaftMessageHandler {
         to: u64,
         term: u64,
         last_log_index: u64,
-        last_log_term: u64,
+        _last_log_term: u64,
     ) -> Message {
         Message {
             msg_type: MessageType::RequestVote,

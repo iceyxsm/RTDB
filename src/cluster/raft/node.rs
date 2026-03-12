@@ -426,7 +426,7 @@ impl RaftNode {
         }
         
         // Append new entries
-        let mut entries = msg.entries.clone();
+        let entries = msg.entries.clone();
         if !entries.is_empty() {
             let next_index = msg.index + 1;
             self.truncate_log(next_index);
@@ -691,7 +691,7 @@ impl RaftNode {
         
         for &peer in &self.conf_state.voters {
             if peer != self.config.id {
-                let msg = Message {
+                let _msg = Message {
                     msg_type: MessageType::RequestPreVote,
                     from: self.config.id,
                     to: peer,
@@ -709,12 +709,12 @@ impl RaftNode {
         
         // Vote for self already counted
         let last_index = self.last_index();
-        let last_term = self.last_term();
+        let _last_term = self.last_term();
         
         // Request votes from all peers
         for &peer in &self.conf_state.voters {
             if peer != self.config.id {
-                let msg = Message {
+                let _msg = Message {
                     msg_type: MessageType::RequestVote,
                     from: self.config.id,
                     to: peer,
@@ -835,8 +835,8 @@ impl RaftNode {
     }
     
     fn check_quorum(&mut self) {
-        let now = Instant::now();
-        let active_threshold = self.config.election_timeout_max;
+        let _now = Instant::now();
+        let _active_threshold = self.config.election_timeout_max;
         
         let active_peers = self.progress
             .values()
@@ -890,7 +890,7 @@ impl RaftNode {
                 // Get entries to send
                 let entries = self.get_entries(next_index, self.config.max_msg_size);
                 let prev_index = next_index - 1;
-                let prev_term = self.log_term(prev_index);
+                let _prev_term = self.log_term(prev_index);
                 
                 let msg = Message {
                     msg_type: MessageType::AppendEntries,
@@ -909,7 +909,7 @@ impl RaftNode {
         // Get committed entries to apply
         if self.commit_index > self.last_applied {
             let start = self.last_applied + 1;
-            let end = self.commit_index + 1;
+            let _end = self.commit_index + 1;
             ready.committed_entries = self.get_entries(start, usize::MAX);
             self.last_applied = self.commit_index;
         }

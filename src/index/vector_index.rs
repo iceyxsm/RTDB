@@ -740,7 +740,7 @@ impl MultiVectorIndex {
         &self,
         query: &[f32],
         k: usize,
-        filter: F,
+        _filter: F,
     ) -> Result<Vec<SearchResult>>
     where
         F: Fn(&HashMap<String, String>) -> bool,
@@ -755,7 +755,7 @@ impl MultiVectorIndex {
         let candidates = self.search(query, search_k)?;
 
         // Apply filter
-        let mut results = Vec::new();
+        let _results = Vec::new();
         
         // Note: This is a simplified implementation
         // Real implementation would need access to metadata
