@@ -25,9 +25,7 @@ use parking_lot::RwLock;
 use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-use std::sync::Arc;
-use std::time::{Duration, Instant};
-use tracing::{debug, info, trace, warn};
+use std::time::Instant;
 
 /// Wrapper for f32 that implements Ord using total ordering
 #[derive(Debug, Clone, Copy, PartialEq)]

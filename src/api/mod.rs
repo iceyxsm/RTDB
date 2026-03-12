@@ -12,7 +12,7 @@ pub mod grpc;
 
 use crate::{
     collection::CollectionManager,
-    observability::{MetricsCollector, HealthChecker, server::ObservabilityServer},
+    observability::{MetricsCollector, HealthChecker},
     storage::snapshot::SnapshotManager,
     Result,
 };

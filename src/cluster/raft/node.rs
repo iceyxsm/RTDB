@@ -5,7 +5,7 @@
 
 use super::types::*;
 use crate::{RTDBError, Result};
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, VecDeque};
 use std::time::{Duration, Instant};
 use tracing::{debug, info, trace, warn};
 

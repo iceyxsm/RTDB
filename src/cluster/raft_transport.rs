@@ -13,8 +13,8 @@ use super::raft::Transport;
 use super::ClusterClient;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{mpsc, Mutex};
-use tracing::{debug, error, trace, warn};
+use tokio::sync::mpsc;
+use tracing::{error, trace, warn};
 
 /// gRPC-based Raft transport implementation
 pub struct RaftTransport {

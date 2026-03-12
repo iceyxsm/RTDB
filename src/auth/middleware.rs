@@ -10,7 +10,7 @@ use axum::{
     Extension, Json,
 };
 use std::sync::Arc;
-use tracing::{debug, info, warn};
+use tracing::warn;
 
 use super::{extract_api_key, ApiKeyStore, AuthConfig, AuthContext, AuthError};
 

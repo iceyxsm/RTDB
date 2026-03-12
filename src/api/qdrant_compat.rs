@@ -4,9 +4,8 @@
 //! Reference: https://api.qdrant.tech/
 
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Path, State},
     http::StatusCode,
-    response::{IntoResponse, Response},
     routing::{delete, get, post, put},
     Json, Router,
 };
@@ -14,12 +13,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, warn};
 
 use crate::{
     collection::CollectionManager,
-    storage::snapshot::{SnapshotConfig, SnapshotManager, SnapshotDescription},
-    CollectionConfig, Distance, Result, SearchRequest as CoreSearchRequest,
+    storage::snapshot::{SnapshotManager, SnapshotDescription},
+    CollectionConfig, SearchRequest as CoreSearchRequest,
     SearchParams as CoreSearchParams, UpsertRequest, Vector, VectorId,
 };
 

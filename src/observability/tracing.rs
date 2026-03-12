@@ -12,14 +12,14 @@
 use opentelemetry::{
     global,
     propagation::TextMapPropagator,
-    trace::{TraceContextExt, TraceError},
+    trace::TraceContextExt,
     Context, KeyValue,
 };
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::{
     propagation::TraceContextPropagator,
     runtime,
-    trace::{BatchConfig, RandomIdGenerator, Sampler},
+    trace::{RandomIdGenerator, Sampler},
     Resource,
 };
 use std::collections::HashMap;

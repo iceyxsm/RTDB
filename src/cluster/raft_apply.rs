@@ -17,7 +17,7 @@ use crate::cluster::{NodeInfo, NodeStatus};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, error, info, trace, warn};
+use tracing::{error, info, trace, warn};
 
 /// Commands that can be applied to the state machine
 #[derive(Debug, Clone, Serialize, Deserialize)]

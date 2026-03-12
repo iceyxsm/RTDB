@@ -9,7 +9,7 @@
 //! This enables billion-scale vector search on a single node with limited RAM.
 
 use crate::{RTDBError, Result, Vector};
-use memmap2::{Mmap, MmapMut, MmapOptions};
+use memmap2::{MmapMut, MmapOptions};
 use serde::{Deserialize, Serialize};
 use std::fs::OpenOptions;
 use std::path::Path;

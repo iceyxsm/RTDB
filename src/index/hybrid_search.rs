@@ -21,7 +21,6 @@ use dashmap::DashMap;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
-use tracing::info;
 
 // ============================================================================
 // Filter Types

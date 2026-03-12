@@ -4,9 +4,8 @@
 //! optimized for high-performance distributed vector database workloads.
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::fmt;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 /// Unique identifier for a Raft node
 pub type NodeId = u64;
