@@ -1,4 +1,13 @@
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Always try to generate API proto files when grpc feature is enabled
+    if std::env::var("CARGO_FEATURE_GRPC").is_ok() {
+        if let Err(e) = generate_api_proto() {
+            println!("cargo:warning=Failed to generate API proto files: {}", e);
+            println!("cargo:warning=Using pre-generated proto files if available");
+            println!("cargo:warning=Install protoc to regenerate: https://grpc.io/docs/protoc-installation/");
+        }
+    }
+    
     // Check if we should regenerate protobuf code
     let regenerate = std::env::var("CARGO_FEATURE_REGENERATE_PROTO").is_ok();
     
@@ -13,21 +22,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("cargo:rerun-if-changed=src/cluster/rpc.proto");
     }
     
-    // Always generate API proto files when grpc feature is enabled
-    if std::env::var("CARGO_FEATURE_GRPC").is_ok() {
-        generate_api_proto()?;
-    }
-    
     Ok(())
 }
 
 fn generate_api_proto() -> Result<(), Box<dyn std::error::Error>> {
+    // Create output directory if it doesn't exist
+    std::fs::create_dir_all("src/api/generated")?;
+    
     tonic_build::configure()
         .build_server(true)
         .build_client(false)
         .out_dir("src/api/generated/")
         .compile(
-            &["proto/qdrant.proto"],
+            &[
+                "proto/collections.proto",
+                "proto/points.proto",
+                "proto/qdrant.proto",
+            ],
             &["proto/"],
         )?;
     
