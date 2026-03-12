@@ -298,7 +298,10 @@ pub mod grpc {
             fn keys(&self) -> Vec<&str> {
                 self.metadata
                     .keys()
-                    .filter_map(|k| k.as_str().ok())
+                    .filter_map(|k| match k {
+                        tonic::metadata::KeyRef::Ascii(key) => Some(key.as_str()),
+                        tonic::metadata::KeyRef::Binary(_) => None,
+                    })
                     .collect()
             }
         }

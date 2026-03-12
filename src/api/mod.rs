@@ -108,15 +108,40 @@ pub async fn start_all(
         }
     });
     
-    // gRPC server implementation pending - requires protoc or manual Service trait implementation
-    // The proto definitions and service implementations are ready in src/api/grpc.rs
-    // To enable: install protoc and regenerate, or manually fix Service trait implementation
+    // Start gRPC server with production-grade configuration
     #[cfg(feature = "grpc")]
     let _grpc_handle = tokio::spawn({
-        let _collections = collections.clone();
+        let collections = collections.clone();
         let port = config.grpc_port;
         async move {
-            tracing::info!("gRPC server on port {} (implementation pending)", port);
+            use tonic::transport::Server;
+            use std::time::Duration;
+            
+            let addr = format!("0.0.0.0:{}", port).parse().unwrap();
+            
+            let collections_service = grpc::CollectionsService::new(collections.clone());
+            let points_service = grpc::PointsService::new(collections.clone());
+            
+            let collections_server = grpc::CollectionsServer::new(collections_service);
+            let points_server = grpc::PointsServer::new(points_service);
+            
+            tracing::info!("Starting gRPC server on {}", addr);
+            
+            if let Err(e) = Server::builder()
+                .tcp_keepalive(Some(Duration::from_secs(60)))
+                .tcp_nodelay(true)
+                .concurrency_limit_per_connection(256)
+                .timeout(Duration::from_secs(30))
+                .http2_keepalive_interval(Some(Duration::from_secs(30)))
+                .http2_keepalive_timeout(Some(Duration::from_secs(10)))
+                .http2_adaptive_window(Some(true))
+                .add_service(collections_server)
+                .add_service(points_server)
+                .serve(addr)
+                .await
+            {
+                tracing::error!(error = %e, "gRPC server error");
+            }
         }
     });
     

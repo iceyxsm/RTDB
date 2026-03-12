@@ -108,19 +108,10 @@ pub struct CollectionConfig {
 /// Response for collection operations
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CollectionOperationResponse {
-    #[prost(message, optional, tag = "1")]
-    pub result: ::core::option::Option<CollectionOperationResponseBody>,
+    #[prost(bool, tag = "1")]
+    pub result: bool,
     #[prost(double, tag = "2")]
     pub time: f64,
-}
-
-/// Collection operation result body
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct CollectionOperationResponseBody {
-    #[prost(bool, tag = "1")]
-    pub success: bool,
-    #[prost(string, tag = "2")]
-    pub message: ::prost::alloc::string::String,
 }
 
 // =============================================================================
@@ -238,3 +229,640 @@ pub struct ScoredPoint {
 // Generated client and server code would follow...
 // For brevity, we're including just the message types
 // =============================================================================
+
+// =============================================================================
+// Generated server code (manually added to avoid protoc dependency)
+// =============================================================================
+
+/// Generated server implementations for Collections service
+pub mod collections {
+    #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
+    use tonic::codegen::*;
+    
+    /// Collections service trait
+    #[async_trait]
+    pub trait Collections: Send + Sync + 'static {
+        async fn list(
+            &self,
+            request: tonic::Request<super::ListCollectionsRequest>,
+        ) -> std::result::Result<tonic::Response<super::ListCollectionsResponse>, tonic::Status>;
+        
+        async fn create(
+            &self,
+            request: tonic::Request<super::CreateCollectionRequest>,
+        ) -> std::result::Result<tonic::Response<super::CollectionOperationResponse>, tonic::Status>;
+        
+        async fn delete(
+            &self,
+            request: tonic::Request<super::DeleteCollectionRequest>,
+        ) -> std::result::Result<tonic::Response<super::CollectionOperationResponse>, tonic::Status>;
+        
+        async fn get(
+            &self,
+            request: tonic::Request<super::GetCollectionRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetCollectionResponse>, tonic::Status>;
+    }
+    
+    /// Collections server
+    #[derive(Debug)]
+    pub struct CollectionsServer<T: Collections> {
+        inner: Arc<T>,
+        accept_compression_encodings: EnabledCompressionEncodings,
+        send_compression_encodings: EnabledCompressionEncodings,
+        max_decoding_message_size: Option<usize>,
+        max_encoding_message_size: Option<usize>,
+    }
+    
+    impl<T: Collections> CollectionsServer<T> {
+        pub fn new(inner: T) -> Self {
+            Self::from_arc(Arc::new(inner))
+        }
+        
+        pub fn from_arc(inner: Arc<T>) -> Self {
+            Self {
+                inner,
+                accept_compression_encodings: Default::default(),
+                send_compression_encodings: Default::default(),
+                max_decoding_message_size: None,
+                max_encoding_message_size: None,
+            }
+        }
+        
+        pub fn with_interceptor<F>(inner: T, interceptor: F) -> InterceptedService<Self, F>
+        where
+            F: tonic::service::Interceptor,
+        {
+            InterceptedService::new(Self::new(inner), interceptor)
+        }
+    }
+    
+    impl<T: Collections> Clone for CollectionsServer<T> {
+        fn clone(&self) -> Self {
+            let inner = self.inner.clone();
+            Self {
+                inner,
+                accept_compression_encodings: self.accept_compression_encodings,
+                send_compression_encodings: self.send_compression_encodings,
+                max_decoding_message_size: self.max_decoding_message_size,
+                max_encoding_message_size: self.max_encoding_message_size,
+            }
+        }
+    }
+    
+    impl<T: Collections> tonic::server::NamedService for CollectionsServer<T> {
+        const NAME: &'static str = "rtdb.Collections";
+    }
+    
+    impl<T, B> Service<http::Request<B>> for CollectionsServer<T>
+    where
+        T: Collections,
+        B: Body + Send + 'static,
+        B::Error: Into<StdError> + Send + 'static,
+    {
+        type Response = http::Response<tonic::body::BoxBody>;
+        type Error = std::convert::Infallible;
+        type Future = BoxFuture<Self::Response, Self::Error>;
+        
+        fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<std::result::Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+        
+        fn call(&mut self, req: http::Request<B>) -> Self::Future {
+            let inner = self.inner.clone();
+            match req.uri().path() {
+                "/rtdb.Collections/List" => {
+                    #[allow(non_camel_case_types)]
+                    struct ListSvc<T: Collections>(pub Arc<T>);
+                    impl<T: Collections> tonic::server::UnaryService<super::ListCollectionsRequest> for ListSvc<T> {
+                        type Response = super::ListCollectionsResponse;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(&mut self, request: tonic::Request<super::ListCollectionsRequest>) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move { inner.list(request).await };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = ListSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(accept_compression_encodings, send_compression_encodings)
+                            .apply_max_message_size_config(max_decoding_message_size, max_encoding_message_size);
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/rtdb.Collections/Create" => {
+                    #[allow(non_camel_case_types)]
+                    struct CreateSvc<T: Collections>(pub Arc<T>);
+                    impl<T: Collections> tonic::server::UnaryService<super::CreateCollectionRequest> for CreateSvc<T> {
+                        type Response = super::CollectionOperationResponse;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(&mut self, request: tonic::Request<super::CreateCollectionRequest>) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move { inner.create(request).await };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = CreateSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(accept_compression_encodings, send_compression_encodings)
+                            .apply_max_message_size_config(max_decoding_message_size, max_encoding_message_size);
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/rtdb.Collections/Delete" => {
+                    #[allow(non_camel_case_types)]
+                    struct DeleteSvc<T: Collections>(pub Arc<T>);
+                    impl<T: Collections> tonic::server::UnaryService<super::DeleteCollectionRequest> for DeleteSvc<T> {
+                        type Response = super::CollectionOperationResponse;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(&mut self, request: tonic::Request<super::DeleteCollectionRequest>) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move { inner.delete(request).await };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = DeleteSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(accept_compression_encodings, send_compression_encodings)
+                            .apply_max_message_size_config(max_decoding_message_size, max_encoding_message_size);
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/rtdb.Collections/Get" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetSvc<T: Collections>(pub Arc<T>);
+                    impl<T: Collections> tonic::server::UnaryService<super::GetCollectionRequest> for GetSvc<T> {
+                        type Response = super::GetCollectionResponse;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(&mut self, request: tonic::Request<super::GetCollectionRequest>) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move { inner.get(request).await };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(accept_compression_encodings, send_compression_encodings)
+                            .apply_max_message_size_config(max_decoding_message_size, max_encoding_message_size);
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                _ => {
+                    Box::pin(async move {
+                        Ok(http::Response::builder()
+                            .status(200)
+                            .header("grpc-status", "12")
+                            .header("content-type", "application/grpc")
+                            .body(empty_body())
+                            .unwrap())
+                    })
+                }
+            }
+        }
+    }
+}
+
+/// Generated server implementations for Points service
+pub mod points {
+    #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
+    use tonic::codegen::*;
+    
+    /// Points service trait
+    #[async_trait]
+    pub trait Points: Send + Sync + 'static {
+        async fn upsert(
+            &self,
+            request: tonic::Request<super::UpsertPointsRequest>,
+        ) -> std::result::Result<tonic::Response<super::PointsOperationResponse>, tonic::Status>;
+        
+        async fn delete(
+            &self,
+            request: tonic::Request<super::DeletePointsRequest>,
+        ) -> std::result::Result<tonic::Response<super::PointsOperationResponse>, tonic::Status>;
+        
+        async fn get(
+            &self,
+            request: tonic::Request<super::GetPointsRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetPointsResponse>, tonic::Status>;
+        
+        async fn search(
+            &self,
+            request: tonic::Request<super::SearchPointsRequest>,
+        ) -> std::result::Result<tonic::Response<super::SearchPointsResponse>, tonic::Status>;
+    }
+    
+    /// Points server
+    #[derive(Debug)]
+    pub struct PointsServer<T: Points> {
+        inner: Arc<T>,
+        accept_compression_encodings: EnabledCompressionEncodings,
+        send_compression_encodings: EnabledCompressionEncodings,
+        max_decoding_message_size: Option<usize>,
+        max_encoding_message_size: Option<usize>,
+    }
+    
+    impl<T: Points> PointsServer<T> {
+        pub fn new(inner: T) -> Self {
+            Self::from_arc(Arc::new(inner))
+        }
+        
+        pub fn from_arc(inner: Arc<T>) -> Self {
+            Self {
+                inner,
+                accept_compression_encodings: Default::default(),
+                send_compression_encodings: Default::default(),
+                max_decoding_message_size: None,
+                max_encoding_message_size: None,
+            }
+        }
+        
+        pub fn with_interceptor<F>(inner: T, interceptor: F) -> InterceptedService<Self, F>
+        where
+            F: tonic::service::Interceptor,
+        {
+            InterceptedService::new(Self::new(inner), interceptor)
+        }
+    }
+    
+    impl<T: Points> Clone for PointsServer<T> {
+        fn clone(&self) -> Self {
+            let inner = self.inner.clone();
+            Self {
+                inner,
+                accept_compression_encodings: self.accept_compression_encodings,
+                send_compression_encodings: self.send_compression_encodings,
+                max_decoding_message_size: self.max_decoding_message_size,
+                max_encoding_message_size: self.max_encoding_message_size,
+            }
+        }
+    }
+    
+    impl<T: Points> tonic::server::NamedService for PointsServer<T> {
+        const NAME: &'static str = "rtdb.Points";
+    }
+    
+    impl<T, B> Service<http::Request<B>> for PointsServer<T>
+    where
+        T: Points,
+        B: Body + Send + 'static,
+        B::Error: Into<StdError> + Send + 'static,
+    {
+        type Response = http::Response<tonic::body::BoxBody>;
+        type Error = std::convert::Infallible;
+        type Future = BoxFuture<Self::Response, Self::Error>;
+        
+        fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<std::result::Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+        
+        fn call(&mut self, req: http::Request<B>) -> Self::Future {
+            let inner = self.inner.clone();
+            match req.uri().path() {
+                "/rtdb.Points/Upsert" => {
+                    #[allow(non_camel_case_types)]
+                    struct UpsertSvc<T: Points>(pub Arc<T>);
+                    impl<T: Points> tonic::server::UnaryService<super::UpsertPointsRequest> for UpsertSvc<T> {
+                        type Response = super::PointsOperationResponse;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(&mut self, request: tonic::Request<super::UpsertPointsRequest>) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move { inner.upsert(request).await };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = UpsertSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(accept_compression_encodings, send_compression_encodings)
+                            .apply_max_message_size_config(max_decoding_message_size, max_encoding_message_size);
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/rtdb.Points/Delete" => {
+                    #[allow(non_camel_case_types)]
+                    struct DeleteSvc<T: Points>(pub Arc<T>);
+                    impl<T: Points> tonic::server::UnaryService<super::DeletePointsRequest> for DeleteSvc<T> {
+                        type Response = super::PointsOperationResponse;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(&mut self, request: tonic::Request<super::DeletePointsRequest>) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move { inner.delete(request).await };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = DeleteSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(accept_compression_encodings, send_compression_encodings)
+                            .apply_max_message_size_config(max_decoding_message_size, max_encoding_message_size);
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/rtdb.Points/Get" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetSvc<T: Points>(pub Arc<T>);
+                    impl<T: Points> tonic::server::UnaryService<super::GetPointsRequest> for GetSvc<T> {
+                        type Response = super::GetPointsResponse;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(&mut self, request: tonic::Request<super::GetPointsRequest>) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move { inner.get(request).await };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(accept_compression_encodings, send_compression_encodings)
+                            .apply_max_message_size_config(max_decoding_message_size, max_encoding_message_size);
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/rtdb.Points/Search" => {
+                    #[allow(non_camel_case_types)]
+                    struct SearchSvc<T: Points>(pub Arc<T>);
+                    impl<T: Points> tonic::server::UnaryService<super::SearchPointsRequest> for SearchSvc<T> {
+                        type Response = super::SearchPointsResponse;
+                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+                        fn call(&mut self, request: tonic::Request<super::SearchPointsRequest>) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move { inner.search(request).await };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = SearchSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(accept_compression_encodings, send_compression_encodings)
+                            .apply_max_message_size_config(max_decoding_message_size, max_encoding_message_size);
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                _ => {
+                    Box::pin(async move {
+                        Ok(http::Response::builder()
+                            .status(200)
+                            .header("grpc-status", "12")
+                            .header("content-type", "application/grpc")
+                            .body(empty_body())
+                            .unwrap())
+                    })
+                }
+            }
+        }
+    }
+}
+
+
+// =============================================================================
+// Generated client code
+// =============================================================================
+
+/// Generated client implementations for Collections service
+pub mod collections_client {
+    #![allow(unused_variables, dead_code, missing_docs)]
+    use tonic::codegen::*;
+    
+    #[derive(Debug, Clone)]
+    pub struct CollectionsClient<T> {
+        inner: tonic::client::Grpc<T>,
+    }
+    
+    impl CollectionsClient<tonic::transport::Channel> {
+        pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
+        where
+            D: TryInto<tonic::transport::Endpoint>,
+            D::Error: Into<StdError>,
+        {
+            let conn = tonic::transport::Endpoint::new(dst)?.connect().await?;
+            Ok(Self::new(conn))
+        }
+    }
+    
+    impl<T> CollectionsClient<T>
+    where
+        T: tonic::client::GrpcService<tonic::body::BoxBody>,
+        T::Error: Into<StdError>,
+        T::ResponseBody: Body<Data = Bytes> + Send + 'static,
+        <T::ResponseBody as Body>::Error: Into<StdError> + Send,
+    {
+        pub fn new(inner: T) -> Self {
+            let inner = tonic::client::Grpc::new(inner);
+            Self { inner }
+        }
+        
+        pub async fn list(
+            &mut self,
+            request: impl tonic::IntoRequest<super::ListCollectionsRequest>,
+        ) -> std::result::Result<tonic::Response<super::ListCollectionsResponse>, tonic::Status> {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(tonic::Code::Unknown, format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static("/rtdb.Collections/List");
+            let mut req = request.into_request();
+            req.extensions_mut().insert(GrpcMethod::new("rtdb.Collections", "List"));
+            self.inner.unary(req, path, codec).await
+        }
+        
+        pub async fn create(
+            &mut self,
+            request: impl tonic::IntoRequest<super::CreateCollectionRequest>,
+        ) -> std::result::Result<tonic::Response<super::CollectionOperationResponse>, tonic::Status> {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(tonic::Code::Unknown, format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static("/rtdb.Collections/Create");
+            let mut req = request.into_request();
+            req.extensions_mut().insert(GrpcMethod::new("rtdb.Collections", "Create"));
+            self.inner.unary(req, path, codec).await
+        }
+        
+        pub async fn delete(
+            &mut self,
+            request: impl tonic::IntoRequest<super::DeleteCollectionRequest>,
+        ) -> std::result::Result<tonic::Response<super::CollectionOperationResponse>, tonic::Status> {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(tonic::Code::Unknown, format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static("/rtdb.Collections/Delete");
+            let mut req = request.into_request();
+            req.extensions_mut().insert(GrpcMethod::new("rtdb.Collections", "Delete"));
+            self.inner.unary(req, path, codec).await
+        }
+        
+        pub async fn get(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetCollectionRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetCollectionResponse>, tonic::Status> {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(tonic::Code::Unknown, format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static("/rtdb.Collections/Get");
+            let mut req = request.into_request();
+            req.extensions_mut().insert(GrpcMethod::new("rtdb.Collections", "Get"));
+            self.inner.unary(req, path, codec).await
+        }
+    }
+}
+
+/// Generated client implementations for Points service
+pub mod points_client {
+    #![allow(unused_variables, dead_code, missing_docs)]
+    use tonic::codegen::*;
+    
+    #[derive(Debug, Clone)]
+    pub struct PointsClient<T> {
+        inner: tonic::client::Grpc<T>,
+    }
+    
+    impl PointsClient<tonic::transport::Channel> {
+        pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
+        where
+            D: TryInto<tonic::transport::Endpoint>,
+            D::Error: Into<StdError>,
+        {
+            let conn = tonic::transport::Endpoint::new(dst)?.connect().await?;
+            Ok(Self::new(conn))
+        }
+    }
+    
+    impl<T> PointsClient<T>
+    where
+        T: tonic::client::GrpcService<tonic::body::BoxBody>,
+        T::Error: Into<StdError>,
+        T::ResponseBody: Body<Data = Bytes> + Send + 'static,
+        <T::ResponseBody as Body>::Error: Into<StdError> + Send,
+    {
+        pub fn new(inner: T) -> Self {
+            let inner = tonic::client::Grpc::new(inner);
+            Self { inner }
+        }
+        
+        pub async fn upsert(
+            &mut self,
+            request: impl tonic::IntoRequest<super::UpsertPointsRequest>,
+        ) -> std::result::Result<tonic::Response<super::PointsOperationResponse>, tonic::Status> {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(tonic::Code::Unknown, format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static("/rtdb.Points/Upsert");
+            let mut req = request.into_request();
+            req.extensions_mut().insert(GrpcMethod::new("rtdb.Points", "Upsert"));
+            self.inner.unary(req, path, codec).await
+        }
+        
+        pub async fn delete(
+            &mut self,
+            request: impl tonic::IntoRequest<super::DeletePointsRequest>,
+        ) -> std::result::Result<tonic::Response<super::PointsOperationResponse>, tonic::Status> {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(tonic::Code::Unknown, format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static("/rtdb.Points/Delete");
+            let mut req = request.into_request();
+            req.extensions_mut().insert(GrpcMethod::new("rtdb.Points", "Delete"));
+            self.inner.unary(req, path, codec).await
+        }
+        
+        pub async fn get(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetPointsRequest>,
+        ) -> std::result::Result<tonic::Response<super::GetPointsResponse>, tonic::Status> {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(tonic::Code::Unknown, format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static("/rtdb.Points/Get");
+            let mut req = request.into_request();
+            req.extensions_mut().insert(GrpcMethod::new("rtdb.Points", "Get"));
+            self.inner.unary(req, path, codec).await
+        }
+        
+        pub async fn search(
+            &mut self,
+            request: impl tonic::IntoRequest<super::SearchPointsRequest>,
+        ) -> std::result::Result<tonic::Response<super::SearchPointsResponse>, tonic::Status> {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(tonic::Code::Unknown, format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static("/rtdb.Points/Search");
+            let mut req = request.into_request();
+            req.extensions_mut().insert(GrpcMethod::new("rtdb.Points", "Search"));
+            self.inner.unary(req, path, codec).await
+        }
+    }
+}
