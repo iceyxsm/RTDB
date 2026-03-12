@@ -106,6 +106,8 @@ rand = "0.8"
 ordered-float = "4.2"
 serde_yaml = { version = "0.9.34", default-features = false }
 num_cpus = "1.17.0"
+sha2 = "0.10"
+zstd = "0.13"
 
 [dev-dependencies]
 tokio-test = "0.4"

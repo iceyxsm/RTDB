@@ -21,6 +21,7 @@ pub mod config;
 pub mod observability;
 pub mod distance;
 pub mod quantization;
+pub mod filter;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;

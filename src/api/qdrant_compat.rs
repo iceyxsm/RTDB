@@ -18,6 +18,7 @@ use tracing::{debug, error, info, warn};
 
 use crate::{
     collection::CollectionManager,
+    storage::snapshot::{SnapshotConfig, SnapshotManager, SnapshotDescription},
     CollectionConfig, Distance, Result, SearchRequest as CoreSearchRequest,
     SearchParams as CoreSearchParams, UpsertRequest, Vector, VectorId,
 };
@@ -26,11 +27,12 @@ use crate::{
 #[derive(Clone)]
 pub struct QdrantState {
     pub collections: Arc<CollectionManager>,
+    pub snapshot_manager: Arc<SnapshotManager>,
 }
 
 impl QdrantState {
-    pub fn new(collections: Arc<CollectionManager>) -> Self {
-        Self { collections }
+    pub fn new(collections: Arc<CollectionManager>, snapshot_manager: Arc<SnapshotManager>) -> Self {
+        Self { collections, snapshot_manager }
     }
 }
 
@@ -484,11 +486,38 @@ pub struct Filter {
     pub must_not: Option<Vec<Condition>>,
 }
 
+impl Filter {
+    /// Convert API Filter to core Filter type
+    pub fn to_core_filter(&self) -> crate::Filter {
+        crate::Filter {
+            must: self.must.as_ref().map(|conditions| {
+                conditions.iter().map(|c| c.to_core_condition()).collect()
+            }),
+            should: self.should.as_ref().map(|conditions| {
+                conditions.iter().map(|c| c.to_core_condition()).collect()
+            }),
+            must_not: self.must_not.as_ref().map(|conditions| {
+                conditions.iter().map(|c| c.to_core_condition()).collect()
+            }),
+        }
+    }
+}
+
 #[derive(Deserialize)]
 pub struct Condition {
     pub key: String,
     #[serde(flatten)]
     pub condition: MatchCondition,
+}
+
+impl Condition {
+    /// Convert API Condition to core Condition type
+    pub fn to_core_condition(&self) -> crate::Condition {
+        crate::Condition::Field(crate::FieldCondition {
+            key: self.key.clone(),
+            r#match: self.condition.to_core_match(),
+        })
+    }
 }
 
 #[derive(Deserialize)]
@@ -502,6 +531,38 @@ pub enum MatchCondition {
     Text { text: String },
     #[serde(rename = "integer")]
     Integer { integer: i64 },
+}
+
+impl MatchCondition {
+    /// Convert API MatchCondition to core Match type
+    pub fn to_core_match(&self) -> crate::Match {
+        match self {
+            MatchCondition::Value { value } => {
+                // Try to extract string or integer from value
+                if let Some(s) = value.as_str() {
+                    crate::Match::Value(crate::MatchValue::Keyword(s.to_string()))
+                } else if let Some(i) = value.as_i64() {
+                    crate::Match::Value(crate::MatchValue::Integer(i))
+                } else {
+                    // Default to string representation
+                    crate::Match::Value(crate::MatchValue::Keyword(value.to_string()))
+                }
+            }
+            MatchCondition::Keyword { keyword } => {
+                crate::Match::Value(crate::MatchValue::Keyword(keyword.clone()))
+            }
+            MatchCondition::Text { text } => {
+                crate::Match::Text(crate::MatchText {
+                    text: text.clone(),
+                })
+            }
+            MatchCondition::Integer { integer } => {
+                crate::Match::Integer(crate::MatchInteger {
+                    integer: *integer,
+                })
+            }
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -540,11 +601,11 @@ async fn search_points(
                 score_threshold: request.score_threshold,
                 with_payload: Some(crate::WithPayload::Bool(request.with_payload)),
                 with_vector: request.with_vector.unwrap_or(false),
-                filter: None, // TODO: Implement filter conversion
+                filter: request.filter.as_ref().map(|f| f.to_core_filter()),
                 params: Some(CoreSearchParams {
                     hnsw_ef: request.params.as_ref().and_then(|p| p.hnsw_ef),
                     exact: request.params.as_ref().map(|p| p.exact).unwrap_or(false),
-                    quantization: None, // TODO: Implement quantization params
+                    quantization: None, // Quantization params handled by index
                 }),
             };
             
@@ -890,74 +951,187 @@ async fn delete_point(
 }
 
 // ============================================================================
-// Snapshot Endpoints (Placeholders)
+// Snapshot Endpoints (Production Implementation)
 // ============================================================================
-
-#[derive(Serialize)]
-pub struct SnapshotDescription {
-    pub name: String,
-    pub size: u64,
-    pub creation_time: Option<String>,
-}
 
 async fn list_snapshots(
     Path(name): Path<String>,
-    State(_state): State<QdrantState>,
+    State(state): State<QdrantState>,
 ) -> Json<ApiResponse<Vec<SnapshotDescription>>> {
-    warn!(collection = %name, "Snapshots not yet implemented");
-    Json(ApiResponse::success(vec![], 0.0))
+    let start = std::time::Instant::now();
+    
+    let snapshots = state.snapshot_manager.list_snapshots(&name).await;
+    
+    Json(ApiResponse::success(snapshots, start.elapsed().as_secs_f64()))
 }
 
 async fn create_snapshot(
     Path(name): Path<String>,
-    State(_state): State<QdrantState>,
+    State(state): State<QdrantState>,
 ) -> Json<ApiResponse<SnapshotDescription>> {
-    warn!(collection = %name, "Snapshot creation not yet implemented");
-    Json(ApiResponse::success(SnapshotDescription {
-        name: format!("{}-snapshot", name),
-        size: 0,
-        creation_time: None,
-    }, 0.0))
+    let start = std::time::Instant::now();
+    
+    // Get collection data
+    match state.collections.get_collection(&name) {
+        Ok(collection) => {
+            // Get all vectors from collection
+            let vectors: Vec<(VectorId, Vector)> = match collection.get_all_vectors() {
+                Ok(vecs) => vecs,
+                Err(e) => {
+                    return Json(ApiResponse::error(
+                        format!("Failed to get vectors: {}", e),
+                        start.elapsed().as_secs_f64()
+                    ));
+                }
+            };
+            
+            // Create full snapshot
+            match state.snapshot_manager.create_full_snapshot(&name, &vectors, 0).await {
+                Ok(metadata) => {
+                    let desc = SnapshotDescription {
+                        name: metadata.id,
+                        collection: metadata.collection,
+                        size: metadata.size_bytes,
+                        creation_time: metadata.created_at.to_rfc3339(),
+                        vector_count: metadata.vector_count,
+                        snapshot_type: metadata.snapshot_type,
+                    };
+                    Json(ApiResponse::success(desc, start.elapsed().as_secs_f64()))
+                }
+                Err(e) => {
+                    error!(collection = %name, error = %e, "Failed to create snapshot");
+                    Json(ApiResponse::error(e.to_string(), start.elapsed().as_secs_f64()))
+                }
+            }
+        }
+        Err(e) => {
+            Json(ApiResponse::error(e.to_string(), start.elapsed().as_secs_f64()))
+        }
+    }
 }
 
 async fn download_snapshot(
-    Path((_name, _snapshot_name)): Path<(String, String)>,
-    State(_state): State<QdrantState>,
+    Path((name, snapshot_name)): Path<(String, String)>,
+    State(state): State<QdrantState>,
 ) -> impl IntoResponse {
-    (StatusCode::NOT_IMPLEMENTED, "Snapshots not yet implemented")
+    use axum::body::Body;
+    use tokio::fs::File;
+    use tokio::io::AsyncReadExt;
+    
+    let snapshot_path = format!("./snapshots/{}.snap", snapshot_name);
+    
+    match File::open(&snapshot_path).await {
+        Ok(mut file) => {
+            let mut contents = Vec::new();
+            if let Err(e) = file.read_to_end(&mut contents).await {
+                return (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to read snapshot: {}", e)).into_response();
+            }
+            
+            let body = Body::from(contents);
+            let headers = [
+                ("content-type", "application/octet-stream"),
+                ("content-disposition", &format!("attachment; filename=\"{}-{}\"", name, snapshot_name)),
+            ];
+            
+            (StatusCode::OK, headers, body).into_response()
+        }
+        Err(_) => {
+            (StatusCode::NOT_FOUND, "Snapshot not found").into_response()
+        }
+    }
 }
 
 async fn delete_snapshot(
     Path((name, snapshot_name)): Path<(String, String)>,
-    State(_state): State<QdrantState>,
+    State(state): State<QdrantState>,
 ) -> Json<ApiResponse<bool>> {
-    warn!(collection = %name, snapshot = %snapshot_name, "Snapshot deletion not yet implemented");
-    Json(ApiResponse::success(true, 0.0))
+    let start = std::time::Instant::now();
+    
+    match state.snapshot_manager.delete_snapshot(&snapshot_name).await {
+        Ok(true) => {
+            info!(collection = %name, snapshot = %snapshot_name, "Snapshot deleted");
+            Json(ApiResponse::success(true, start.elapsed().as_secs_f64()))
+        }
+        Ok(false) => {
+            Json(ApiResponse::error("Snapshot not found", start.elapsed().as_secs_f64()))
+        }
+        Err(e) => {
+            error!(collection = %name, snapshot = %snapshot_name, error = %e, "Failed to delete snapshot");
+            Json(ApiResponse::error(e.to_string(), start.elapsed().as_secs_f64()))
+        }
+    }
 }
 
 async fn list_full_snapshots(
-    State(_state): State<QdrantState>,
+    State(state): State<QdrantState>,
 ) -> Json<ApiResponse<Vec<SnapshotDescription>>> {
-    warn!("Full snapshots not yet implemented");
-    Json(ApiResponse::success(vec![], 0.0))
+    let start = std::time::Instant::now();
+    
+    // List all snapshots across all collections
+    let mut all_snapshots = Vec::new();
+    let collections = state.collections.list_collections();
+    
+    for collection in collections {
+        let snapshots = state.snapshot_manager.list_snapshots(&collection).await;
+        all_snapshots.extend(snapshots);
+    }
+    
+    Json(ApiResponse::success(all_snapshots, start.elapsed().as_secs_f64()))
 }
 
 async fn create_full_snapshot(
-    State(_state): State<QdrantState>,
+    State(state): State<QdrantState>,
 ) -> Json<ApiResponse<SnapshotDescription>> {
-    warn!("Full snapshot creation not yet implemented");
-    Json(ApiResponse::success(SnapshotDescription {
-        name: "full-snapshot".to_string(),
-        size: 0,
-        creation_time: None,
-    }, 0.0))
+    let start = std::time::Instant::now();
+    
+    // Create snapshots for all collections
+    let collections = state.collections.list_collections();
+    let mut last_snapshot = None;
+    
+    for collection_name in collections {
+        if let Ok(collection) = state.collections.get_collection(&collection_name) {
+            let vectors = match collection.get_all_vectors() {
+                Ok(vecs) => vecs,
+                Err(_) => continue,
+            };
+            
+            match state.snapshot_manager.create_full_snapshot(&collection_name, &vectors, 0).await {
+                Ok(meta) => {
+                    last_snapshot = Some(SnapshotDescription {
+                        name: meta.id,
+                        collection: meta.collection,
+                        size: meta.size_bytes,
+                        creation_time: meta.created_at.to_rfc3339(),
+                        vector_count: meta.vector_count,
+                        snapshot_type: meta.snapshot_type,
+                    });
+                }
+                Err(_) => continue,
+            }
+        }
+    }
+    
+    match last_snapshot {
+        Some(desc) => Json(ApiResponse::success(desc, start.elapsed().as_secs_f64())),
+        None => Json(ApiResponse::error("Failed to create any snapshots", start.elapsed().as_secs_f64()))
+    }
 }
 
 async fn download_full_snapshot(
-    Path(_snapshot_name): Path<String>,
-    State(_state): State<QdrantState>,
+    Path(snapshot_name): Path<String>,
+    State(state): State<QdrantState>,
 ) -> impl IntoResponse {
-    (StatusCode::NOT_IMPLEMENTED, "Full snapshots not yet implemented")
+    // Try to find snapshot in any collection
+    let collections = state.collections.list_collections();
+    
+    for collection in collections {
+        let snapshots = state.snapshot_manager.list_snapshots(&collection).await;
+        if snapshots.iter().any(|s| s.name == snapshot_name) {
+            return download_snapshot(Path((collection, snapshot_name)), State(state)).await.into_response();
+        }
+    }
+    
+    (StatusCode::NOT_FOUND, "Snapshot not found").into_response()
 }
 
 

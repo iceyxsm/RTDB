@@ -13,6 +13,7 @@ pub mod grpc;
 use crate::{
     collection::CollectionManager,
     observability::{MetricsCollector, HealthChecker, server::ObservabilityServer},
+    storage::snapshot::SnapshotManager,
     Result,
 };
 use std::sync::Arc;
@@ -80,7 +81,17 @@ pub async fn start_all(
         let collections = collections.clone();
         let port = config.http_port;
         async move {
-            let state = qdrant_compat::QdrantState::new(collections);
+            // Create snapshot manager
+            let snapshot_config = crate::storage::snapshot::SnapshotConfig::default();
+            let snapshot_manager = match SnapshotManager::new(snapshot_config) {
+                Ok(manager) => Arc::new(manager),
+                Err(e) => {
+                    tracing::error!(error = %e, "Failed to create snapshot manager");
+                    return;
+                }
+            };
+            
+            let state = qdrant_compat::QdrantState::new(collections, snapshot_manager);
             let app = qdrant_compat::create_qdrant_router(state);
             
             let listener = match tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await {

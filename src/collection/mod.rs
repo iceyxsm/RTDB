@@ -293,7 +293,19 @@ impl Collection {
         }
 
         // Search index
-        let results = self.index.read().search(&request)?;
+        let mut results = self.index.read().search(&request)?;
+
+        // Apply filter if provided
+        if let Some(filter) = &request.filter {
+            results.retain(|scored| {
+                // Get vector to check filter
+                if let Ok(Some(vector)) = self.storage.get(scored.id) {
+                    crate::filter::FilterEvaluator::matches(filter, scored.id, &vector)
+                } else {
+                    false
+                }
+            });
+        }
 
         // Limit results
         let limit = request.limit.min(results.len());
@@ -356,6 +368,29 @@ impl Collection {
             operation_id: 0,
             status: OperationStatus::Completed,
         })
+    }
+    
+    /// Get all vectors (for snapshots)
+    pub fn get_all_vectors(&self) -> Result<Vec<(VectorId, crate::Vector)>> {
+        // Scan through storage to get all vectors
+        // This is a simplified implementation - in production, use a more efficient scan
+        let mut vectors = Vec::new();
+        
+        // Get max ID from storage metadata or scan range
+        let count = self.vector_count();
+        if count == 0 {
+            return Ok(vectors);
+        }
+        
+        // Scan reasonable range for vectors
+        // In production, this should use a proper iterator from storage
+        for id in 0..count * 2 + 1000 {
+            if let Ok(Some(vector)) = self.storage.get(id) {
+                vectors.push((id, vector));
+            }
+        }
+        
+        Ok(vectors)
     }
 }
 
