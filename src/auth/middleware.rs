@@ -2,6 +2,8 @@
 //!
 //! Axum middleware for API key authentication and RBAC enforcement.
 
+#![allow(missing_docs)]
+
 use axum::{
     extract::{Request, State},
     http::StatusCode,
@@ -142,11 +144,14 @@ fn get_permissions_for_role(role: super::rbac::Role) -> Vec<String> {
 /// Auth state bundle for middleware
 #[derive(Clone)]
 pub struct AuthState {
+    /// Authentication configuration
     pub config: AuthConfig,
+    /// API key storage
     pub key_store: Arc<ApiKeyStore>,
 }
 
 impl AuthState {
+    /// Create a new AuthState
     pub fn new(config: AuthConfig, key_store: Arc<ApiKeyStore>) -> Self {
         Self { config, key_store }
     }

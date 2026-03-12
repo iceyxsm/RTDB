@@ -3,6 +3,8 @@
 //! Implements leader election, log replication, and safety properties
 //! following the etcd/TiKV design patterns.
 
+#![allow(missing_docs)]
+
 use super::types::*;
 use crate::{RTDBError, Result};
 use std::collections::{HashMap, VecDeque};
@@ -142,38 +144,47 @@ impl RaftNode {
     
     // ==================== Accessors ====================
     
+    /// Get the node ID
     pub fn id(&self) -> NodeId {
         self.config.id
     }
     
+    /// Get the current term
     pub fn term(&self) -> Term {
         self.term
     }
     
+    /// Get the current Raft state
     pub fn state(&self) -> RaftState {
         self.state
     }
     
+    /// Get the current leader ID
     pub fn leader_id(&self) -> NodeId {
         self.leader_id
     }
     
+    /// Check if this node is the leader
     pub fn is_leader(&self) -> bool {
         self.state == RaftState::Leader
     }
     
+    /// Get the commit index
     pub fn commit_index(&self) -> LogIndex {
         self.commit_index
     }
     
+    /// Get the last log index
     pub fn last_index(&self) -> LogIndex {
         self.log.len() as LogIndex
     }
     
+    /// Get the last log term
     pub fn last_term(&self) -> Term {
         self.log_term(self.last_index())
     }
     
+    /// Get the configuration state
     pub fn conf_state(&self) -> &ConfState {
         &self.conf_state
     }

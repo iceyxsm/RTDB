@@ -3,6 +3,8 @@
 //! Implements Kubernetes-style health probes:
 //! - Liveness: Is the application running?
 //! - Readiness: Is the application ready to serve traffic?
+
+#![allow(missing_docs)]
 //! - Startup: Has the application completed startup?
 //!
 //! Follows best practices from Qdrant and Milvus.

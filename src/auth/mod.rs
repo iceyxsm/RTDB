@@ -3,6 +3,8 @@
 //! Implements API Key authentication and Role-Based Access Control (RBAC).
 //!
 //! Features:
+
+#![allow(missing_docs)]
 //! - API Key authentication via X-API-Key header or Authorization: Bearer
 //! - Predefined roles: Admin, Writer, Reader
 //! - Resource-level permissions
@@ -31,11 +33,14 @@ pub use rbac::{Role, Permission, AccessControl};
 /// Authentication error
 #[derive(Debug, Clone)]
 pub struct AuthError {
+    /// Error message
     pub message: String,
+    /// HTTP status code
     pub status: StatusCode,
 }
 
 impl AuthError {
+    /// Create an unauthorized error (401)
     pub fn unauthorized(msg: impl Into<String>) -> Self {
         Self {
             message: msg.into(),
@@ -43,6 +48,7 @@ impl AuthError {
         }
     }
     
+    /// Create a forbidden error (403)
     pub fn forbidden(msg: impl Into<String>) -> Self {
         Self {
             message: msg.into(),

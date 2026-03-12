@@ -3,6 +3,8 @@
 //! Implements metrics following Qdrant/Milvus best practices:
 //! - Query latency histograms with p50/p95/p99 tracking
 //! - QPS (queries per second) counters
+
+#![allow(missing_docs)]
 //! - Index-specific metrics (recall, index size)
 //! - Resource utilization (memory, CPU)
 
@@ -18,38 +20,49 @@ use parking_lot::RwLock;
 /// Labels for vector database metrics
 #[derive(Debug, Clone, Default)]
 pub struct MetricLabels {
+    /// Operation name
     pub operation: Option<String>,
+    /// Collection name
     pub collection: Option<String>,
+    /// Index type
     pub index_type: Option<String>,
+    /// Operation status
     pub status: Option<String>,
+    /// Node identifier
     pub node_id: Option<String>,
 }
 
 impl MetricLabels {
+    /// Create new empty metric labels
     pub fn new() -> Self {
         Self::default()
     }
     
+    /// Set operation label
     pub fn operation(mut self, op: impl Into<String>) -> Self {
         self.operation = Some(op.into());
         self
     }
     
+    /// Set collection label
     pub fn collection(mut self, col: impl Into<String>) -> Self {
         self.collection = Some(col.into());
         self
     }
     
+    /// Set index type label
     pub fn index_type(mut self, idx: impl Into<String>) -> Self {
         self.index_type = Some(idx.into());
         self
     }
     
+    /// Set status label
     pub fn status(mut self, status: impl Into<String>) -> Self {
         self.status = Some(status.into());
         self
     }
     
+    /// Set node ID label
     pub fn node_id(mut self, node: impl Into<String>) -> Self {
         self.node_id = Some(node.into());
         self
@@ -73,8 +86,11 @@ impl MetricLabels {
 /// Metric value types
 #[derive(Debug, Clone)]
 pub enum MetricValue {
+    /// Counter metric (monotonically increasing)
     Counter(u64),
+    /// Gauge metric (can go up or down)
     Gauge(f64),
+    /// Duration metric
     Duration(Duration),
 }
 

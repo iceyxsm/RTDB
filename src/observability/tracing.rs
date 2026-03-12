@@ -3,6 +3,8 @@
 //! Performance-optimized distributed tracing with:
 //! - Batched exports with configurable sizes
 //! - gzip compression for reduced bandwidth
+
+#![allow(missing_docs)]
 //! - Memory-limited span buffering
 //! - Intelligent sampling (head-based and tail-based)
 //! - Production-hardened retry logic

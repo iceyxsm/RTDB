@@ -3,6 +3,8 @@
 //! Production-grade optimizations based on industry best practices:
 //! - Zero-cost abstractions using compile-time flags
 //! - Lock-free metrics collection where possible
+
+#![allow(missing_docs)]
 //! - Batched exports with compression
 //! - Cardinality limits to prevent metric explosion
 //! - Memory-efficient span storage

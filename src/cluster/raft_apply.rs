@@ -3,6 +3,8 @@
 //! Implements the Apply trait for processing committed Raft entries.
 //! This is where collection metadata changes are applied deterministically.
 //!
+
+#![allow(missing_docs)]
 //! Design based on production patterns from TiKV and etcd:
 //! - Deterministic application of commands
 //! - Snapshot support for log compaction
@@ -24,7 +26,9 @@ use tracing::{debug, error, info, trace, warn};
 pub enum StateMachineCommand {
     /// Create a new collection
     CreateCollection {
+        /// Collection name
         name: String,
+        /// Vector dimension
         dimension: usize,
         /// Serialized collection configuration
         config: Vec<u8>,
@@ -32,11 +36,13 @@ pub enum StateMachineCommand {
     
     /// Delete a collection
     DeleteCollection {
+        /// Collection name
         name: String,
     },
     
     /// Update collection configuration
     UpdateCollection {
+        /// Collection name
         name: String,
         /// Serialized configuration changes
         config_update: Vec<u8>,
@@ -44,7 +50,9 @@ pub enum StateMachineCommand {
     
     /// Register a node in the cluster
     RegisterNode {
+        /// Node identifier
         node_id: String,
+        /// Node network address
         address: String,
         /// Node capabilities (JSON)
         capabilities: Vec<u8>,
@@ -52,11 +60,13 @@ pub enum StateMachineCommand {
     
     /// Deregister a node
     DeregisterNode {
+        /// Node identifier
         node_id: String,
     },
     
     /// Update node status
     UpdateNodeStatus {
+        /// Node identifier
         node_id: String,
         /// Status: 0=Unknown, 1=Healthy, 2=Degraded, 3=Unhealthy, 4=Offline
         status: u32,
@@ -449,6 +459,7 @@ impl Apply for RaftStateMachine {
 
 /// Helper to create commands
 impl StateMachineCommand {
+    /// Create a CreateCollection command
     pub fn create_collection(name: impl Into<String>, dimension: usize) -> Self {
         Self::CreateCollection {
             name: name.into(),
@@ -457,12 +468,14 @@ impl StateMachineCommand {
         }
     }
 
+    /// Create a DeleteCollection command
     pub fn delete_collection(name: impl Into<String>) -> Self {
         Self::DeleteCollection {
             name: name.into(),
         }
     }
 
+    /// Create a RegisterNode command
     pub fn register_node(
         node_id: impl Into<String>,
         address: impl Into<String>,
@@ -474,12 +487,14 @@ impl StateMachineCommand {
         }
     }
 
+    /// Create a DeregisterNode command
     pub fn deregister_node(node_id: impl Into<String>) -> Self {
         Self::DeregisterNode {
             node_id: node_id.into(),
         }
     }
 
+    /// Create a NoOp command
     pub fn no_op() -> Self {
         Self::NoOp
     }

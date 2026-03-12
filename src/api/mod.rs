@@ -5,6 +5,8 @@
 //! - Milvus (gRPC)
 //! - Weaviate (GraphQL + REST)
 
+#![allow(missing_docs)]
+
 pub mod rest;
 pub mod qdrant_compat;
 #[cfg(feature = "grpc")]

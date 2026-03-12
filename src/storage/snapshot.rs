@@ -76,11 +76,17 @@ pub enum CompressionType {
 /// Snapshot description for API responses
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SnapshotDescription {
+    /// Snapshot name
     pub name: String,
+    /// Collection name
     pub collection: String,
+    /// Snapshot size in bytes
     pub size: u64,
+    /// Creation timestamp
     pub creation_time: String,
+    /// Number of vectors in snapshot
     pub vector_count: u64,
+    /// Type of snapshot
     pub snapshot_type: SnapshotType,
 }
 

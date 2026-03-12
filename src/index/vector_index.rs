@@ -8,6 +8,8 @@
 //! - IVF-PQ: Memory-efficient inverted file with product quantization
 //! - Hybrid Search: Vector similarity + metadata filtering
 //! - Auto Index Selection: Choose optimal index based on data characteristics
+
+#![allow(missing_docs)]
 //! - Query Optimization: Caching, batch processing, query planning
 //!
 //! ## Index Selection Guide
@@ -150,7 +152,9 @@ impl Default for PqConfig {
 /// Combined IVF-PQ configuration
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct IvfPqConfig {
+    /// IVF configuration
     pub ivf: IvfConfig,
+    /// Product quantization configuration
     pub pq: PqConfig,
 }
 
@@ -216,16 +220,22 @@ impl IndexType {
 /// Stored vector with metadata
 #[derive(Debug, Clone)]
 pub struct StoredVector {
+    /// Vector ID
     pub id: u64,
+    /// Vector data
     pub data: Vec<f32>,
+    /// Vector metadata
     pub metadata: HashMap<String, String>,
 }
 
 /// Search result
 #[derive(Debug, Clone, PartialEq)]
 pub struct SearchResult {
+    /// Result vector ID
     pub id: u64,
+    /// Distance to query vector
     pub distance: f32,
+    /// Optional vector data
     pub vector: Option<Vec<f32>>,
 }
 
@@ -257,6 +267,7 @@ pub struct FlatIndex {
 }
 
 impl FlatIndex {
+    /// Create a new flat index
     pub fn new(dimension: usize, metric: SimilarityMetric) -> Self {
         Self {
             vectors: RwLock::new(Vec::new()),
@@ -265,6 +276,7 @@ impl FlatIndex {
         }
     }
 
+    /// Insert a vector into the index
     pub fn insert(&self, vector: StoredVector) -> Result<()> {
         if vector.data.len() != self.dimension {
             return Err(RTDBError::InvalidDimension {

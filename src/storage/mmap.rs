@@ -373,9 +373,13 @@ impl DiskANNIndex {
 /// Statistics for DiskANN index
 #[derive(Debug, Clone)]
 pub struct DiskANNStats {
+    /// Number of vectors in the index
     pub num_vectors: usize,
+    /// Memory used by product quantization
     pub pq_memory_bytes: usize,
+    /// Memory used by graph structure
     pub graph_memory_bytes: usize,
+    /// Disk space used
     pub disk_bytes: usize,
 }
 

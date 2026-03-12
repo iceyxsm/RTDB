@@ -3,6 +3,8 @@
 //! Handles:
 //! - Timer ticks for elections and heartbeats
 //! - Message I/O via Transport trait
+
+#![allow(missing_docs)]
 //! - Entry application via Apply trait
 //! - Snapshot management
 

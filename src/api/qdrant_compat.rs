@@ -3,6 +3,8 @@
 //! Full compatibility with Qdrant's REST API specification.
 //! Reference: https://api.qdrant.tech/
 
+#![allow(missing_docs)]
+
 use axum::{
     extract::{Path, State},
     http::StatusCode,

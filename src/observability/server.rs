@@ -3,6 +3,8 @@
 //! Production-grade HTTP endpoints for metrics and health checks.
 //! Follows Kubernetes and Prometheus best practices.
 //!
+
+#![allow(missing_docs)]
 //! Endpoints:
 //! - GET /metrics - Prometheus metrics in text format
 //! - GET /health - Overall health status

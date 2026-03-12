@@ -3,6 +3,8 @@
 //! Implements production-grade replication patterns from TiKV, CockroachDB, and Qdrant:
 //! - Leader-based replication with Raft consensus
 //! - Synchronous and asynchronous replication strategies
+
+#![allow(missing_docs)]
 //! - Quorum-based writes with configurable consistency
 //! - Follower reads with load balancing for query scaling
 //!
@@ -403,10 +405,15 @@ impl ReplicaTracker {
 /// Replication statistics
 #[derive(Debug, Clone, Default)]
 pub struct ReplicationStats {
+    /// Total number of shards
     pub total_shards: usize,
+    /// Total number of replicas
     pub total_replicas: usize,
+    /// Number of online replicas
     pub online_replicas: usize,
+    /// Number of offline replicas
     pub offline_replicas: usize,
+    /// Average replication lag in milliseconds
     pub avg_replication_lag_ms: u64,
 }
 

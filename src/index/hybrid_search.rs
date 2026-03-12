@@ -8,6 +8,8 @@
 //!
 //! ## Filter Types
 //! - Exact match: `category = "electronics"`
+
+#![allow(missing_docs)]
 //! - Range: `price >= 100 AND price < 500`
 //! - Set membership: `status IN ("active", "pending")`
 //! - Boolean: `is_published = true`

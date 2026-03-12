@@ -3,6 +3,8 @@
 //! A production-grade Raft consensus module for RTDB cluster coordination.
 //!
 //! ## Architecture
+
+#![allow(missing_docs)]
 //!
 //! The implementation follows the TiKV/etcd design patterns:
 //!

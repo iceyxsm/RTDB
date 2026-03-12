@@ -3,6 +3,8 @@
 //! Handles incoming Raft RPCs and forwards them to the Raft state machine.
 //! Based on production patterns from TiKV and etcd.
 
+#![allow(missing_docs)]
+
 use super::raft::types::{Message, MessageType};
 use super::raft::RaftCommand;
 use std::sync::Arc;

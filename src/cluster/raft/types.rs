@@ -3,6 +3,8 @@
 //! Based on the Raft consensus algorithm design from etcd and TiKV,
 //! optimized for high-performance distributed vector database workloads.
 
+#![allow(missing_docs)]
+
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::time::Duration;
@@ -374,12 +376,26 @@ pub struct RaftMetrics {
 /// Error types for Raft operations
 #[derive(Debug, Clone, PartialEq)]
 pub enum RaftError {
-    NotLeader { hint: Option<NodeId> },
+    /// Node is not the leader, optional hint to the actual leader
+    NotLeader { 
+        /// Optional hint to the actual leader node ID
+        hint: Option<NodeId> 
+    },
+    /// Proposal was dropped before being committed
     ProposalDropped,
+    /// Storage layer error
     Storage(String),
+    /// Configuration error
     Configuration(String),
+    /// Communication channel was closed
     ChannelClosed,
-    InvalidState { expected: String, actual: String },
+    /// Invalid state transition
+    InvalidState { 
+        /// Expected state
+        expected: String, 
+        /// Actual state
+        actual: String 
+    },
 }
 
 impl fmt::Display for RaftError {

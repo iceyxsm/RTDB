@@ -89,6 +89,7 @@ pub struct ObservabilitySystem {
 }
 
 impl ObservabilitySystem {
+    /// Create a new observability system
     pub fn new(config: ObservabilityConfig) -> Self {
         let metrics = Arc::new(MetricsCollector::new(
             config.service_name.clone(),
@@ -104,10 +105,12 @@ impl ObservabilitySystem {
         }
     }
     
+    /// Get the metrics collector
     pub fn metrics(&self) -> Arc<MetricsCollector> {
         self.metrics.clone()
     }
     
+    /// Get the health checker
     pub fn health(&self) -> Arc<HealthChecker> {
         self.health.clone()
     }
@@ -138,10 +141,13 @@ impl ObservabilitySystem {
     }
 }
 
+/// Observability system errors
 #[derive(Debug, thiserror::Error)]
 pub enum ObservabilityError {
+    /// Metrics initialization failed
     #[error("Metrics initialization failed: {0}")]
     MetricsInit(String),
+    /// Health check failed
     #[error("Health check failed: {0}")]
     HealthCheck(String),
 }

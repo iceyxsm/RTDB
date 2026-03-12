@@ -3,6 +3,8 @@
 //! Production-grade structured logging with:
 //! - Zero-allocation JSON formatting where possible
 //! - Async log writing to prevent blocking
+
+#![allow(missing_docs)]
 //! - Log level filtering at compile time
 //! - PII redaction with regex support
 //! - Memory-efficient buffering

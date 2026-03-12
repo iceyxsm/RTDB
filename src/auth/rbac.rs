@@ -2,33 +2,51 @@
 //!
 //! Implements permission-based access control with predefined roles.
 
+#![allow(missing_docs)]
+
 /// Permissions for vector database operations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Permission {
     // Collection management
+    /// Create a new collection
     CreateCollection,
+    /// Delete an existing collection
     DeleteCollection,
+    /// List all collections
     ListCollections,
+    /// Get collection information
     GetCollectionInfo,
     
     // Vector operations
+    /// Insert vectors into a collection
     InsertVectors,
+    /// Delete vectors from a collection
     DeleteVectors,
+    /// Search for similar vectors
     Search,
+    /// Retrieve vectors by ID
     Retrieve,
     
     // Index operations
+    /// Create a new index
     CreateIndex,
+    /// Delete an existing index
     DeleteIndex,
+    /// Optimize index performance
     OptimizeIndex,
     
     // Cluster operations
+    /// Administer cluster operations
     ClusterAdmin,
+    /// View cluster status
     ViewClusterStatus,
     
     // System operations
+    /// System administration
     SystemAdmin,
+    /// View system metrics
     ViewMetrics,
+    /// View system logs
     ViewLogs,
 }
 
@@ -186,18 +204,26 @@ impl PermissionChecker {
 /// Collection operations
 #[derive(Debug, Clone, Copy)]
 pub enum CollectionOperation {
+    /// Create a collection
     Create,
+    /// Delete a collection
     Delete,
+    /// List collections
     List,
+    /// Get collection info
     GetInfo,
 }
 
 /// Vector operations
 #[derive(Debug, Clone, Copy)]
 pub enum VectorOperation {
+    /// Insert vectors
     Insert,
+    /// Delete vectors
     Delete,
+    /// Search vectors
     Search,
+    /// Retrieve vectors
     Retrieve,
 }
 

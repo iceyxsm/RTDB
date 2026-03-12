@@ -3,6 +3,8 @@
 //! Implements the Transport trait for sending Raft messages between cluster nodes.
 //! Uses the existing ClusterClient connection pool for efficient message passing.
 //!
+
+#![allow(missing_docs)]
 //! Design based on TiKV and etcd patterns:
 //! - Batching: Multiple messages batched when possible
 //! - Pipelining: Async sending without blocking
@@ -210,10 +212,15 @@ impl RaftTransport {
 /// Metrics for Raft transport
 #[derive(Debug, Default)]
 pub struct TransportMetrics {
+    /// Total messages sent
     pub messages_sent: u64,
+    /// Total messages received
     pub messages_received: u64,
+    /// Total messages dropped
     pub messages_dropped: u64,
+    /// Total bytes sent
     pub bytes_sent: u64,
+    /// Total bytes received
     pub bytes_received: u64,
 }
 

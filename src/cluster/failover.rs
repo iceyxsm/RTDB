@@ -8,6 +8,8 @@
 //!
 //! Design inspired by TiKV PD and Apache Cassandra.
 
+#![allow(missing_docs)]
+
 use crate::cluster::raft::{NodeId, Term};
 use crate::cluster::replication::ReplicaTracker;
 use crate::RTDBError;

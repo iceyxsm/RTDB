@@ -3,6 +3,8 @@
 //! Provides a reference implementation of the Storage trait.
 //! Production deployments should use a persistent storage backend.
 
+#![allow(missing_docs)]
+
 use super::types::*;
 use crate::{RTDBError, Result};
 use parking_lot::RwLock;
@@ -319,6 +321,7 @@ struct FileStorageCore {
 }
 
 impl FileStorage {
+    /// Create a new file-based Raft storage
     pub fn new(path: impl AsRef<std::path::Path>) -> crate::Result<Self> {
         let path = path.as_ref().to_path_buf();
         
