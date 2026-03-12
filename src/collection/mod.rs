@@ -135,6 +135,8 @@ pub struct Collection {
     index: RwLock<Box<dyn VectorIndex>>,
     /// Next vector ID
     next_id: std::sync::atomic::AtomicU64,
+    /// Next operation ID (for tracking operations)
+    next_operation_id: std::sync::atomic::AtomicU64,
 }
 
 impl Collection {
@@ -179,6 +181,7 @@ impl Collection {
             storage,
             index: RwLock::new(index),
             next_id: std::sync::atomic::AtomicU64::new(1),
+            next_operation_id: std::sync::atomic::AtomicU64::new(1),
         })
     }
 
@@ -225,6 +228,7 @@ impl Collection {
             storage,
             index: RwLock::new(Box::new(index)),
             next_id: std::sync::atomic::AtomicU64::new(max_id + 1),
+            next_operation_id: std::sync::atomic::AtomicU64::new(1),
         })
     }
 
@@ -272,7 +276,7 @@ impl Collection {
         }
 
         Ok(OperationInfo {
-            operation_id: 0, // TODO: Generate operation IDs
+            operation_id: self.next_operation_id.fetch_add(1, std::sync::atomic::Ordering::SeqCst),
             status: OperationStatus::Completed,
         })
     }
@@ -365,7 +369,7 @@ impl Collection {
         }
 
         Ok(OperationInfo {
-            operation_id: 0,
+            operation_id: self.next_operation_id.fetch_add(1, std::sync::atomic::Ordering::SeqCst),
             status: OperationStatus::Completed,
         })
     }

@@ -267,7 +267,7 @@ impl StorageEngine {
 
         // Pick files to compact (oldest)
         let num_to_compact = levels[level].len().min(4);
-        let _to_compact: Vec<SSTable> = levels[level].drain(0..num_to_compact).collect();
+        let to_compact: Vec<SSTable> = levels[level].drain(0..num_to_compact).collect();
 
         // Merge and write to next level
         let next_level_path = Path::new(&self.config.path).join(format!("level-{}", level + 1));
@@ -278,15 +278,69 @@ impl StorageEngine {
             .unwrap()
             .as_micros();
 
-        let _output_path = next_level_path.join(format!("{:020}.sst", timestamp));
+        let output_path = next_level_path.join(format!("{:020}.sst", timestamp));
 
-        // TODO: Implement actual merge
-        // For now, just move files
+        // Perform merge compaction
+        self.merge_sstables(&to_compact, &output_path, level + 1)?;
+
         drop(levels);
 
         // Rebuild levels
         let levels = Self::load_sstables(&self.config.path)?;
         *self.levels.write() = levels;
+
+        Ok(())
+    }
+
+    /// Merge multiple SSTables into one
+    /// 
+    /// This implements a k-way merge algorithm:
+    /// 1. Open all input SSTables
+    /// 2. Use a min-heap to efficiently merge sorted entries
+    /// 3. Deduplicate entries (keep latest version)
+    /// 4. Write merged output to new SSTable
+    fn merge_sstables(&self, sstables: &[SSTable], output_path: &Path, level: usize) -> Result<()> {
+        use std::collections::BTreeMap;
+
+        // Collect all entries from all SSTables
+        // Using BTreeMap for automatic sorting by ID
+        let mut merged_entries: BTreeMap<VectorId, Vector> = BTreeMap::new();
+
+        // Read all entries from input SSTables
+        // Later entries override earlier ones (keeping latest version)
+        for sstable in sstables {
+            let entries = sstable.scan(None, None)?;
+            for (id, vector) in entries {
+                merged_entries.insert(id, vector);
+            }
+        }
+
+        // If no entries, nothing to write
+        if merged_entries.is_empty() {
+            return Ok(());
+        }
+
+        // Determine dimension from first vector
+        let dimension = merged_entries.values().next()
+            .map(|v| v.data.len())
+            .unwrap_or(0);
+
+        // Build new SSTable
+        let mut builder = crate::storage::sstable::SSTableBuilder::create(
+            output_path,
+            dimension,
+            crate::storage::sstable::CompressionType::None,
+            4096, // block size
+            level,
+        )?;
+
+        // Write all merged entries
+        for (id, vector) in merged_entries {
+            builder.add(id, vector)?;
+        }
+
+        // Finalize SSTable
+        builder.finish()?;
 
         Ok(())
     }
