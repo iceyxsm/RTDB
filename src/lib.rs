@@ -19,6 +19,8 @@ pub mod telemetry;
 pub mod cli;
 pub mod config;
 pub mod observability;
+pub mod distance;
+pub mod quantization;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;

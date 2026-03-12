@@ -1,11 +1,14 @@
 //! REST API implementation (Qdrant-compatible)
 
 use crate::{
+    auth::middleware::{auth_middleware, AuthState},
+    auth::{ApiKeyStore, AuthConfig},
     CollectionConfig, Result, SearchRequest, UpsertRequest, Vector, VectorId,
     collection::CollectionManager,
 };
 use axum::{
     extract::{Path, State},
+    middleware,
     response::Json,
     routing::{get, post, put},
     Router,
@@ -19,24 +22,45 @@ use std::sync::Arc;
 pub struct RestState {
     /// Collection manager
     pub collections: Arc<CollectionManager>,
+    /// Auth state
+    pub auth_state: AuthState,
 }
 
 impl RestState {
     /// Create new REST state
     pub fn new(collections: Arc<CollectionManager>) -> Self {
-        Self { collections }
+        let key_store = Arc::new(ApiKeyStore::default());
+        let auth_state = AuthState::new(AuthConfig::default(), key_store);
+        Self { collections, auth_state }
+    }
+    
+    /// Create with auth state
+    pub fn with_auth(collections: Arc<CollectionManager>, auth_state: AuthState) -> Self {
+        Self { collections, auth_state }
     }
 }
 
-/// Create REST router
+/// Create REST router with auth middleware
 pub fn create_router(state: RestState) -> Router {
-    Router::new()
+    // Public routes (no auth required)
+    let public_routes = Router::new()
         .route("/", get(health_check))
+        .route("/health", get(health_check));
+    
+    // Protected routes (auth required)
+    let protected_routes = Router::new()
         .route("/collections", get(list_collections).put(create_collection))
         .route("/collections/:name", get(get_collection).delete(delete_collection))
         .route("/collections/:name/points", put(upsert_points))
         .route("/collections/:name/points/search", post(search_points))
         .route("/collections/:name/points/:id", get(get_point).delete(delete_point))
+        .route_layer(middleware::from_fn_with_state(
+            state.auth_state.clone(),
+            auth_middleware
+        ));
+    
+    public_routes
+        .merge(protected_routes)
         .with_state(state)
 }
 

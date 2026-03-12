@@ -1,0 +1,25 @@
+[package]
+name = "rtdb-python"
+version = "0.1.0"
+edition = "2021"
+authors = ["RTDB Team"]
+description = "Python SDK for RTDB Vector Database"
+license = "MIT"
+repository = "https://github.com/iceyxsm/RTDB"
+
+[lib]
+name = "rtdb_python"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.21", features = ["extension-module", "abi3-py38"] }
+pyo3-asyncio = { version = "0.21", features = ["tokio-runtime"] }
+tokio = { version = "1.35", features = ["full"] }
+rtdb = { path = "../.." }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+reqwest = { version = "0.11", features = ["json"] }
+url = "2.5"
+
+[dev-dependencies]
+pyo3-testing = "0.1"

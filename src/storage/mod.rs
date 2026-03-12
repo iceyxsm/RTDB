@@ -11,6 +11,7 @@ pub mod memtable;
 pub mod sstable;
 pub mod engine;
 pub mod backup;
+pub mod mmap;
 
 pub use engine::StorageEngine;
 pub use wal::{WAL, WALEntry};

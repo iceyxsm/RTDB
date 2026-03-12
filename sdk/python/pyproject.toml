@@ -1,0 +1,80 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "rtdb-sdk"
+version = "0.1.0"
+description = "Python SDK for RTDB Vector Database"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "RTDB Team", email = "team@rtdb.dev"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Rust",
+    "Topic :: Database",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+keywords = ["vector-database", "search", "similarity", "ann", "qdrant"]
+requires-python = ">=3.8"
+dependencies = [
+    "aiohttp>=3.8.0",
+    "numpy>=1.20.0",
+    "typing-extensions>=4.0.0; python_version<'3.10'",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-benchmark>=4.0.0",
+    "black>=23.0.0",
+    "mypy>=1.0.0",
+    "ruff>=0.1.0",
+]
+docs = [
+    "sphinx>=7.0.0",
+    "sphinx-rtd-theme>=1.3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/iceyxsm/RTDB"
+Documentation = "https://rtdb.readthedocs.io"
+Repository = "https://github.com/iceyxsm/RTDB"
+"Bug Tracker" = "https://github.com/iceyxsm/RTDB/issues"
+
+[tool.maturin]
+module-name = "rtdb_sdk.rtdb_python"
+python-source = "rtdb_sdk"
+manifest-path = "Cargo.toml"
+
+[tool.black]
+line-length = 100
+target-version = ["py38", "py39", "py310", "py311", "py312"]
+
+[tool.mypy]
+python_version = "3.8"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "W", "I", "N", "D", "UP", "B", "C4", "SIM"]
+ignore = ["D100", "D104"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"
