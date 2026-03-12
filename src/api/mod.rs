@@ -108,15 +108,17 @@ pub async fn start_all(
         }
     });
     
-    // TODO: Start gRPC server - needs proper tonic-build integration
-    // #[cfg(feature = "grpc")]
-    // let _grpc_handle = tokio::spawn({
-    //     let collections = collections.clone();
-    //     let port = config.grpc_port;
-    //     async move {
-    //         tracing::info!("gRPC server on port {} (not yet implemented)", port);
-    //     }
-    // });
+    // gRPC server implementation pending - requires protoc or manual Service trait implementation
+    // The proto definitions and service implementations are ready in src/api/grpc.rs
+    // To enable: install protoc and regenerate, or manually fix Service trait implementation
+    #[cfg(feature = "grpc")]
+    let _grpc_handle = tokio::spawn({
+        let _collections = collections.clone();
+        let port = config.grpc_port;
+        async move {
+            tracing::info!("gRPC server on port {} (implementation pending)", port);
+        }
+    });
     
     // Mark startup as complete
     health.startup_check().mark_ready();
