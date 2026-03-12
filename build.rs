@@ -13,6 +13,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("cargo:rerun-if-changed=src/cluster/rpc.proto");
     }
     
+    // Always generate API proto files when grpc feature is enabled
+    if std::env::var("CARGO_FEATURE_GRPC").is_ok() {
+        generate_api_proto()?;
+    }
+    
+    Ok(())
+}
+
+fn generate_api_proto() -> Result<(), Box<dyn std::error::Error>> {
+    tonic_build::configure()
+        .build_server(true)
+        .build_client(false)
+        .out_dir("src/api/generated/")
+        .compile(
+            &["proto/qdrant.proto"],
+            &["proto/"],
+        )?;
+    
+    println!("cargo:rerun-if-changed=proto/qdrant.proto");
+    println!("cargo:rerun-if-changed=proto/collections.proto");
+    println!("cargo:rerun-if-changed=proto/points.proto");
+    
     Ok(())
 }
 

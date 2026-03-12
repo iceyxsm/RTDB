@@ -2,9 +2,13 @@
   "mcpServers": {
     "symdex": {
       "command": "symdex",
-      "args": ["serve"],
+      "args": [
+        "serve"
+      ],
       "disabled": false,
-      "autoApprove": []
+      "autoApprove": [
+        "index_repo"
+      ]
     }
   }
 }

@@ -7,9 +7,11 @@ option go_package = "github.com/iceyxsm/rtdb/proto";
 // Points operations service
 service Points {
   rpc Upsert (UpsertPointsRequest) returns (PointsOperationResponse) {}
+  rpc UpsertStream (stream UpsertPointsRequest) returns (PointsOperationResponse) {}
   rpc Delete (DeletePointsRequest) returns (PointsOperationResponse) {}
   rpc Get (GetPointsRequest) returns (GetPointsResponse) {}
   rpc Search (SearchPointsRequest) returns (SearchPointsResponse) {}
+  rpc SearchStream (SearchPointsRequest) returns (stream ScoredPoint) {}
 }
 
 message UpsertPointsRequest {
