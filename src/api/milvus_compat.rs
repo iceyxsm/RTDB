@@ -1004,6 +1004,8 @@ fn rtdb_error_to_milvus_code(error: &RTDBError) -> i32 {
         RTDBError::Consensus(_) => 11,
         RTDBError::Configuration(_) => 12,
         RTDBError::Authorization(_) => 13,
+        RTDBError::Validation(_) => 14,
+        RTDBError::Network(_) => 15,
     }
 }
 

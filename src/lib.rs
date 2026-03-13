@@ -22,6 +22,8 @@ pub mod observability;
 pub mod distance;
 pub mod quantization;
 pub mod filter;
+pub mod migration;
+pub mod jepsen;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -99,6 +101,14 @@ pub enum RTDBError {
     /// Configuration errors
     #[error("Configuration error: {0}")]
     Config(String),
+    
+    /// Validation errors
+    #[error("Validation error: {0}")]
+    Validation(String),
+    
+    /// Network errors
+    #[error("Network error: {0}")]
+    Network(String),
 }
 
 impl From<std::io::Error> for RTDBError {

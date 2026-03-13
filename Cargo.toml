@@ -47,6 +47,8 @@ tonic = { version = "0.11", features = ["transport", "codegen", "prost"], option
 tower = { version = "0.4", features = ["full"] }
 tower-http = { version = "0.5", features = ["compression-gzip", "cors", "trace"] }
 hyper = { version = "1.1", features = ["full"] }
+reqwest = { version = "0.11", features = ["json", "gzip"] }
+regex = "1.10"
 
 # Storage
 crc32c = "0.6"
@@ -110,6 +112,10 @@ num_cpus = "1.17.0"
 sha2 = "0.10"
 zstd = "0.13"
 futures = "0.3"
+
+# Jepsen testing dependencies
+rand_distr = "0.4"
+libc = "0.2"
 
 [dev-dependencies]
 tokio-test = "0.4"

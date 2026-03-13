@@ -1,0 +1,1074 @@
+//! Client implementations for different vector databases
+//!
+//! Provides unified interfaces for reading from source databases and writing to RTDB.
+//! Supports Qdrant, Milvus, Weaviate, Pinecone, LanceDB, and file formats.
+
+use crate::migration::{AuthConfig, MigrationConfig, SourceType, VectorRecord};
+use crate::{Result, RTDBError};
+use async_trait::async_trait;
+use reqwest::Client as HttpClient;
+use serde_json::Value;
+use std::collections::HashMap;
+use std::str::FromStr;
+use tokio::fs::File;
+use tokio::io::{AsyncBufReadExt, BufReader};
+
+/// Trait for source database clients
+#[async_trait]
+pub trait SourceClient: Send + Sync {
+    /// Get total number of records (if available)
+    async fn get_total_count(&mut self) -> Result<Option<u64>>;
+    
+    /// Fetch a batch of records starting from offset
+    async fn fetch_batch(&mut self, offset: u64, limit: usize) -> Result<Vec<VectorRecord>>;
+    
+    /// Clone the client for use in different tasks
+    fn clone_box(&self) -> Box<dyn SourceClient>;
+}
+
+/// Trait for target database clients
+#[async_trait]
+pub trait TargetClient: Send + Sync {
+    /// Insert a batch of records
+    async fn insert_batch(&self, records: &[VectorRecord]) -> Result<()>;
+    
+    /// Create collection if it doesn't exist
+    async fn ensure_collection(&self, collection_name: &str, dimension: usize) -> Result<()>;
+    
+    /// Get collection info
+    async fn get_collection_info(&self, collection_name: &str) -> Result<Option<CollectionInfo>>;
+    
+    /// Clone the client for use in different tasks
+    fn clone_box(&self) -> Box<dyn TargetClient>;
+}
+
+/// Collection information
+#[derive(Debug, Clone)]
+pub struct CollectionInfo {
+    pub name: String,
+    pub dimension: usize,
+    pub vector_count: u64,
+    pub distance_metric: String,
+}
+
+/// Create source client based on configuration
+pub async fn create_source_client(config: &MigrationConfig) -> Result<Box<dyn SourceClient>> {
+    match config.source_type {
+        SourceType::Qdrant => {
+            Ok(Box::new(QdrantSourceClient::new(
+                &config.source_url,
+                config.source_collection.as_deref(),
+                config.source_auth.as_ref(),
+            ).await?))
+        }
+        SourceType::Milvus => {
+            Ok(Box::new(MilvusSourceClient::new(
+                &config.source_url,
+                config.source_collection.as_deref(),
+                config.source_auth.as_ref(),
+            ).await?))
+        }
+        SourceType::Weaviate => {
+            Ok(Box::new(WeaviateSourceClient::new(
+                &config.source_url,
+                config.source_collection.as_deref(),
+                config.source_auth.as_ref(),
+            ).await?))
+        }
+        SourceType::Pinecone => {
+            Ok(Box::new(PineconeSourceClient::new(
+                &config.source_url,
+                config.source_collection.as_deref(),
+                config.source_auth.as_ref(),
+            ).await?))
+        }
+        SourceType::LanceDB => {
+            Ok(Box::new(LanceDBSourceClient::new(
+                &config.source_url,
+                config.source_collection.as_deref(),
+            ).await?))
+        }
+        SourceType::Jsonl => {
+            Ok(Box::new(JsonlSourceClient::new(&config.source_url).await?))
+        }
+        SourceType::Parquet => {
+            Ok(Box::new(ParquetSourceClient::new(&config.source_url).await?))
+        }
+        SourceType::Hdf5 => {
+            Ok(Box::new(Hdf5SourceClient::new(&config.source_url).await?))
+        }
+    }
+}
+
+/// Create target client (always RTDB)
+pub async fn create_target_client(config: &MigrationConfig) -> Result<Box<dyn TargetClient>> {
+    Ok(Box::new(RTDBTargetClient::new(
+        &config.target_url,
+        config.target_auth.as_ref(),
+    ).await?))
+}
+
+/// Qdrant source client
+pub struct QdrantSourceClient {
+    client: HttpClient,
+    base_url: String,
+    collection: String,
+    current_offset: Option<String>,
+}
+
+impl QdrantSourceClient {
+    async fn new(url: &str, collection: Option<&str>, auth: Option<&AuthConfig>) -> Result<Self> {
+        let mut client_builder = HttpClient::builder();
+        
+        if let Some(auth_config) = auth {
+            let mut headers = reqwest::header::HeaderMap::new();
+            
+            if let Some(api_key) = &auth_config.api_key {
+                headers.insert("api-key", api_key.parse().map_err(|_| 
+                    RTDBError::Config("Invalid API key format".to_string()))?);
+            }
+            
+            for (key, value) in &auth_config.headers {
+                let header_name = reqwest::header::HeaderName::from_str(key)
+                    .map_err(|_| RTDBError::Config(format!("Invalid header name: {}", key)))?;
+                let header_value = reqwest::header::HeaderValue::from_str(value)
+                    .map_err(|_| RTDBError::Config(format!("Invalid header value: {}", value)))?;
+                headers.insert(header_name, header_value);
+            }
+            
+            client_builder = client_builder.default_headers(headers);
+        }
+        
+        let client = client_builder.build()
+            .map_err(|e| RTDBError::Config(format!("Failed to create HTTP client: {}", e)))?;
+        
+        Ok(Self {
+            client,
+            base_url: url.trim_end_matches('/').to_string(),
+            collection: collection.unwrap_or("default").to_string(),
+            current_offset: None,
+        })
+    }
+}
+
+#[async_trait]
+impl SourceClient for QdrantSourceClient {
+    async fn get_total_count(&mut self) -> Result<Option<u64>> {
+        let url = format!("{}/collections/{}", self.base_url, self.collection);
+        let response = self.client.get(&url).send().await
+            .map_err(|e| RTDBError::Network(format!("Failed to get collection info: {}", e)))?;
+        
+        if !response.status().is_success() {
+            return Err(RTDBError::Network(format!("HTTP error: {}", response.status())));
+        }
+        
+        let info: Value = response.json().await
+            .map_err(|e| RTDBError::Serialization(format!("Failed to parse response: {}", e)))?;
+        
+        let count = info["result"]["points_count"].as_u64();
+        Ok(count)
+    }
+    
+    async fn fetch_batch(&mut self, offset: u64, limit: usize) -> Result<Vec<VectorRecord>> {
+        let url = format!("{}/collections/{}/points/scroll", self.base_url, self.collection);
+        
+        let mut request_body = serde_json::json!({
+            "limit": limit,
+            "with_payload": true,
+            "with_vector": true
+        });
+        
+        if let Some(offset_id) = &self.current_offset {
+            request_body["offset"] = Value::String(offset_id.clone());
+        }
+        
+        let response = self.client.post(&url)
+            .json(&request_body)
+            .send().await
+            .map_err(|e| RTDBError::Network(format!("Failed to fetch batch: {}", e)))?;
+        
+        if !response.status().is_success() {
+            return Err(RTDBError::Network(format!("HTTP error: {}", response.status())));
+        }
+        
+        let result: Value = response.json().await
+            .map_err(|e| RTDBError::Serialization(format!("Failed to parse response: {}", e)))?;
+        
+        let points = result["result"]["points"].as_array()
+            .ok_or_else(|| RTDBError::Serialization("Invalid response format".to_string()))?;
+        
+        let mut records = Vec::new();
+        
+        for point in points {
+            let id = point["id"].as_str()
+                .or_else(|| point["id"].as_u64().map(|n| Box::leak(n.to_string().into_boxed_str()) as &str))
+                .ok_or_else(|| RTDBError::Serialization("Missing point ID".to_string()))?;
+            
+            let vector = point["vector"].as_array()
+                .ok_or_else(|| RTDBError::Serialization("Missing vector data".to_string()))?
+                .iter()
+                .map(|v| v.as_f64().unwrap_or(0.0) as f32)
+                .collect();
+            
+            let metadata = point["payload"].as_object()
+                .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+                .unwrap_or_default();
+            
+            records.push(VectorRecord {
+                id: id.to_string(),
+                vector,
+                metadata,
+            });
+        }
+        
+        // Update offset for next batch
+        if let Some(next_offset) = result["result"]["next_page_offset"].as_str() {
+            self.current_offset = Some(next_offset.to_string());
+        } else {
+            self.current_offset = None;
+        }
+        
+        Ok(records)
+    }
+    
+    fn clone_box(&self) -> Box<dyn SourceClient> {
+        Box::new(Self {
+            client: self.client.clone(),
+            base_url: self.base_url.clone(),
+            collection: self.collection.clone(),
+            current_offset: self.current_offset.clone(),
+        })
+    }
+}
+
+/// Milvus source client
+pub struct MilvusSourceClient {
+    client: HttpClient,
+    base_url: String,
+    collection: String,
+}
+
+impl MilvusSourceClient {
+    async fn new(url: &str, collection: Option<&str>, auth: Option<&AuthConfig>) -> Result<Self> {
+        let mut client_builder = HttpClient::builder();
+        
+        if let Some(auth_config) = auth {
+            let mut headers = reqwest::header::HeaderMap::new();
+            
+            if let Some(token) = &auth_config.token {
+                headers.insert("Authorization", format!("Bearer {}", token).parse()
+                    .map_err(|_| RTDBError::Config("Invalid token format".to_string()))?);
+            }
+            
+            client_builder = client_builder.default_headers(headers);
+        }
+        
+        let client = client_builder.build()
+            .map_err(|e| RTDBError::Config(format!("Failed to create HTTP client: {}", e)))?;
+        
+        Ok(Self {
+            client,
+            base_url: url.trim_end_matches('/').to_string(),
+            collection: collection.unwrap_or("default").to_string(),
+        })
+    }
+}
+
+#[async_trait]
+impl SourceClient for MilvusSourceClient {
+    async fn get_total_count(&mut self) -> Result<Option<u64>> {
+        let url = format!("{}/v1/vector/collections/{}/entities/stats", self.base_url, self.collection);
+        let response = self.client.get(&url).send().await
+            .map_err(|e| RTDBError::Network(format!("Failed to get collection stats: {}", e)))?;
+        
+        if response.status().is_success() {
+            let stats: Value = response.json().await
+                .map_err(|e| RTDBError::Serialization(format!("Failed to parse response: {}", e)))?;
+            Ok(stats["row_count"].as_u64())
+        } else {
+            Ok(None)
+        }
+    }
+    
+    async fn fetch_batch(&mut self, offset: u64, limit: usize) -> Result<Vec<VectorRecord>> {
+        // Milvus uses query API for batch retrieval
+        let url = format!("{}/v1/vector/query", self.base_url);
+        
+        let request_body = serde_json::json!({
+            "collection_name": self.collection,
+            "output_fields": ["*"],
+            "limit": limit,
+            "offset": offset,
+            "expr": "" // Empty expression to get all records
+        });
+        
+        let response = self.client.post(&url)
+            .json(&request_body)
+            .send().await
+            .map_err(|e| RTDBError::Network(format!("Failed to fetch batch: {}", e)))?;
+        
+        if !response.status().is_success() {
+            return Err(RTDBError::Network(format!("HTTP error: {}", response.status())));
+        }
+        
+        let result: Value = response.json().await
+            .map_err(|e| RTDBError::Serialization(format!("Failed to parse response: {}", e)))?;
+        
+        let mut records = Vec::new();
+        
+        if let Some(data) = result.get("data") {
+            if let Some(entities) = data.as_array() {
+                for entity in entities {
+                    if let Some(entity_obj) = entity.as_object() {
+                        // Extract ID (could be in different fields)
+                        let id = entity_obj.get("id")
+                            .or_else(|| entity_obj.get("pk"))
+                            .or_else(|| entity_obj.get("primary_key"))
+                            .and_then(|v| v.as_str().or_else(|| v.as_i64().map(|i| Box::leak(i.to_string().into_boxed_str()) as &str)))
+                            .unwrap_or("unknown")
+                            .to_string();
+                        
+                        // Extract vector (try common field names)
+                        let vector = entity_obj.get("vector")
+                            .or_else(|| entity_obj.get("embedding"))
+                            .or_else(|| entity_obj.get("embeddings"))
+                            .or_else(|| entity_obj.get("vec"))
+                            .and_then(|v| v.as_array())
+                            .map(|arr| arr.iter().map(|v| v.as_f64().unwrap_or(0.0) as f32).collect())
+                            .unwrap_or_default();
+                        
+                        // Extract metadata (all other fields)
+                        let mut metadata = HashMap::new();
+                        for (key, value) in entity_obj {
+                            if !["id", "pk", "primary_key", "vector", "embedding", "embeddings", "vec"].contains(&key.as_str()) {
+                                metadata.insert(key.clone(), value.clone());
+                            }
+                        }
+                        
+                        records.push(VectorRecord {
+                            id,
+                            vector,
+                            metadata,
+                        });
+                    }
+                }
+            }
+        }
+        
+        Ok(records)
+    }
+    
+    fn clone_box(&self) -> Box<dyn SourceClient> {
+        Box::new(Self {
+            client: self.client.clone(),
+            base_url: self.base_url.clone(),
+            collection: self.collection.clone(),
+        })
+    }
+}
+
+/// Weaviate source client
+pub struct WeaviateSourceClient {
+    client: HttpClient,
+    base_url: String,
+    class_name: String,
+}
+
+impl WeaviateSourceClient {
+    async fn new(url: &str, class_name: Option<&str>, auth: Option<&AuthConfig>) -> Result<Self> {
+        let mut client_builder = HttpClient::builder();
+        
+        if let Some(auth_config) = auth {
+            let mut headers = reqwest::header::HeaderMap::new();
+            
+            if let Some(api_key) = &auth_config.api_key {
+                headers.insert("X-OpenAI-Api-Key", api_key.parse()
+                    .map_err(|_| RTDBError::Config("Invalid API key format".to_string()))?);
+            }
+            
+            client_builder = client_builder.default_headers(headers);
+        }
+        
+        let client = client_builder.build()
+            .map_err(|e| RTDBError::Config(format!("Failed to create HTTP client: {}", e)))?;
+        
+        Ok(Self {
+            client,
+            base_url: url.trim_end_matches('/').to_string(),
+            class_name: class_name.unwrap_or("Document").to_string(),
+        })
+    }
+}
+
+#[async_trait]
+impl SourceClient for WeaviateSourceClient {
+    async fn get_total_count(&mut self) -> Result<Option<u64>> {
+        let query = format!(r#"
+        {{
+            Aggregate {{
+                {}(groupBy: []) {{
+                    meta {{
+                        count
+                    }}
+                }}
+            }}
+        }}
+        "#, self.class_name);
+        
+        let url = format!("{}/v1/graphql", self.base_url);
+        let response = self.client.post(&url)
+            .json(&serde_json::json!({"query": query}))
+            .send().await
+            .map_err(|e| RTDBError::Network(format!("Failed to get count: {}", e)))?;
+        
+        if response.status().is_success() {
+            let result: Value = response.json().await
+                .map_err(|e| RTDBError::Serialization(format!("Failed to parse response: {}", e)))?;
+            
+            let count = result["data"]["Aggregate"][&self.class_name][0]["meta"]["count"].as_u64();
+            Ok(count)
+        } else {
+            Ok(None)
+        }
+    }
+    
+    async fn fetch_batch(&mut self, offset: u64, limit: usize) -> Result<Vec<VectorRecord>> {
+        let query = format!(r#"
+        {{
+            Get {{
+                {}(limit: {}, offset: {}) {{
+                    _additional {{
+                        id
+                        vector
+                    }}
+                    # Add other fields as needed
+                }}
+            }}
+        }}
+        "#, self.class_name, limit, offset);
+        
+        let url = format!("{}/v1/graphql", self.base_url);
+        let response = self.client.post(&url)
+            .json(&serde_json::json!({"query": query}))
+            .send().await
+            .map_err(|e| RTDBError::Network(format!("Failed to fetch batch: {}", e)))?;
+        
+        if !response.status().is_success() {
+            return Err(RTDBError::Network(format!("HTTP error: {}", response.status())));
+        }
+        
+        let result: Value = response.json().await
+            .map_err(|e| RTDBError::Serialization(format!("Failed to parse response: {}", e)))?;
+        
+        let mut records = Vec::new();
+        
+        if let Some(objects) = result["data"]["Get"][&self.class_name].as_array() {
+            for obj in objects {
+                if let Some(additional) = obj["_additional"].as_object() {
+                    let id = additional["id"].as_str()
+                        .ok_or_else(|| RTDBError::Serialization("Missing object ID".to_string()))?;
+                    
+                    let vector = additional["vector"].as_array()
+                        .ok_or_else(|| RTDBError::Serialization("Missing vector data".to_string()))?
+                        .iter()
+                        .map(|v| v.as_f64().unwrap_or(0.0) as f32)
+                        .collect();
+                    
+                    // Extract other properties as metadata
+                    let mut metadata = HashMap::new();
+                    for (key, value) in obj.as_object().unwrap_or(&serde_json::Map::new()) {
+                        if key != "_additional" {
+                            metadata.insert(key.clone(), value.clone());
+                        }
+                    }
+                    
+                    records.push(VectorRecord {
+                        id: id.to_string(),
+                        vector,
+                        metadata,
+                    });
+                }
+            }
+        }
+        
+        Ok(records)
+    }
+    
+    fn clone_box(&self) -> Box<dyn SourceClient> {
+        Box::new(Self {
+            client: self.client.clone(),
+            base_url: self.base_url.clone(),
+            class_name: self.class_name.clone(),
+        })
+    }
+}
+
+/// Pinecone source client (placeholder)
+pub struct PineconeSourceClient {
+    client: HttpClient,
+    base_url: String,
+    index_name: String,
+}
+
+impl PineconeSourceClient {
+    async fn new(url: &str, index_name: Option<&str>, auth: Option<&AuthConfig>) -> Result<Self> {
+        let mut client_builder = HttpClient::builder();
+        
+        if let Some(auth_config) = auth {
+            let mut headers = reqwest::header::HeaderMap::new();
+            
+            if let Some(api_key) = &auth_config.api_key {
+                headers.insert("Api-Key", api_key.parse()
+                    .map_err(|_| RTDBError::Config("Invalid API key format".to_string()))?);
+            }
+            
+            client_builder = client_builder.default_headers(headers);
+        }
+        
+        let client = client_builder.build()
+            .map_err(|e| RTDBError::Config(format!("Failed to create HTTP client: {}", e)))?;
+        
+        Ok(Self {
+            client,
+            base_url: url.to_string(),
+            index_name: index_name.unwrap_or("default").to_string(),
+        })
+    }
+}
+
+#[async_trait]
+impl SourceClient for PineconeSourceClient {
+    async fn get_total_count(&mut self) -> Result<Option<u64>> {
+        // Pinecone doesn't provide easy count API
+        Ok(None)
+    }
+    
+    async fn fetch_batch(&mut self, _offset: u64, _limit: usize) -> Result<Vec<VectorRecord>> {
+        // Pinecone uses list/query operations for batch retrieval
+        let url = format!("{}/query", self.base_url);
+        
+        let request_body = serde_json::json!({
+            "vector": vec![0.0; 1536], // Dummy vector for query
+            "topK": _limit,
+            "includeValues": true,
+            "includeMetadata": true
+        });
+        
+        let response = self.client.post(&url)
+            .json(&request_body)
+            .send().await
+            .map_err(|e| RTDBError::Network(format!("Failed to fetch batch: {}", e)))?;
+        
+        if !response.status().is_success() {
+            return Err(RTDBError::Network(format!("HTTP error: {}", response.status())));
+        }
+        
+        let result: Value = response.json().await
+            .map_err(|e| RTDBError::Serialization(format!("Failed to parse response: {}", e)))?;
+        
+        let mut records = Vec::new();
+        
+        if let Some(matches) = result.get("matches").and_then(|v| v.as_array()) {
+            for match_obj in matches {
+                if let Some(match_data) = match_obj.as_object() {
+                    let id = match_data.get("id")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("unknown")
+                        .to_string();
+                    
+                    let vector = match_data.get("values")
+                        .and_then(|v| v.as_array())
+                        .map(|arr| arr.iter().map(|v| v.as_f64().unwrap_or(0.0) as f32).collect())
+                        .unwrap_or_default();
+                    
+                    let metadata = match_data.get("metadata")
+                        .and_then(|v| v.as_object())
+                        .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+                        .unwrap_or_default();
+                    
+                    records.push(VectorRecord {
+                        id,
+                        vector,
+                        metadata,
+                    });
+                }
+            }
+        }
+        
+        Ok(records)
+    }
+    
+    fn clone_box(&self) -> Box<dyn SourceClient> {
+        Box::new(Self {
+            client: self.client.clone(),
+            base_url: self.base_url.clone(),
+            index_name: self.index_name.clone(),
+        })
+    }
+}
+
+/// LanceDB source client (file-based)
+pub struct LanceDBSourceClient {
+    path: String,
+    table_name: String,
+    current_offset: u64,
+}
+
+impl LanceDBSourceClient {
+    async fn new(path: &str, table_name: Option<&str>) -> Result<Self> {
+        // Verify path exists
+        if !std::path::Path::new(path).exists() {
+            return Err(RTDBError::Config(format!("LanceDB path does not exist: {}", path)));
+        }
+        
+        Ok(Self {
+            path: path.to_string(),
+            table_name: table_name.unwrap_or("vectors").to_string(),
+            current_offset: 0,
+        })
+    }
+}
+
+#[async_trait]
+impl SourceClient for LanceDBSourceClient {
+    async fn get_total_count(&mut self) -> Result<Option<u64>> {
+        // For LanceDB, we would need to read parquet metadata or scan the directory
+        // This is a simplified implementation
+        let table_path = std::path::Path::new(&self.path).join(&self.table_name);
+        
+        if table_path.exists() {
+            // Try to estimate from directory size or file count
+            let metadata = tokio::fs::metadata(&table_path).await
+                .map_err(|e| RTDBError::Io(format!("Failed to read table metadata: {}", e)))?;
+            
+            // Rough estimate based on file size (assuming ~1KB per vector)
+            let estimated_count = metadata.len() / 1024;
+            Ok(Some(estimated_count))
+        } else {
+            Ok(None)
+        }
+    }
+    
+    async fn fetch_batch(&mut self, offset: u64, limit: usize) -> Result<Vec<VectorRecord>> {
+        // For a real implementation, this would use the LanceDB Rust SDK
+        // or read parquet files directly. For now, we'll simulate reading
+        // from a JSONL file in the LanceDB directory
+        
+        let jsonl_path = std::path::Path::new(&self.path)
+            .join(&self.table_name)
+            .with_extension("jsonl");
+        
+        if !jsonl_path.exists() {
+            tracing::warn!("LanceDB JSONL file not found: {:?}", jsonl_path);
+            return Ok(Vec::new());
+        }
+        
+        let file = File::open(&jsonl_path).await
+            .map_err(|e| RTDBError::Io(format!("Failed to open LanceDB file: {}", e)))?;
+        
+        let mut reader = BufReader::new(file);
+        let mut line = String::new();
+        let mut records = Vec::new();
+        let mut current_line = 0u64;
+        
+        // Skip to offset
+        while current_line < offset {
+            line.clear();
+            if reader.read_line(&mut line).await
+                .map_err(|e| RTDBError::Io(format!("Failed to read line: {}", e)))? == 0 {
+                break; // EOF
+            }
+            current_line += 1;
+        }
+        
+        // Read batch
+        for _ in 0..limit {
+            line.clear();
+            let bytes_read = reader.read_line(&mut line).await
+                .map_err(|e| RTDBError::Io(format!("Failed to read line: {}", e)))?;
+            
+            if bytes_read == 0 {
+                break; // EOF
+            }
+            
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+            
+            let record: serde_json::Value = serde_json::from_str(line)
+                .map_err(|e| RTDBError::Serialization(format!("Failed to parse JSON line: {}", e)))?;
+            
+            if let Some(obj) = record.as_object() {
+                let id = obj.get("id")
+                    .or_else(|| obj.get("_id"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+                
+                let vector = obj.get("vector")
+                    .or_else(|| obj.get("embedding"))
+                    .or_else(|| obj.get("embeddings"))
+                    .and_then(|v| v.as_array())
+                    .map(|arr| arr.iter().map(|v| v.as_f64().unwrap_or(0.0) as f32).collect())
+                    .unwrap_or_default();
+                
+                let mut metadata = HashMap::new();
+                for (key, value) in obj {
+                    if !["id", "_id", "vector", "embedding", "embeddings"].contains(&key.as_str()) {
+                        metadata.insert(key.clone(), value.clone());
+                    }
+                }
+                
+                records.push(VectorRecord {
+                    id,
+                    vector,
+                    metadata,
+                });
+            }
+        }
+        
+        self.current_offset = offset + records.len() as u64;
+        Ok(records)
+    }
+    
+    fn clone_box(&self) -> Box<dyn SourceClient> {
+        Box::new(Self {
+            path: self.path.clone(),
+            table_name: self.table_name.clone(),
+            current_offset: self.current_offset,
+        })
+    }
+}
+
+/// JSONL source client
+pub struct JsonlSourceClient {
+    path: String,
+    current_offset: u64,
+}
+
+impl JsonlSourceClient {
+    async fn new(path: &str) -> Result<Self> {
+        // Verify file exists
+        if !std::path::Path::new(path).exists() {
+            return Err(RTDBError::Config(format!("JSONL file does not exist: {}", path)));
+        }
+        
+        Ok(Self { 
+            path: path.to_string(),
+            current_offset: 0,
+        })
+    }
+    
+    async fn count_lines(&self) -> Result<u64> {
+        let file = File::open(&self.path).await
+            .map_err(|e| RTDBError::Io(format!("Failed to open file for counting: {}", e)))?;
+        
+        let mut reader = BufReader::new(file);
+        let mut count = 0u64;
+        let mut line = String::new();
+        
+        while reader.read_line(&mut line).await
+            .map_err(|e| RTDBError::Io(format!("Failed to read line: {}", e)))? > 0 {
+            count += 1;
+            line.clear();
+        }
+        
+        Ok(count)
+    }
+}
+
+#[async_trait]
+impl SourceClient for JsonlSourceClient {
+    async fn get_total_count(&mut self) -> Result<Option<u64>> {
+        match self.count_lines().await {
+            Ok(count) => Ok(Some(count)),
+            Err(_) => Ok(None), // Don't fail if we can't count
+        }
+    }
+    
+    async fn fetch_batch(&mut self, offset: u64, limit: usize) -> Result<Vec<VectorRecord>> {
+        let file = File::open(&self.path).await
+            .map_err(|e| RTDBError::Io(format!("Failed to open JSONL file: {}", e)))?;
+        
+        let mut reader = BufReader::new(file);
+        let mut line = String::new();
+        let mut records = Vec::new();
+        let mut current_line = 0u64;
+        
+        // Skip to offset
+        while current_line < offset {
+            line.clear();
+            if reader.read_line(&mut line).await
+                .map_err(|e| RTDBError::Io(format!("Failed to read line: {}", e)))? == 0 {
+                break; // EOF
+            }
+            current_line += 1;
+        }
+        
+        // Read batch
+        for _ in 0..limit {
+            line.clear();
+            let bytes_read = reader.read_line(&mut line).await
+                .map_err(|e| RTDBError::Io(format!("Failed to read line: {}", e)))?;
+            
+            if bytes_read == 0 {
+                break; // EOF
+            }
+            
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+            
+            let record: serde_json::Value = serde_json::from_str(line)
+                .map_err(|e| RTDBError::Serialization(format!("Failed to parse JSON line {}: {}", current_line + 1, e)))?;
+            
+            if let Some(obj) = record.as_object() {
+                let id = obj.get("id")
+                    .or_else(|| obj.get("_id"))
+                    .and_then(|v| v.as_str().or_else(|| v.as_i64().map(|i| Box::leak(i.to_string().into_boxed_str()) as &str)))
+                    .unwrap_or("unknown")
+                    .to_string();
+                
+                let vector = obj.get("vector")
+                    .or_else(|| obj.get("embedding"))
+                    .or_else(|| obj.get("embeddings"))
+                    .or_else(|| obj.get("vec"))
+                    .and_then(|v| v.as_array())
+                    .map(|arr| arr.iter().map(|v| v.as_f64().unwrap_or(0.0) as f32).collect())
+                    .unwrap_or_default();
+                
+                let mut metadata = HashMap::new();
+                for (key, value) in obj {
+                    if !["id", "_id", "vector", "embedding", "embeddings", "vec"].contains(&key.as_str()) {
+                        metadata.insert(key.clone(), value.clone());
+                    }
+                }
+                
+                records.push(VectorRecord {
+                    id,
+                    vector,
+                    metadata,
+                });
+            }
+            
+            current_line += 1;
+        }
+        
+        self.current_offset = current_line;
+        Ok(records)
+    }
+    
+    fn clone_box(&self) -> Box<dyn SourceClient> {
+        Box::new(Self { 
+            path: self.path.clone(),
+            current_offset: self.current_offset,
+        })
+    }
+}
+
+/// Parquet source client (placeholder)
+pub struct ParquetSourceClient {
+    path: String,
+}
+
+impl ParquetSourceClient {
+    async fn new(path: &str) -> Result<Self> {
+        Ok(Self { path: path.to_string() })
+    }
+}
+
+#[async_trait]
+impl SourceClient for ParquetSourceClient {
+    async fn get_total_count(&mut self) -> Result<Option<u64>> {
+        Ok(None)
+    }
+    
+    async fn fetch_batch(&mut self, _offset: u64, _limit: usize) -> Result<Vec<VectorRecord>> {
+        tracing::warn!("Parquet migration not fully implemented");
+        Ok(Vec::new())
+    }
+    
+    fn clone_box(&self) -> Box<dyn SourceClient> {
+        Box::new(Self { path: self.path.clone() })
+    }
+}
+
+/// HDF5 source client (placeholder)
+pub struct Hdf5SourceClient {
+    path: String,
+}
+
+impl Hdf5SourceClient {
+    async fn new(path: &str) -> Result<Self> {
+        Ok(Self { path: path.to_string() })
+    }
+}
+
+#[async_trait]
+impl SourceClient for Hdf5SourceClient {
+    async fn get_total_count(&mut self) -> Result<Option<u64>> {
+        Ok(None)
+    }
+    
+    async fn fetch_batch(&mut self, _offset: u64, _limit: usize) -> Result<Vec<VectorRecord>> {
+        tracing::warn!("HDF5 migration not fully implemented");
+        Ok(Vec::new())
+    }
+    
+    fn clone_box(&self) -> Box<dyn SourceClient> {
+        Box::new(Self { path: self.path.clone() })
+    }
+}
+
+/// RTDB target client
+pub struct RTDBTargetClient {
+    client: HttpClient,
+    base_url: String,
+}
+
+impl RTDBTargetClient {
+    async fn new(url: &str, auth: Option<&AuthConfig>) -> Result<Self> {
+        let mut client_builder = HttpClient::builder();
+        
+        if let Some(auth_config) = auth {
+            let mut headers = reqwest::header::HeaderMap::new();
+            
+            if let Some(api_key) = &auth_config.api_key {
+                headers.insert("api-key", api_key.parse()
+                    .map_err(|_| RTDBError::Config("Invalid API key format".to_string()))?);
+            }
+            
+            client_builder = client_builder.default_headers(headers);
+        }
+        
+        let client = client_builder.build()
+            .map_err(|e| RTDBError::Config(format!("Failed to create HTTP client: {}", e)))?;
+        
+        Ok(Self {
+            client,
+            base_url: url.trim_end_matches('/').to_string(),
+        })
+    }
+}
+
+#[async_trait]
+impl TargetClient for RTDBTargetClient {
+    async fn insert_batch(&self, records: &[VectorRecord]) -> Result<()> {
+        let url = format!("{}/collections/{{collection_name}}/points", self.base_url);
+        
+        let points: Vec<Value> = records.iter().map(|record| {
+            serde_json::json!({
+                "id": record.id,
+                "vector": record.vector,
+                "payload": record.metadata
+            })
+        }).collect();
+        
+        let request_body = serde_json::json!({
+            "points": points
+        });
+        
+        let response = self.client.put(&url)
+            .json(&request_body)
+            .send().await
+            .map_err(|e| RTDBError::Network(format!("Failed to insert batch: {}", e)))?;
+        
+        if !response.status().is_success() {
+            return Err(RTDBError::Network(format!("HTTP error: {}", response.status())));
+        }
+        
+        Ok(())
+    }
+    
+    async fn ensure_collection(&self, collection_name: &str, dimension: usize) -> Result<()> {
+        let url = format!("{}/collections/{}", self.base_url, collection_name);
+        
+        let collection_config = serde_json::json!({
+            "vectors": {
+                "size": dimension,
+                "distance": "Cosine"
+            }
+        });
+        
+        let response = self.client.put(&url)
+            .json(&collection_config)
+            .send().await
+            .map_err(|e| RTDBError::Network(format!("Failed to create collection: {}", e)))?;
+        
+        if !response.status().is_success() && response.status().as_u16() != 409 {
+            return Err(RTDBError::Network(format!("HTTP error: {}", response.status())));
+        }
+        
+        Ok(())
+    }
+    
+    async fn get_collection_info(&self, collection_name: &str) -> Result<Option<CollectionInfo>> {
+        let url = format!("{}/collections/{}", self.base_url, collection_name);
+        
+        let response = self.client.get(&url).send().await
+            .map_err(|e| RTDBError::Network(format!("Failed to get collection info: {}", e)))?;
+        
+        if response.status().as_u16() == 404 {
+            return Ok(None);
+        }
+        
+        if !response.status().is_success() {
+            return Err(RTDBError::Network(format!("HTTP error: {}", response.status())));
+        }
+        
+        let info: Value = response.json().await
+            .map_err(|e| RTDBError::Serialization(format!("Failed to parse response: {}", e)))?;
+        
+        let result = info["result"].as_object()
+            .ok_or_else(|| RTDBError::Serialization("Invalid response format".to_string()))?;
+        
+        let config = result["config"].as_object()
+            .ok_or_else(|| RTDBError::Serialization("Missing config in response".to_string()))?;
+        
+        let vectors_config = config["params"]["vectors"].as_object()
+            .ok_or_else(|| RTDBError::Serialization("Missing vectors config".to_string()))?;
+        
+        let dimension = vectors_config["size"].as_u64()
+            .ok_or_else(|| RTDBError::Serialization("Missing vector size".to_string()))? as usize;
+        
+        let distance_metric = vectors_config["distance"].as_str()
+            .unwrap_or("Cosine").to_string();
+        
+        let vector_count = result["points_count"].as_u64().unwrap_or(0);
+        
+        Ok(Some(CollectionInfo {
+            name: collection_name.to_string(),
+            dimension,
+            vector_count,
+            distance_metric,
+        }))
+    }
+    
+    fn clone_box(&self) -> Box<dyn TargetClient> {
+        Box::new(Self {
+            client: self.client.clone(),
+            base_url: self.base_url.clone(),
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_collection_info() {
+        let info = CollectionInfo {
+            name: "test".to_string(),
+            dimension: 128,
+            vector_count: 1000,
+            distance_metric: "Cosine".to_string(),
+        };
+        
+        assert_eq!(info.name, "test");
+        assert_eq!(info.dimension, 128);
+        assert_eq!(info.vector_count, 1000);
+    }
+}
