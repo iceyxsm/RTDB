@@ -9,6 +9,7 @@
 
 pub mod rest;
 pub mod qdrant_compat;
+pub mod milvus_compat;
 pub mod enhanced_router;
 pub mod error;
 pub mod middleware;
@@ -83,21 +84,22 @@ pub async fn start_all(
         .and_then(|p| p.parse().ok())
         .unwrap_or(9090);
     
-    // Start REST server with Qdrant-compatible API
+    // Create snapshot manager (shared between APIs)
+    let snapshot_config = crate::storage::snapshot::SnapshotConfig::default();
+    let snapshot_manager = match SnapshotManager::new(snapshot_config) {
+        Ok(manager) => Arc::new(manager),
+        Err(e) => {
+            tracing::error!(error = %e, "Failed to create snapshot manager");
+            return Err(e);
+        }
+    };
+    
+    // Start REST server with Qdrant-compatible API (port 6333)
     let _rest_handle = tokio::spawn({
         let collections = collections.clone();
+        let snapshot_manager = snapshot_manager.clone();
         let port = config.http_port;
         async move {
-            // Create snapshot manager
-            let snapshot_config = crate::storage::snapshot::SnapshotConfig::default();
-            let snapshot_manager = match SnapshotManager::new(snapshot_config) {
-                Ok(manager) => Arc::new(manager),
-                Err(e) => {
-                    tracing::error!(error = %e, "Failed to create snapshot manager");
-                    return;
-                }
-            };
-            
             let state = qdrant_compat::QdrantState::new(collections, snapshot_manager);
             let app = qdrant_compat::create_qdrant_router(state);
             
@@ -109,8 +111,32 @@ pub async fn start_all(
                 }
             };
             
+            tracing::info!("Starting Qdrant-compatible REST server on port {}", port);
             if let Err(e) = axum::serve(listener, app).await {
                 tracing::error!(error = %e, "REST server error");
+            }
+        }
+    });
+    
+    // Start Milvus-compatible REST server (port 19530 - Milvus default)
+    let _milvus_handle = tokio::spawn({
+        let collections = collections.clone();
+        let snapshot_manager = snapshot_manager.clone();
+        async move {
+            let state = milvus_compat::MilvusState::new(collections, snapshot_manager);
+            let app = milvus_compat::create_milvus_router(state);
+            
+            let listener = match tokio::net::TcpListener::bind("0.0.0.0:19530").await {
+                Ok(l) => l,
+                Err(e) => {
+                    tracing::error!(error = %e, "Failed to bind Milvus server");
+                    return;
+                }
+            };
+            
+            tracing::info!("Starting Milvus-compatible REST server on port 19530");
+            if let Err(e) = axum::serve(listener, app).await {
+                tracing::error!(error = %e, "Milvus server error");
             }
         }
     });
@@ -155,7 +181,8 @@ pub async fn start_all(
     // Mark startup as complete
     health.startup_check().mark_ready();
     
-    tracing::info!("All servers started successfully");
+    tracing::info!("All servers started successfully - Qdrant API on {}, Milvus API on 19530, gRPC on {}", 
+                  config.http_port, config.grpc_port);
     
     Ok(ServerHandle {
         rest_port: config.http_port,
