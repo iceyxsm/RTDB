@@ -677,7 +677,7 @@ mod tests {
         assert_eq!(meta.entry_count, 100);
 
         // Read
-        let mut table = SSTable::open(&path).unwrap();
+        let table = SSTable::open(&path).unwrap();
         assert_eq!(table.meta.entry_count, 100);
 
         // Get
@@ -709,7 +709,7 @@ mod tests {
         builder.finish().unwrap();
 
         // Read
-        let mut table = SSTable::open(&path).unwrap();
+        let table = SSTable::open(&path).unwrap();
         let results = table.scan(Some(10), Some(20)).unwrap();
         assert_eq!(results.len(), 11); // 10..=20
     }

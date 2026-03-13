@@ -755,7 +755,7 @@ impl MultiVectorIndex {
         let candidates = self.search(query, search_k)?;
 
         // Apply filter
-        let _results = Vec::new();
+        let _results: Vec<SearchResult> = Vec::new();
         
         // Note: This is a simplified implementation
         // Real implementation would need access to metadata
@@ -763,7 +763,7 @@ impl MultiVectorIndex {
         
         // For now, return top-k unfiltered (actual metadata filtering
         // requires integration with metadata storage)
-        results = candidates.into_iter().take(k).collect();
+        let results = candidates.into_iter().take(k).collect();
 
         let latency = start.elapsed().as_micros() as u64;
         self.query_count.fetch_add(1, Ordering::SeqCst);
@@ -835,7 +835,7 @@ mod tests {
         (0..count)
             .map(|i| {
                 let vec: Vec<f32> = (0..dim)
-                    .map(|j| ((i * dim + j) as f32 / (count * dim) as f32))
+                    .map(|j| (i * dim + j) as f32 / (count * dim) as f32)
                     .collect();
                 (i as u64, vec)
             })

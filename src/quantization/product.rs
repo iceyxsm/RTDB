@@ -273,7 +273,7 @@ mod tests {
         (0..n)
             .map(|i| {
                 let data: Vec<f32> = (0..dim)
-                    .map(|j| ((i * dim + j) as f32 / (n * dim) as f32))
+                    .map(|j| (i * dim + j) as f32 / (n * dim) as f32)
                     .collect();
                 Vector::new(data)
             })

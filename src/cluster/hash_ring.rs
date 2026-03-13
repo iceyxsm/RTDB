@@ -320,7 +320,7 @@ mod tests {
         ring.add_node("node-2");
         
         // Get initial assignment
-        let initial_node = ring.get_node("test-key").cloned();
+        let _initial_node = ring.get_node("test-key").cloned();
         
         // Remove a node
         ring.remove_node("node-1");

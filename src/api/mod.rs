@@ -9,6 +9,11 @@
 
 pub mod rest;
 pub mod qdrant_compat;
+pub mod enhanced_router;
+pub mod error;
+pub mod middleware;
+pub mod performance;
+pub mod validation;
 #[cfg(feature = "grpc")]
 pub mod grpc;
 

@@ -6,7 +6,7 @@
 //! - Payload filtering with nested key support
 //! - Optimized evaluation order
 
-use crate::{Condition, FieldCondition, Filter, Match, MatchValue, Range, Vector, VectorId};
+use crate::{Condition, FieldCondition, Filter, HasIdCondition, Match, MatchValue, Range, Vector, VectorId};
 use serde_json::Value;
 
 /// Filter evaluator for applying filters to vectors
@@ -210,7 +210,7 @@ mod tests {
         payload.insert("city".to_string(), json!("London"));
         
         let vector = Vector {
-            vector: vec![1.0, 2.0, 3.0],
+            data: vec![1.0, 2.0, 3.0],
             payload: Some(payload),
         };
 
@@ -235,7 +235,7 @@ mod tests {
         }));
         
         let vector = Vector {
-            vector: vec![1.0, 2.0, 3.0],
+            data: vec![1.0, 2.0, 3.0],
             payload: Some(payload),
         };
 
@@ -257,7 +257,7 @@ mod tests {
         payload.insert("price".to_string(), json!(150.0));
         
         let vector = Vector {
-            vector: vec![1.0, 2.0, 3.0],
+            data: vec![1.0, 2.0, 3.0],
             payload: Some(payload),
         };
 
@@ -284,7 +284,7 @@ mod tests {
         payload.insert("color".to_string(), json!("red"));
         
         let vector = Vector {
-            vector: vec![1.0, 2.0, 3.0],
+            data: vec![1.0, 2.0, 3.0],
             payload: Some(payload),
         };
 
@@ -303,7 +303,7 @@ mod tests {
     #[test]
     fn test_has_id_condition() {
         let vector = Vector {
-            vector: vec![1.0, 2.0, 3.0],
+            data: vec![1.0, 2.0, 3.0],
             payload: None,
         };
 
