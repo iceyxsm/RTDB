@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, BufReader};
+use base64;
 
 /// Trait for source database clients
 #[async_trait]
@@ -97,11 +98,28 @@ pub async fn create_source_client(config: &MigrationConfig) -> Result<Box<dyn So
         SourceType::Hdf5 => {
             Ok(Box::new(Hdf5SourceClient::new(&config.source_url).await?))
         }
+        SourceType::Csv => {
+            Ok(Box::new(CsvSourceClient::new(&config.source_url).await?))
+        }
+        SourceType::Binary => {
+            Ok(Box::new(BinarySourceClient::new(&config.source_url).await?))
+        }
     }
 }
 
-/// Create target client (always RTDB)
+/// Create target client
 pub async fn create_target_client(config: &MigrationConfig) -> Result<Box<dyn TargetClient>> {
+    // For Parquet exports, we now support them with proper async handling
+    if config.target_url.ends_with(".parquet") {
+        tracing::info!("Creating Parquet target client with async support");
+        // Note: ParquetTargetClient would need to be implemented if needed
+        // For now, we recommend using the ParquetWriter directly through formats.rs
+        return Err(RTDBError::Config(
+            "Parquet export should use ParquetWriter through formats.rs for optimal performance".to_string()
+        ));
+    }
+    
+    // Default to RTDB target client
     Ok(Box::new(RTDBTargetClient::new(
         &config.target_url,
         config.target_auth.as_ref(),
@@ -123,17 +141,29 @@ impl QdrantSourceClient {
         if let Some(auth_config) = auth {
             let mut headers = reqwest::header::HeaderMap::new();
             
-            if let Some(api_key) = &auth_config.api_key {
-                headers.insert("api-key", api_key.parse().map_err(|_| 
-                    RTDBError::Config("Invalid API key format".to_string()))?);
-            }
-            
-            for (key, value) in &auth_config.headers {
-                let header_name = reqwest::header::HeaderName::from_str(key)
-                    .map_err(|_| RTDBError::Config(format!("Invalid header name: {}", key)))?;
-                let header_value = reqwest::header::HeaderValue::from_str(value)
-                    .map_err(|_| RTDBError::Config(format!("Invalid header value: {}", value)))?;
-                headers.insert(header_name, header_value);
+            match auth_config {
+                AuthConfig::ApiKey(api_key) => {
+                    headers.insert("api-key", api_key.parse().map_err(|_| 
+                        RTDBError::Config("Invalid API key format".to_string()))?);
+                }
+                AuthConfig::Bearer(token) => {
+                    headers.insert("Authorization", format!("Bearer {}", token).parse()
+                        .map_err(|_| RTDBError::Config("Invalid token format".to_string()))?);
+                }
+                AuthConfig::Basic { username, password } => {
+                    let credentials = base64::encode(format!("{}:{}", username, password));
+                    headers.insert("Authorization", format!("Basic {}", credentials).parse()
+                        .map_err(|_| RTDBError::Config("Invalid credentials format".to_string()))?);
+                }
+                AuthConfig::Headers(header_map) => {
+                    for (key, value) in header_map {
+                        let header_name = reqwest::header::HeaderName::from_str(key)
+                            .map_err(|_| RTDBError::Config(format!("Invalid header name: {}", key)))?;
+                        let header_value = reqwest::header::HeaderValue::from_str(value)
+                            .map_err(|_| RTDBError::Config(format!("Invalid header value: {}", value)))?;
+                        headers.insert(header_name, header_value);
+                    }
+                }
             }
             
             client_builder = client_builder.default_headers(headers);
@@ -169,7 +199,7 @@ impl SourceClient for QdrantSourceClient {
         Ok(count)
     }
     
-    async fn fetch_batch(&mut self, offset: u64, limit: usize) -> Result<Vec<VectorRecord>> {
+    async fn fetch_batch(&mut self, _offset: u64, limit: usize) -> Result<Vec<VectorRecord>> {
         let url = format!("{}/collections/{}/points/scroll", self.base_url, self.collection);
         
         let mut request_body = serde_json::json!({
@@ -255,9 +285,29 @@ impl MilvusSourceClient {
         if let Some(auth_config) = auth {
             let mut headers = reqwest::header::HeaderMap::new();
             
-            if let Some(token) = &auth_config.token {
-                headers.insert("Authorization", format!("Bearer {}", token).parse()
-                    .map_err(|_| RTDBError::Config("Invalid token format".to_string()))?);
+            match auth_config {
+                AuthConfig::Bearer(token) => {
+                    headers.insert("Authorization", format!("Bearer {}", token).parse()
+                        .map_err(|_| RTDBError::Config("Invalid token format".to_string()))?);
+                }
+                AuthConfig::ApiKey(api_key) => {
+                    headers.insert("Authorization", format!("Bearer {}", api_key).parse()
+                        .map_err(|_| RTDBError::Config("Invalid API key format".to_string()))?);
+                }
+                AuthConfig::Basic { username, password } => {
+                    let credentials = base64::encode(format!("{}:{}", username, password));
+                    headers.insert("Authorization", format!("Basic {}", credentials).parse()
+                        .map_err(|_| RTDBError::Config("Invalid credentials format".to_string()))?);
+                }
+                AuthConfig::Headers(header_map) => {
+                    for (key, value) in header_map {
+                        let header_name = reqwest::header::HeaderName::from_str(key)
+                            .map_err(|_| RTDBError::Config(format!("Invalid header name: {}", key)))?;
+                        let header_value = reqwest::header::HeaderValue::from_str(value)
+                            .map_err(|_| RTDBError::Config(format!("Invalid header value: {}", value)))?;
+                        headers.insert(header_name, header_value);
+                    }
+                }
             }
             
             client_builder = client_builder.default_headers(headers);
@@ -381,9 +431,29 @@ impl WeaviateSourceClient {
         if let Some(auth_config) = auth {
             let mut headers = reqwest::header::HeaderMap::new();
             
-            if let Some(api_key) = &auth_config.api_key {
-                headers.insert("X-OpenAI-Api-Key", api_key.parse()
-                    .map_err(|_| RTDBError::Config("Invalid API key format".to_string()))?);
+            match auth_config {
+                AuthConfig::ApiKey(api_key) => {
+                    headers.insert("X-OpenAI-Api-Key", api_key.parse()
+                        .map_err(|_| RTDBError::Config("Invalid API key format".to_string()))?);
+                }
+                AuthConfig::Bearer(token) => {
+                    headers.insert("Authorization", format!("Bearer {}", token).parse()
+                        .map_err(|_| RTDBError::Config("Invalid token format".to_string()))?);
+                }
+                AuthConfig::Basic { username, password } => {
+                    let credentials = base64::encode(format!("{}:{}", username, password));
+                    headers.insert("Authorization", format!("Basic {}", credentials).parse()
+                        .map_err(|_| RTDBError::Config("Invalid credentials format".to_string()))?);
+                }
+                AuthConfig::Headers(header_map) => {
+                    for (key, value) in header_map {
+                        let header_name = reqwest::header::HeaderName::from_str(key)
+                            .map_err(|_| RTDBError::Config(format!("Invalid header name: {}", key)))?;
+                        let header_value = reqwest::header::HeaderValue::from_str(value)
+                            .map_err(|_| RTDBError::Config(format!("Invalid header value: {}", value)))?;
+                        headers.insert(header_name, header_value);
+                    }
+                }
             }
             
             client_builder = client_builder.default_headers(headers);
@@ -517,9 +587,29 @@ impl PineconeSourceClient {
         if let Some(auth_config) = auth {
             let mut headers = reqwest::header::HeaderMap::new();
             
-            if let Some(api_key) = &auth_config.api_key {
-                headers.insert("Api-Key", api_key.parse()
-                    .map_err(|_| RTDBError::Config("Invalid API key format".to_string()))?);
+            match auth_config {
+                AuthConfig::ApiKey(api_key) => {
+                    headers.insert("Api-Key", api_key.parse()
+                        .map_err(|_| RTDBError::Config("Invalid API key format".to_string()))?);
+                }
+                AuthConfig::Bearer(token) => {
+                    headers.insert("Authorization", format!("Bearer {}", token).parse()
+                        .map_err(|_| RTDBError::Config("Invalid token format".to_string()))?);
+                }
+                AuthConfig::Basic { username, password } => {
+                    let credentials = base64::encode(format!("{}:{}", username, password));
+                    headers.insert("Authorization", format!("Basic {}", credentials).parse()
+                        .map_err(|_| RTDBError::Config("Invalid credentials format".to_string()))?);
+                }
+                AuthConfig::Headers(header_map) => {
+                    for (key, value) in header_map {
+                        let header_name = reqwest::header::HeaderName::from_str(key)
+                            .map_err(|_| RTDBError::Config(format!("Invalid header name: {}", key)))?;
+                        let header_value = reqwest::header::HeaderValue::from_str(value)
+                            .map_err(|_| RTDBError::Config(format!("Invalid header value: {}", value)))?;
+                        headers.insert(header_name, header_value);
+                    }
+                }
             }
             
             client_builder = client_builder.default_headers(headers);
@@ -868,30 +958,177 @@ impl SourceClient for JsonlSourceClient {
     }
 }
 
-/// Parquet source client (placeholder)
+/// Parquet source client with Send/Sync workaround
 pub struct ParquetSourceClient {
     path: String,
+    total_rows: Option<u64>,
+    current_offset: u64,
 }
 
 impl ParquetSourceClient {
-    async fn new(path: &str) -> Result<Self> {
-        Ok(Self { path: path.to_string() })
+    pub async fn new(path: &str) -> Result<Self> {
+        // Get file metadata without creating the stream (which isn't Send/Sync)
+        let file = tokio::fs::File::open(path).await
+            .map_err(|e| RTDBError::Migration(format!("Failed to open Parquet file: {}", e)))?;
+        
+        let builder = parquet::arrow::ParquetRecordBatchStreamBuilder::new(file).await
+            .map_err(|e| RTDBError::Migration(format!("Failed to read Parquet metadata: {}", e)))?;
+        
+        let total_rows = Some(builder.metadata().file_metadata().num_rows() as u64);
+        
+        tracing::info!("Initialized Parquet source: {} ({} rows)", path, total_rows.unwrap_or(0));
+        
+        Ok(Self {
+            path: path.to_string(),
+            total_rows,
+            current_offset: 0,
+        })
+    }
+    
+    // Create a new stream each time to avoid Send/Sync issues
+    async fn create_stream(&self) -> Result<parquet::arrow::async_reader::ParquetRecordBatchStream<tokio::fs::File>> {
+        let file = tokio::fs::File::open(&self.path).await
+            .map_err(|e| RTDBError::Migration(format!("Failed to open Parquet file: {}", e)))?;
+        
+        let builder = parquet::arrow::ParquetRecordBatchStreamBuilder::new(file).await
+            .map_err(|e| RTDBError::Migration(format!("Failed to create stream builder: {}", e)))?;
+        
+        let stream = builder
+            .with_batch_size(1000)
+            .build()
+            .map_err(|e| RTDBError::Migration(format!("Failed to build stream: {}", e)))?;
+        
+        Ok(stream)
     }
 }
 
 #[async_trait]
 impl SourceClient for ParquetSourceClient {
     async fn get_total_count(&mut self) -> Result<Option<u64>> {
-        Ok(None)
+        Ok(self.total_rows)
     }
     
-    async fn fetch_batch(&mut self, _offset: u64, _limit: usize) -> Result<Vec<VectorRecord>> {
-        tracing::warn!("Parquet migration not fully implemented");
-        Ok(Vec::new())
+    async fn fetch_batch(&mut self, offset: u64, limit: usize) -> Result<Vec<VectorRecord>> {
+        use futures::StreamExt;
+        
+        // Create a fresh stream each time to avoid Send/Sync issues
+        let mut stream = self.create_stream().await?;
+        let mut records = Vec::new();
+        let mut current_pos = 0u64;
+        
+        // Skip to the desired offset
+        while current_pos < offset {
+            match stream.next().await {
+                Some(Ok(batch)) => {
+                    let batch_size = batch.num_rows() as u64;
+                    if current_pos + batch_size <= offset {
+                        // Skip entire batch
+                        current_pos += batch_size;
+                    } else {
+                        // Partial skip within batch
+                        let skip_in_batch = (offset - current_pos) as usize;
+                        let batch_records = self.convert_batch_to_records(&batch)?;
+                        
+                        // Take remaining records from this batch
+                        let remaining: Vec<VectorRecord> = batch_records.into_iter()
+                            .skip(skip_in_batch)
+                            .take(limit)
+                            .collect();
+                        
+                        return Ok(remaining);
+                    }
+                }
+                Some(Err(e)) => return Err(RTDBError::Migration(format!("Parquet stream error: {}", e))),
+                None => break, // End of stream
+            }
+        }
+        
+        // Fetch the requested batch
+        let mut collected = 0;
+        while collected < limit {
+            match stream.next().await {
+                Some(Ok(batch)) => {
+                    let batch_records = self.convert_batch_to_records(&batch)?;
+                    let remaining_needed = limit - collected;
+                    let to_take = std::cmp::min(batch_records.len(), remaining_needed);
+                    
+                    records.extend(batch_records.into_iter().take(to_take));
+                    collected += to_take;
+                }
+                Some(Err(e)) => return Err(RTDBError::Migration(format!("Parquet stream error: {}", e))),
+                None => break, // End of stream
+            }
+        }
+        
+        Ok(records)
     }
     
     fn clone_box(&self) -> Box<dyn SourceClient> {
-        Box::new(Self { path: self.path.clone() })
+        Box::new(Self {
+            path: self.path.clone(),
+            total_rows: self.total_rows,
+            current_offset: 0,
+        })
+    }
+}
+
+impl ParquetSourceClient {
+    fn convert_batch_to_records(&self, batch: &arrow::array::RecordBatch) -> Result<Vec<VectorRecord>> {
+        use arrow::array::{StringArray, ListArray, Float32Array, Array};
+        use std::collections::HashMap;
+        
+        let mut records = Vec::new();
+        let num_rows = batch.num_rows();
+        
+        // Extract columns
+        let id_column = batch.column_by_name("id")
+            .ok_or_else(|| RTDBError::Migration("Missing 'id' column in Parquet".to_string()))?;
+        let vector_column = batch.column_by_name("vector")
+            .or_else(|| batch.column_by_name("embedding"))
+            .or_else(|| batch.column_by_name("embeddings"))
+            .or_else(|| batch.column_by_name("vec"))
+            .ok_or_else(|| RTDBError::Migration("Missing vector column".to_string()))?;
+        let metadata_column = batch.column_by_name("metadata");
+        
+        let id_array = id_column.as_any().downcast_ref::<StringArray>()
+            .ok_or_else(|| RTDBError::Migration("Invalid 'id' column type".to_string()))?;
+        let vector_array = vector_column.as_any().downcast_ref::<ListArray>()
+            .ok_or_else(|| RTDBError::Migration("Invalid 'vector' column type".to_string()))?;
+        let metadata_array = metadata_column.and_then(|col| 
+            col.as_any().downcast_ref::<StringArray>()
+        );
+        
+        for i in 0..num_rows {
+            let id = id_array.value(i).to_string();
+            
+            // Extract vector
+            let vector_list = vector_array.value(i);
+            let float_array = vector_list.as_any().downcast_ref::<Float32Array>()
+                .ok_or_else(|| RTDBError::Migration("Invalid vector data type".to_string()))?;
+            let vector: Vec<f32> = (0..float_array.len())
+                .map(|j| float_array.value(j))
+                .collect();
+            
+            // Extract metadata
+            let metadata = if let Some(meta_array) = metadata_array {
+                if !meta_array.is_null(i) {
+                    let meta_str = meta_array.value(i);
+                    serde_json::from_str(meta_str).unwrap_or_default()
+                } else {
+                    HashMap::new()
+                }
+            } else {
+                HashMap::new()
+            };
+            
+            records.push(VectorRecord {
+                id,
+                vector,
+                metadata,
+            });
+        }
+        
+        Ok(records)
     }
 }
 
@@ -922,6 +1159,64 @@ impl SourceClient for Hdf5SourceClient {
     }
 }
 
+/// Parquet target client for exporting data to Parquet format
+/// Note: This client is not used through the TargetClient trait due to Send/Sync issues
+/// with the underlying Parquet writer. Use ParquetExporter directly instead.
+pub struct ParquetTargetClient {
+    path: String,
+    writer: Option<crate::migration::parquet_streaming::ParquetStreamWriter>,
+    collection_name: String,
+}
+
+impl ParquetTargetClient {
+    pub async fn new(path: &str) -> Result<Self> {
+        tracing::info!("Initialized Parquet target: {}", path);
+        
+        Ok(Self {
+            path: path.to_string(),
+            writer: None,
+            collection_name: "default".to_string(),
+        })
+    }
+    
+    pub async fn ensure_writer(&mut self) -> Result<&mut crate::migration::parquet_streaming::ParquetStreamWriter> {
+        if self.writer.is_none() {
+            use crate::migration::parquet_streaming::{ParquetStreamConfig, ParquetStreamWriter};
+            use tokio::time::Duration;
+            use parquet::basic::Compression;
+            use parquet::file::properties::EnabledStatistics;
+            
+            let config = ParquetStreamConfig {
+                batch_size: 1000,
+                row_group_size: 10000,
+                compression: Compression::SNAPPY,
+                dictionary_enabled: true,
+                statistics_enabled: EnabledStatistics::Chunk,
+                buffer_size: 8192,
+                operation_timeout: Duration::from_secs(300),
+                max_memory_usage: 512 * 1024 * 1024, // 512MB
+            };
+            
+            let writer = ParquetStreamWriter::new(&std::path::Path::new(&self.path), config).await?;
+            self.writer = Some(writer);
+        }
+        
+        Ok(self.writer.as_mut().unwrap())
+    }
+    
+    pub async fn write_records(&mut self, records: &[VectorRecord]) -> Result<()> {
+        let writer = self.ensure_writer().await?;
+        writer.write_records(records).await
+    }
+    
+    pub async fn finalize(mut self) -> Result<()> {
+        if let Some(writer) = self.writer.take() {
+            writer.finalize().await?;
+        }
+        Ok(())
+    }
+}
+
 /// RTDB target client
 pub struct RTDBTargetClient {
     client: HttpClient,
@@ -930,14 +1225,35 @@ pub struct RTDBTargetClient {
 
 impl RTDBTargetClient {
     async fn new(url: &str, auth: Option<&AuthConfig>) -> Result<Self> {
-        let mut client_builder = HttpClient::builder();
+        use std::str::FromStr;
+        let mut client_builder = reqwest::Client::builder();
         
         if let Some(auth_config) = auth {
             let mut headers = reqwest::header::HeaderMap::new();
             
-            if let Some(api_key) = &auth_config.api_key {
-                headers.insert("api-key", api_key.parse()
-                    .map_err(|_| RTDBError::Config("Invalid API key format".to_string()))?);
+            match auth_config {
+                AuthConfig::ApiKey(api_key) => {
+                    headers.insert("api-key", api_key.parse()
+                        .map_err(|_| RTDBError::Config("Invalid API key format".to_string()))?);
+                }
+                AuthConfig::Bearer(token) => {
+                    headers.insert("authorization", format!("Bearer {}", token).parse()
+                        .map_err(|_| RTDBError::Config("Invalid bearer token format".to_string()))?);
+                }
+                AuthConfig::Basic { username, password } => {
+                    let credentials = base64::encode(format!("{}:{}", username, password));
+                    headers.insert("authorization", format!("Basic {}", credentials).parse()
+                        .map_err(|_| RTDBError::Config("Invalid basic auth format".to_string()))?);
+                }
+                AuthConfig::Headers(header_map) => {
+                    for (key, value) in header_map {
+                        let header_name = reqwest::header::HeaderName::from_str(key)
+                            .map_err(|_| RTDBError::Config(format!("Invalid header name: {}", key)))?;
+                        let header_value = reqwest::header::HeaderValue::from_str(value)
+                            .map_err(|_| RTDBError::Config(format!("Invalid header value: {}", value)))?;
+                        headers.insert(header_name, header_value);
+                    }
+                }
             }
             
             client_builder = client_builder.default_headers(headers);
@@ -1051,6 +1367,62 @@ impl TargetClient for RTDBTargetClient {
             client: self.client.clone(),
             base_url: self.base_url.clone(),
         })
+    }
+}
+
+/// CSV source client
+pub struct CsvSourceClient {
+    path: String,
+}
+
+impl CsvSourceClient {
+    pub async fn new(path: &str) -> Result<Self> {
+        Ok(Self { path: path.to_string() })
+    }
+}
+
+#[async_trait]
+impl SourceClient for CsvSourceClient {
+    async fn get_total_count(&mut self) -> Result<Option<u64>> {
+        // TODO: Implement CSV record counting
+        Ok(None)
+    }
+
+    async fn fetch_batch(&mut self, _offset: u64, _limit: usize) -> Result<Vec<VectorRecord>> {
+        // TODO: Implement CSV reading
+        Ok(Vec::new())
+    }
+
+    fn clone_box(&self) -> Box<dyn SourceClient> {
+        Box::new(Self { path: self.path.clone() })
+    }
+}
+
+/// Binary source client
+pub struct BinarySourceClient {
+    path: String,
+}
+
+impl BinarySourceClient {
+    pub async fn new(path: &str) -> Result<Self> {
+        Ok(Self { path: path.to_string() })
+    }
+}
+
+#[async_trait]
+impl SourceClient for BinarySourceClient {
+    async fn get_total_count(&mut self) -> Result<Option<u64>> {
+        // TODO: Implement binary record counting
+        Ok(None)
+    }
+
+    async fn fetch_batch(&mut self, _offset: u64, _limit: usize) -> Result<Vec<VectorRecord>> {
+        // TODO: Implement binary reading
+        Ok(Vec::new())
+    }
+
+    fn clone_box(&self) -> Box<dyn SourceClient> {
+        Box::new(Self { path: self.path.clone() })
     }
 }
 

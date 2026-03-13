@@ -109,11 +109,33 @@ pub enum RTDBError {
     /// Network errors
     #[error("Network error: {0}")]
     Network(String),
+    
+    /// Migration errors
+    #[error("Migration error: {0}")]
+    Migration(String),
 }
 
 impl From<std::io::Error> for RTDBError {
     fn from(err: std::io::Error) -> Self {
         RTDBError::Io(err.to_string())
+    }
+}
+
+impl From<serde_json::Error> for RTDBError {
+    fn from(err: serde_json::Error) -> Self {
+        RTDBError::Serialization(err.to_string())
+    }
+}
+
+impl From<parquet::errors::ParquetError> for RTDBError {
+    fn from(err: parquet::errors::ParquetError) -> Self {
+        RTDBError::Migration(format!("Parquet error: {}", err))
+    }
+}
+
+impl From<arrow_schema::ArrowError> for RTDBError {
+    fn from(err: arrow_schema::ArrowError) -> Self {
+        RTDBError::Migration(format!("Arrow error: {}", err))
     }
 }
 
