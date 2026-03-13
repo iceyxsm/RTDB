@@ -10,6 +10,7 @@
 pub mod rest;
 pub mod qdrant_compat;
 pub mod milvus_compat;
+pub mod weaviate_compat;
 pub mod enhanced_router;
 pub mod error;
 pub mod middleware;
@@ -141,6 +142,29 @@ pub async fn start_all(
         }
     });
     
+    // Start Weaviate-compatible GraphQL/REST server (port 8080 - Weaviate default)
+    let _weaviate_handle = tokio::spawn({
+        let collections = collections.clone();
+        let snapshot_manager = snapshot_manager.clone();
+        async move {
+            let state = weaviate_compat::WeaviateState::new(collections, snapshot_manager);
+            let app = weaviate_compat::create_weaviate_router(state);
+            
+            let listener = match tokio::net::TcpListener::bind("0.0.0.0:8080").await {
+                Ok(l) => l,
+                Err(e) => {
+                    tracing::error!(error = %e, "Failed to bind Weaviate server");
+                    return;
+                }
+            };
+            
+            tracing::info!("Starting Weaviate-compatible GraphQL/REST server on port 8080");
+            if let Err(e) = axum::serve(listener, app).await {
+                tracing::error!(error = %e, "Weaviate server error");
+            }
+        }
+    });
+    
     // Start gRPC server with production-grade configuration
     #[cfg(feature = "grpc")]
     let _grpc_handle = tokio::spawn({
@@ -181,7 +205,7 @@ pub async fn start_all(
     // Mark startup as complete
     health.startup_check().mark_ready();
     
-    tracing::info!("All servers started successfully - Qdrant API on {}, Milvus API on 19530, gRPC on {}", 
+    tracing::info!("All servers started successfully - Qdrant API on {}, Milvus API on 19530, Weaviate API on 8080, gRPC on {}", 
                   config.http_port, config.grpc_port);
     
     Ok(ServerHandle {
