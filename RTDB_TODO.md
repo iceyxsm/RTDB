@@ -60,7 +60,7 @@ RTDB is a next-generation vector database written in Rust that:
   
 - [x] **Client SDK Compatibility** 
   - [x] Python client (`qdrant-client` drop-in) - PyO3-based native SDK with async support 
-  - [ ] JavaScript/TypeScript client (`@qdrant/js-client-rest`)
+  - [x] JavaScript/TypeScript client (`@rtdb/client`) - Production-grade SDK with HTTP/2, connection pooling, retry logic
   - [ ] Rust client (`qdrant-client` crate)
   - [ ] Go client compatibility
   - [ ] Java client compatibility
