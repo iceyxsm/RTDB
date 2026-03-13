@@ -178,36 +178,47 @@ async fn test_transformation_rules() {
     };
     
     // Test rename transformation
-    let rename_rule = TransformationRule {
+    let rename_rule = TransformationRule::FieldRename {
         field: "old_field".to_string(),
-        operation: TransformOperation::Rename("new_field".to_string()),
+        new_name: "new_field".to_string(),
     };
     
     // Test conversion transformation
-    let convert_rule = TransformationRule {
+    let convert_rule = TransformationRule::FieldConvert {
         field: "number_string".to_string(),
-        operation: TransformOperation::Convert(ConversionType::StringToNumber),
+        conversion: ConversionType::StringToNumber,
     };
     
     // Apply transformations (this would normally be done by BatchProcessor)
     // For testing, we'll simulate the transformation logic
     
     // Rename transformation
-    if let Some(value) = record.metadata.remove(&rename_rule.field) {
-        if let TransformOperation::Rename(new_name) = &rename_rule.operation {
-            record.metadata.insert(new_name.clone(), value);
+    match &rename_rule {
+        TransformationRule::FieldRename { field, new_name } => {
+            if let Some(value) = record.metadata.remove(field) {
+                record.metadata.insert(new_name.clone(), value);
+            }
         }
+        _ => {}
     }
     
     // Convert transformation
-    if let Some(value) = record.metadata.get(&convert_rule.field).cloned() {
-        if let TransformOperation::Convert(ConversionType::StringToNumber) = &convert_rule.operation {
-            if let Some(s) = value.as_str() {
-                if let Ok(num) = s.parse::<f64>() {
-                    record.metadata.insert(convert_rule.field.clone(), serde_json::Value::Number(serde_json::Number::from_f64(num).unwrap()));
+    match &convert_rule {
+        TransformationRule::FieldConvert { field, conversion } => {
+            if let Some(value) = record.metadata.get(field).cloned() {
+                match conversion {
+                    ConversionType::StringToNumber => {
+                        if let Some(s) = value.as_str() {
+                            if let Ok(num) = s.parse::<f64>() {
+                                record.metadata.insert(field.clone(), serde_json::Value::Number(serde_json::Number::from_f64(num).unwrap()));
+                            }
+                        }
+                    }
+                    _ => {}
                 }
             }
         }
+        _ => {}
     }
     
     // Verify transformations

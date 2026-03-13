@@ -28,12 +28,15 @@ use uuid::Uuid;
 pub mod checkpoint;
 pub mod clients;
 pub mod formats;
+pub mod parquet_streaming;
 pub mod progress;
 pub mod strategies;
 pub mod validation;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod parquet_integration_test;
 
 /// Migration source types
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -46,6 +49,25 @@ pub enum SourceType {
     Jsonl,
     Parquet,
     Hdf5,
+    Csv,
+    Binary,
+}
+
+impl std::fmt::Display for SourceType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SourceType::Qdrant => write!(f, "Qdrant"),
+            SourceType::Milvus => write!(f, "Milvus"),
+            SourceType::Weaviate => write!(f, "Weaviate"),
+            SourceType::Pinecone => write!(f, "Pinecone"),
+            SourceType::LanceDB => write!(f, "LanceDB"),
+            SourceType::Jsonl => write!(f, "JSONL"),
+            SourceType::Parquet => write!(f, "Parquet"),
+            SourceType::Hdf5 => write!(f, "HDF5"),
+            SourceType::Csv => write!(f, "CSV"),
+            SourceType::Binary => write!(f, "Binary"),
+        }
+    }
 }
 
 /// Migration configuration
@@ -100,19 +122,40 @@ pub enum MigrationStrategy {
 
 /// Authentication configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AuthConfig {
-    pub api_key: Option<String>,
-    pub username: Option<String>,
-    pub password: Option<String>,
-    pub token: Option<String>,
-    pub headers: HashMap<String, String>,
+pub enum AuthConfig {
+    ApiKey(String),
+    Bearer(String),
+    Basic { username: String, password: String },
+    Headers(HashMap<String, String>),
 }
 
 /// Data transformation rule
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TransformationRule {
-    pub field: String,
-    pub operation: TransformOperation,
+pub enum TransformationRule {
+    DimensionReduction {
+        from_dimension: usize,
+        to_dimension: usize,
+        method: String,
+    },
+    MetadataFilter {
+        query: String,
+    },
+    FieldRename {
+        field: String,
+        new_name: String,
+    },
+    FieldMap {
+        field: String,
+        mapping: HashMap<String, String>,
+    },
+    FieldConvert {
+        field: String,
+        conversion: ConversionType,
+    },
+    FieldFilter {
+        field: String,
+        condition: FilterCondition,
+    },
 }
 
 /// Transformation operations
@@ -158,6 +201,8 @@ pub struct ValidationConfig {
 pub struct MigrationProgress {
     pub id: Uuid,
     pub status: MigrationStatus,
+    pub source_type: SourceType,
+    pub target_collection: String,
     pub total_records: Option<u64>,
     pub processed_records: u64,
     pub failed_records: u64,
@@ -219,6 +264,8 @@ impl MigrationManager {
         let progress = MigrationProgress {
             id: migration_id,
             status: MigrationStatus::Pending,
+            source_type: config.source_type.clone(),
+            target_collection: config.target_collection.clone(),
             total_records: None,
             processed_records: 0,
             failed_records: 0,
@@ -322,6 +369,23 @@ impl MigrationManager {
         self.update_status(migration_id, MigrationStatus::Cancelled).await;
         // TODO: Implement cancellation logic
         Ok(())
+    }
+
+    /// Resume a failed or cancelled migration
+    pub async fn resume_migration(&self, migration_id: Uuid) -> Result<bool> {
+        // Check if migration exists and can be resumed
+        if let Some(progress) = self.get_progress(migration_id).await {
+            match progress.status {
+                MigrationStatus::Failed | MigrationStatus::Cancelled => {
+                    self.update_status(migration_id, MigrationStatus::Running).await;
+                    // TODO: Implement resume logic with checkpoint
+                    Ok(true)
+                }
+                _ => Ok(false), // Cannot resume running or completed migrations
+            }
+        } else {
+            Ok(false) // Migration not found
+        }
     }
 
     /// Update migration status
@@ -447,22 +511,76 @@ impl BatchProcessor {
     }
 
     /// Execute dual-write migration
-    async fn dual_write_migration(&self, _checkpoint: Option<serde_json::Value>) -> Result<()> {
-        // TODO: Implement dual-write strategy
-        Err(RTDBError::Config("Dual-write migration not yet implemented".to_string()))
-    }
+    async fn dual_write_migration(&self, checkpoint: Option<serde_json::Value>) -> Result<()> {
+            tracing::info!("Starting dual-write migration for {}", self.config.id);
+
+            // Create strategy executor
+            let source_client = crate::migration::clients::create_source_client(&self.config).await?;
+            let target_client = crate::migration::clients::create_target_client(&self.config).await?;
+
+            let mut executor = crate::migration::strategies::StrategyExecutor::new(
+                self.config.clone(),
+                source_client,
+                target_client,
+                self.progress_tracker.clone(),
+                self.checkpoint_manager.clone(),
+            );
+
+            // Execute dual-write strategy
+            executor.execute_dual_write(checkpoint).await?;
+
+            tracing::info!("Dual-write migration completed for {}", self.config.id);
+            Ok(())
+        }
+
 
     /// Execute blue-green migration
-    async fn blue_green_migration(&self, _checkpoint: Option<serde_json::Value>) -> Result<()> {
-        // TODO: Implement blue-green strategy
-        Err(RTDBError::Config("Blue-green migration not yet implemented".to_string()))
-    }
+    async fn blue_green_migration(&self, checkpoint: Option<serde_json::Value>) -> Result<()> {
+            tracing::info!("Starting blue-green migration for {}", self.config.id);
+
+            // Create strategy executor
+            let source_client = crate::migration::clients::create_source_client(&self.config).await?;
+            let target_client = crate::migration::clients::create_target_client(&self.config).await?;
+
+            let mut executor = crate::migration::strategies::StrategyExecutor::new(
+                self.config.clone(),
+                source_client,
+                target_client,
+                self.progress_tracker.clone(),
+                self.checkpoint_manager.clone(),
+            );
+
+            // Execute blue-green strategy
+            executor.execute_blue_green(checkpoint).await?;
+
+            tracing::info!("Blue-green migration completed for {}", self.config.id);
+            Ok(())
+        }
+
 
     /// Execute snapshot migration
-    async fn snapshot_migration(&self, _checkpoint: Option<serde_json::Value>) -> Result<()> {
-        // TODO: Implement snapshot strategy
-        Err(RTDBError::Config("Snapshot migration not yet implemented".to_string()))
-    }
+    async fn snapshot_migration(&self, checkpoint: Option<serde_json::Value>) -> Result<()> {
+            tracing::info!("Starting snapshot migration for {}", self.config.id);
+
+            // Create strategy executor
+            let source_client = crate::migration::clients::create_source_client(&self.config).await?;
+            let target_client = crate::migration::clients::create_target_client(&self.config).await?;
+
+            let mut executor = crate::migration::strategies::StrategyExecutor::new(
+                self.config.clone(),
+                source_client,
+                target_client,
+                self.progress_tracker.clone(),
+                self.checkpoint_manager.clone(),
+            );
+
+            // Execute snapshot strategy
+            executor.execute_snapshot(checkpoint).await?;
+
+            tracing::info!("Snapshot migration completed for {}", self.config.id);
+            Ok(())
+        }
+
 
     /// Produce batches from source
     async fn produce_batches(
@@ -559,23 +677,31 @@ impl BatchProcessor {
 
     /// Apply a single transformation rule
     fn apply_transformation_rule(&self, record: &mut VectorRecord, rule: &TransformationRule) -> Result<()> {
-        match &rule.operation {
-            TransformOperation::Rename(new_name) => {
-                if let Some(value) = record.metadata.remove(&rule.field) {
+        match rule {
+            TransformationRule::DimensionReduction { from_dimension, to_dimension, method: _ } => {
+                if record.vector.len() == *from_dimension && *to_dimension < *from_dimension {
+                    record.vector.truncate(*to_dimension);
+                }
+            }
+            TransformationRule::MetadataFilter { query: _ } => {
+                // Filter operations are handled at the batch level
+            }
+            TransformationRule::FieldRename { field, new_name } => {
+                if let Some(value) = record.metadata.remove(field) {
                     record.metadata.insert(new_name.clone(), value);
                 }
             }
-            TransformOperation::Map(mapping) => {
-                if let Some(value) = record.metadata.get(&rule.field) {
+            TransformationRule::FieldMap { field, mapping } => {
+                if let Some(value) = record.metadata.get(field) {
                     if let Some(string_val) = value.as_str() {
                         if let Some(mapped_val) = mapping.get(string_val) {
-                            record.metadata.insert(rule.field.clone(), serde_json::Value::String(mapped_val.clone()));
+                            record.metadata.insert(field.clone(), serde_json::Value::String(mapped_val.clone()));
                         }
                     }
                 }
             }
-            TransformOperation::Convert(conversion) => {
-                if let Some(value) = record.metadata.get(&rule.field).cloned() {
+            TransformationRule::FieldConvert { field, conversion } => {
+                if let Some(value) = record.metadata.get(field).cloned() {
                     let converted = match conversion {
                         ConversionType::StringToNumber => {
                             if let Some(s) = value.as_str() {
@@ -613,12 +739,11 @@ impl BatchProcessor {
                             }
                         }
                     };
-                    record.metadata.insert(rule.field.clone(), converted);
+                    record.metadata.insert(field.clone(), converted);
                 }
             }
-            TransformOperation::Filter(_condition) => {
-                // Filter operations remove records that don't match
-                // This is handled at the batch level
+            TransformationRule::FieldFilter { field: _, condition: _ } => {
+                // Filter operations are handled at the batch level
             }
         }
         Ok(())
