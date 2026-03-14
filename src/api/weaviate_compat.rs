@@ -528,18 +528,34 @@ fn extract_class_name_from_query(query: &str) -> RTDBResult<String> {
     // Simple regex-like parsing for class name
     // In production, use a proper GraphQL parser
     if let Some(start) = query.find("Get {") {
-        let after_get = &query[start + 5..];
-        if let Some(end) = after_get.find(' ') {
-            let class_name = after_get[..end].trim();
+        let after_get = &query[start + 5..].trim_start(); // Trim leading whitespace
+        // Look for the class name which ends with either space, '(' or '{'
+        let mut end_pos = after_get.len();
+        for (i, ch) in after_get.char_indices() {
+            if ch == ' ' || ch == '(' || ch == '{' {
+                end_pos = i;
+                break;
+            }
+        }
+        let class_name = after_get[..end_pos].trim();
+        if !class_name.is_empty() {
             return Ok(class_name.to_string());
         }
     }
     
     // Alternative format: { Get ClassName { ... } }
     if let Some(start) = query.find("Get ") {
-        let after_get = &query[start + 4..];
-        if let Some(end) = after_get.find(' ') {
-            let class_name = after_get[..end].trim();
+        let after_get = &query[start + 4..].trim_start(); // Trim leading whitespace
+        // Look for the class name which ends with either space, '(' or '{'
+        let mut end_pos = after_get.len();
+        for (i, ch) in after_get.char_indices() {
+            if ch == ' ' || ch == '(' || ch == '{' {
+                end_pos = i;
+                break;
+            }
+        }
+        let class_name = after_get[..end_pos].trim();
+        if !class_name.is_empty() {
             return Ok(class_name.to_string());
         }
     }
@@ -1340,6 +1356,14 @@ mod tests {
         };
         state.schema_registry.write().insert("TestClass".to_string(), test_class);
         
+        // Add a test vector to the collection so we have something to search
+        let collection = state.collections.get_collection("TestClass").unwrap();
+        let vector = Vector::new(vec![1.0, 2.0, 3.0]);
+        let upsert_req = UpsertRequest {
+            vectors: vec![(1, vector)],
+        };
+        collection.upsert(upsert_req).unwrap();
+        
         let query = r#"{ Get { TestClass(nearVector: { vector: [1.0, 2.0, 3.0] }) { _additional { id distance } } } }"#;
         
         let request = GraphQLRequest {
@@ -1350,6 +1374,17 @@ mod tests {
         
         let response = handle_graphql(State(state), Json(request)).await;
         assert!(response.0.data.is_some());
+        
+        // Verify the response structure
+        if let Some(ref data) = response.0.data {
+            assert!(data.get("Get").is_some());
+            assert!(data.get("Get").unwrap().get("TestClass").is_some());
+        }
+        
+        // Verify the response structure
+        let data = response.0.data.unwrap();
+        assert!(data.get("Get").is_some());
+        assert!(data.get("Get").unwrap().get("TestClass").is_some());
     }
 
     #[tokio::test]

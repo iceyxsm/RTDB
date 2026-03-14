@@ -1,0 +1,327 @@
+# Default values for RTDB production deployment
+# This is a YAML-formatted file with production-grade defaults
+
+# Global configuration
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+
+# Image configuration
+image:
+  registry: docker.io
+  repository: rtdb/rtdb
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+# Deployment configuration
+replicaCount: 3
+
+# RTDB specific configuration
+rtdb:
+  # Cluster configuration
+  cluster:
+    enabled: true
+    name: "rtdb-cluster"
+    # Raft configuration
+    raft:
+      heartbeatInterval: "150ms"
+      electionTimeout: "1s"
+      snapshotThreshold: 10000
+      maxAppendEntries: 64
+    # Replication settings
+    replication:
+      factor: 3
+      syncWrites: true
+      readPreference: "leader"
+  
+  # SIMDX optimization settings
+  simdx:
+    enabled: true
+    # CPU feature detection
+    autoDetect: true
+    # Force specific SIMD instruction set (avx512, avx2, sse2, neon)
+    forceInstructionSet: ""
+    # Vector optimization settings
+    vectorPadding: true
+    batchOptimization: true
+    prefetchSize: 64
+  
+  # Storage configuration
+  storage:
+    # LSM-tree settings
+    lsm:
+      memtableSize: "64MB"
+      l0CompactionThreshold: 4
+      maxLevels: 7
+      compressionType: "zstd"
+      blockSize: "4KB"
+    # WAL settings
+    wal:
+      enabled: true
+      syncInterval: "1s"
+      segmentSize: "64MB"
+      retention: "7d"
+    # Quantization settings
+    quantization:
+      enabled: true
+      type: "scalar" # scalar, product, binary
+      precision: "int8"
+      alwaysRam: true
+  
+  # Index configuration
+  index:
+    # HNSW settings optimized for SIMDX
+    hnsw:
+      m: 16
+      efConstruct: 200
+      efSearch: 128
+      maxM: 16
+      maxM0: 32
+      fullScanThreshold: 10000
+    # Learned index settings
+    learned:
+      enabled: true
+      errorBound: 0.01
+      retrainThreshold: 0.1
+  
+  # Performance settings
+  performance:
+    # Thread pool configuration
+    threads:
+      query: 0 # 0 = auto-detect
+      index: 0 # 0 = auto-detect
+      compaction: 0 # 0 = auto-detect
+    # Memory settings
+    memory:
+      hugePagesEnabled: true
+      numaAware: true
+      memoryMappedIO: true
+    # Cache settings
+    cache:
+      queryCache: "1GB"
+      indexCache: "2GB"
+      blockCache: "512MB"
+
+# Service configuration
+service:
+  type: ClusterIP
+  # gRPC port
+  grpcPort: 6334
+  # REST API port
+  restPort: 6333
+  # Health check port
+  healthPort: 8080
+  # Metrics port
+  metricsPort: 9090
+  annotations: {}
+  labels: {}
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+    # nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+  hosts:
+    - host: rtdb.local
+      paths:
+        - path: /
+          pathType: Prefix
+          port: 6333
+  tls: []
+    # - secretName: rtdb-tls
+    #   hosts:
+    #     - rtdb.local
+
+# Persistence configuration
+persistence:
+  enabled: true
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 100Gi
+  annotations: {}
+  # For high-performance workloads
+  mountOptions: []
+    # - noatime
+    # - nodiratime
+
+# Resource configuration
+resources:
+  limits:
+    cpu: "4"
+    memory: "8Gi"
+    # Huge pages for SIMDX optimization
+    hugepages-2Mi: "2Gi"
+  requests:
+    cpu: "2"
+    memory: "4Gi"
+    hugepages-2Mi: "1Gi"
+
+# Node selection and affinity
+nodeSelector: {}
+  # kubernetes.io/arch: amd64
+  # node.kubernetes.io/instance-type: c5.2xlarge
+
+tolerations: []
+
+affinity:
+  # Anti-affinity to spread replicas across nodes
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - rtdb
+          topologyKey: kubernetes.io/hostname
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# Horizontal Pod Autoscaler
+autoscaling:
+  enabled: false
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+
+# Pod security context
+podSecurityContext:
+  fsGroup: 1000
+
+# Service account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# RBAC
+rbac:
+  create: true
+
+# Network policies
+networkPolicy:
+  enabled: false
+  ingress: []
+  egress: []
+
+# Monitoring configuration
+monitoring:
+  # Prometheus ServiceMonitor
+  serviceMonitor:
+    enabled: false
+    namespace: ""
+    labels: {}
+    annotations: {}
+    interval: 30s
+    scrapeTimeout: 10s
+    path: /metrics
+  
+  # Grafana dashboard
+  grafanaDashboard:
+    enabled: false
+    namespace: ""
+    labels: {}
+
+# Backup configuration
+backup:
+  enabled: false
+  schedule: "0 2 * * *" # Daily at 2 AM
+  retention: "30d"
+  storage:
+    type: "s3" # s3, gcs, azure
+    bucket: ""
+    region: ""
+    credentials: ""
+
+# Configuration files
+config:
+  # Custom RTDB configuration
+  rtdb: |
+    # RTDB Configuration
+    cluster:
+      name: {{ .Values.rtdb.cluster.name }}
+      nodes: {{ .Values.replicaCount }}
+    
+    storage:
+      data_dir: "/data"
+      wal_dir: "/data/wal"
+    
+    api:
+      grpc_port: {{ .Values.service.grpcPort }}
+      rest_port: {{ .Values.service.restPort }}
+      health_port: {{ .Values.service.healthPort }}
+    
+    simdx:
+      enabled: {{ .Values.rtdb.simdx.enabled }}
+      auto_detect: {{ .Values.rtdb.simdx.autoDetect }}
+    
+    performance:
+      query_threads: {{ .Values.rtdb.performance.threads.query }}
+      index_threads: {{ .Values.rtdb.performance.threads.index }}
+
+# Init containers
+initContainers: []
+
+# Sidecar containers
+sidecars: []
+
+# Extra volumes
+extraVolumes: []
+
+# Extra volume mounts
+extraVolumeMounts: []
+
+# Extra environment variables
+extraEnvVars: []
+
+# Extra environment variables from ConfigMap/Secret
+extraEnvVarsConfigMap: ""
+extraEnvVarsSecret: ""
+
+# Lifecycle hooks
+lifecycleHooks: {}
+
+# Pod annotations
+podAnnotations: {}
+
+# Pod labels
+podLabels: {}
+
+# Priority class
+priorityClassName: ""
+
+# Topology spread constraints
+topologySpreadConstraints: []
+
+# DNS configuration
+dnsPolicy: ClusterFirst
+dnsConfig: {}
+
+# Host aliases
+hostAliases: []
+
+# Termination grace period
+terminationGracePeriodSeconds: 30

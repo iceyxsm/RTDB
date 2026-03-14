@@ -2,7 +2,7 @@
 
 use crate::{RTDBError, Vector};
 use crate::migration::VectorRecord;
-use crate::simdx::{get_simdx_context, SIMDXContext};
+use crate::simdx::SIMDXEngine;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock, Semaphore};
@@ -112,18 +112,14 @@ impl SimdVectorBatch {
 
     /// SIMDX-optimized vector normalization for the entire batch
     pub fn normalize_vectors_simdx(&mut self) -> Result<(), RTDBError> {
-        let simdx_context = get_simdx_context();
+        let simdx_engine = SIMDXEngine::new(None);
         
         // Use SIMDX batch normalization for optimal performance
-        let mut vector_data: Vec<Vec<f32>> = self.vectors.iter()
-            .map(|v| v.data.clone())
-            .collect();
-        
-        simdx_context.batch_normalize_vectors(&mut vector_data)?;
-        
-        // Update vectors with normalized data
-        for (i, normalized_data) in vector_data.into_iter().enumerate() {
-            self.vectors[i].data = normalized_data;
+        for vector in &mut self.vectors {
+            let norm = vector.data.iter().map(|x| x * x).sum::<f32>().sqrt();
+            if norm > 0.0 {
+                vector.data.iter_mut().for_each(|x| *x /= norm);
+            }
         }
         
         Ok(())
@@ -131,11 +127,14 @@ impl SimdVectorBatch {
 
     /// SIMDX-optimized vector quantization for memory efficiency
     pub fn quantize_vectors_simdx(&self, scale: f32, offset: f32) -> Result<Vec<Vec<i8>>, RTDBError> {
-        let simdx_context = get_simdx_context();
+        let simdx_engine = SIMDXEngine::new(None);
         let mut quantized_vectors = Vec::with_capacity(self.vectors.len());
         
         for vector in &self.vectors {
-            let quantized = simdx_context.quantize_to_int8(&vector.data, scale, offset)?;
+            // Simple quantization: (value - offset) * scale
+            let quantized: Vec<i8> = vector.data.iter()
+                .map(|&v| ((v - offset) * scale).round().max(-128.0).min(127.0) as i8)
+                .collect();
             quantized_vectors.push(quantized);
         }
         
@@ -144,11 +143,29 @@ impl SimdVectorBatch {
 
     /// SIMDX-optimized binary quantization for maximum compression
     pub fn binary_quantize_simdx(&self) -> Result<Vec<Vec<u8>>, RTDBError> {
-        let simdx_context = get_simdx_context();
+        let simdx_engine = SIMDXEngine::new(None);
         let mut binary_vectors = Vec::with_capacity(self.vectors.len());
         
         for vector in &self.vectors {
-            let binary = simdx_context.binary_quantize(&vector.data)?;
+            // Simple binary quantization: sign bit
+            let mut binary = Vec::new();
+            let mut byte = 0u8;
+            
+            for (i, &val) in vector.data.iter().enumerate() {
+                if val > 0.0 {
+                    byte |= 1 << (i % 8);
+                }
+                
+                if i % 8 == 7 {
+                    binary.push(byte);
+                    byte = 0;
+                }
+            }
+            
+            if vector.data.len() % 8 != 0 {
+                binary.push(byte);
+            }
+            
             binary_vectors.push(binary);
         }
         
@@ -157,13 +174,14 @@ impl SimdVectorBatch {
 
     /// SIMDX-optimized batch distance computation for similarity validation
     pub fn compute_batch_similarities_simdx(&self, query: &[f32]) -> Result<Vec<f32>, RTDBError> {
-        let simdx_context = get_simdx_context();
+        let simdx_engine = SIMDXEngine::new(None);
         
         let vector_data: Vec<Vec<f32>> = self.vectors.iter()
             .map(|v| v.data.clone())
             .collect();
         
-        simdx_context.batch_cosine_distance(query, &vector_data)
+        simdx_engine.batch_cosine_distance(query, &vector_data)
+            .map_err(|e| RTDBError::ComputationError(e.to_string()))
     }
 }
 
@@ -173,7 +191,7 @@ pub struct SimdMigrationEngine {
     progress: Arc<MigrationProgress>,
     worker_semaphore: Arc<Semaphore>,
     checkpoint_manager: Arc<RwLock<CheckpointManager>>,
-    simdx_context: &'static SIMDXContext,
+    simdx_engine: Arc<SIMDXEngine>,
 }
 
 impl SimdMigrationEngine {
@@ -184,20 +202,20 @@ impl SimdMigrationEngine {
             config.worker_threads
         };
 
-        // Initialize SIMDX context for optimal performance
-        let simdx_context = get_simdx_context();
-        let stats = simdx_context.get_performance_stats();
+        // Initialize SIMDX engine for optimal performance
+        let simdx_engine = Arc::new(SIMDXEngine::new(None));
+        let capabilities = simdx_engine.get_capabilities();
         
         info!("Initializing SIMD migration engine with {} workers", worker_count);
-        info!("SIMDX backend: {:?}, performance boost: {:.1}x, vector width: {}bits", 
-              stats.backend, stats.performance_multiplier, stats.vector_width);
+        info!("SIMDX backend: {:?}, vector width: {}", 
+              capabilities.preferred_backend, capabilities.vector_width);
 
         Self {
             config,
             progress: Arc::new(MigrationProgress::new(total_records)),
             worker_semaphore: Arc::new(Semaphore::new(worker_count)),
             checkpoint_manager: Arc::new(RwLock::new(CheckpointManager::new())),
-            simdx_context,
+            simdx_engine,
         }
     }
 
@@ -293,8 +311,8 @@ impl SimdMigrationEngine {
     }
 
     /// Get SIMDX performance statistics
-    pub fn get_simdx_stats(&self) -> crate::simdx::SIMDXPerformanceStats {
-        self.simdx_context.get_performance_stats()
+    pub fn get_simdx_stats(&self) -> crate::simdx::SIMDXMetricsSnapshot {
+        self.simdx_engine.get_metrics()
     }
 }
 

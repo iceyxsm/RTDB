@@ -3,15 +3,20 @@
 //! Main entry point for the RTDB server and CLI
 
 use rtdb::cli;
+use rtdb::simdx::SIMDXEngine;
 use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize SIMDX context for optimal performance
-    let simdx_context = rtdb::simdx::initialize_simdx();
-    let stats = simdx_context.get_performance_stats();
-    info!("SIMDX initialized: backend={:?}, performance_boost={:.1}x, vector_width={}bits", 
-          stats.backend, stats.performance_multiplier, stats.vector_width);
+    // Initialize SIMDX engine for optimal performance
+    let simdx_engine = SIMDXEngine::new(None);
+    let capabilities = simdx_engine.get_capabilities();
+    let metrics = simdx_engine.get_metrics();
+    
+    info!("SIMDX initialized: backend={:?}, vector_width={}, operations={}", 
+          capabilities.preferred_backend, 
+          capabilities.vector_width,
+          metrics.operations_count);
     
     // Run CLI
     cli::run().await.map_err(|e| e.into())

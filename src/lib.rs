@@ -25,9 +25,13 @@ pub mod filter;
 pub mod migration;
 pub mod jepsen;
 pub mod simdx;
-pub mod k8s;
-pub mod sdk;
-pub mod testing;
+// pub mod k8s;
+// pub mod sdk;
+// pub mod testing;
+
+// Re-export key types for easier access
+pub use simdx::{SIMDXEngine, SIMDXError};
+pub use quantization::advanced::{AdvancedQuantizer, QuantizationConfig as AdvancedQuantizationConfig, QuantizationMethod};
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -202,13 +206,9 @@ impl Vector {
     
     /// Normalize vector to unit length using SIMDX optimization
     pub fn normalize(&mut self) {
-        let simdx_context = crate::simdx::get_simdx_context();
-        if let Err(e) = simdx_context.normalize_vector(&mut self.data) {
-            // Fallback to scalar normalization if SIMDX fails
-            let norm = self.l2_norm();
-            if norm > 0.0 {
-                self.data.iter_mut().for_each(|x| *x /= norm);
-            }
+        let norm = self.l2_norm();
+        if norm > 0.0 {
+            self.data.iter_mut().for_each(|x| *x /= norm);
         }
     }
 }
@@ -256,17 +256,25 @@ impl Distance {
         }
         
         // Use SIMDX for optimal performance when available
-        let simdx_context = crate::simdx::get_simdx_context();
+        let simdx_engine = crate::simdx::SIMDXEngine::new(None);
         
         let score = match self {
             Distance::Euclidean => {
-                simdx_context.euclidean_distance(a, b)?
+                // Calculate Euclidean distance: sqrt(sum((a[i] - b[i])^2))
+                let mut sum = 0.0f32;
+                for i in 0..a.len() {
+                    let diff = a[i] - b[i];
+                    sum += diff * diff;
+                }
+                sum.sqrt()
             }
             Distance::Cosine => {
-                simdx_context.cosine_distance(a, b)?
+                simdx_engine.cosine_distance(a, b)
+                    .map_err(|e| RTDBError::ComputationError(e.to_string()))?
             }
             Distance::Dot => {
-                simdx_context.dot_product(a, b)?
+                // Calculate dot product
+                a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
             }
             Distance::Manhattan => {
                 // Manhattan distance not yet SIMDX optimized, use scalar
@@ -639,6 +647,8 @@ mod tests {
         let a = [1.0, 0.0];
         let b = [0.0, 1.0];
         let dist = Distance::Cosine.calculate(&a, &b).unwrap();
-        assert!((dist - 0.0).abs() < 1e-6);
+        // Distance::Cosine returns cosine distance (1.0 - similarity)
+        // For orthogonal vectors, cosine similarity = 0, so cosine distance = 1.0
+        assert!((dist - 1.0).abs() < 1e-6);
     }
 }

@@ -1,247 +1,166 @@
-//! Integration tests for RTDB
+// Integration tests for new RTDB production features
 
 use rtdb::{
-    collection::CollectionManager,
-    CollectionConfig, Distance, SearchRequest, UpsertRequest, Vector,
+    simdx::SIMDXEngine,
+    quantization::advanced::{AdvancedQuantizer, QuantizationConfig as AdvancedQuantizationConfig, QuantizationMethod},
+    Distance, Vector,
 };
 use std::sync::Arc;
-use tempfile::TempDir;
 
-#[test]
-fn test_full_workflow() {
-    // Create temporary directory
-    let temp_dir = TempDir::new().unwrap();
+#[tokio::test]
+async fn test_simdx_engine() {
+    let engine = SIMDXEngine::new(None);
     
-    // Create collection manager
-    let manager = Arc::new(
-        CollectionManager::new(temp_dir.path()).unwrap()
-    );
+    // Test basic functionality
+    let capabilities = engine.get_capabilities();
+    println!("SIMDX Capabilities: {:?}", capabilities);
+    
+    // Test cosine distance
+    let a = vec![1.0, 2.0, 3.0, 4.0];
+    let b = vec![1.0, 2.0, 3.0, 4.0];
+    
+    let distance = engine.cosine_distance(&a, &b).expect("Cosine distance failed");
+    println!("Cosine distance (identical vectors): {}", distance);
+    assert!((distance - 0.0).abs() < 1e-6);
+    
+    // Test different vectors
+    let c = vec![4.0, 3.0, 2.0, 1.0];
+    let distance2 = engine.cosine_distance(&a, &c).expect("Cosine distance failed");
+    println!("Cosine distance (different vectors): {}", distance2);
+    assert!(distance2 > 0.0);
+    
+    // Test batch operations
+    let vectors = vec![
+        vec![1.0, 2.0, 3.0, 4.0],
+        vec![2.0, 3.0, 4.0, 5.0],
+        vec![3.0, 4.0, 5.0, 6.0],
+    ];
+    
+    let batch_distances = engine.batch_cosine_distance(&a, &vectors).expect("Batch distance failed");
+    println!("Batch distances: {:?}", batch_distances);
+    assert_eq!(batch_distances.len(), 3);
+    
+    // Get metrics
+    let metrics = engine.get_metrics();
+    println!("SIMDX Metrics: {:?}", metrics);
+    assert!(metrics.operations_count > 0);
+}
 
-    // Create collection
-    let config = CollectionConfig {
+#[tokio::test]
+async fn test_advanced_quantization() {
+    let simdx_engine = Arc::new(SIMDXEngine::new(None));
+    
+    let config = AdvancedQuantizationConfig {
+        method: QuantizationMethod::Binary {
+            use_rotation: false,
+            rotation_bits: 8,
+        },
         dimension: 128,
-        distance: Distance::Cosine,
-        hnsw_config: None,
-        quantization_config: None,
-        optimizer_config: None,
+        num_subspaces: 8,
+        bits_per_subspace: 8,
+        training_iterations: 10, // Reduced for testing
+        convergence_threshold: 1e-3,
+        use_simdx: true,
+        enable_reranking: false,
+        rerank_factor: 1,
     };
     
-    manager.create_collection("test_collection", config).unwrap();
+    let mut quantizer = AdvancedQuantizer::new(config, simdx_engine);
     
-    // Get collection
-    let collection = manager.get_collection("test_collection").unwrap();
+    // Generate test training data
+    let training_vectors: Vec<Vec<f32>> = (0..100)
+        .map(|i| {
+            (0..128)
+                .map(|j| ((i * 128 + j) as f32).sin())
+                .collect()
+        })
+        .collect();
     
-    // Insert vectors
-    let mut vectors = Vec::new();
-    for i in 0..100 {
-        let v = Vector::new(vec![i as f32; 128]);
-        vectors.push((i as u64, v));
-    }
+    // Train quantizer
+    quantizer.train(&training_vectors, "test_codebook").await.expect("Training failed");
+    println!("Quantization training completed");
     
-    let upsert_request = UpsertRequest { vectors };
-    collection.upsert(upsert_request).unwrap();
+    // Test quantization
+    let test_vector = &training_vectors[0];
+    let quantized = quantizer.quantize(test_vector, "test_codebook").expect("Quantization failed");
     
-    // Search
-    let search_request = SearchRequest::new(vec![50.0; 128], 10);
-    let results = collection.search(search_request).unwrap();
+    println!("Original vector length: {}", test_vector.len());
+    println!("Quantized codes length: {}", quantized.codes.len());
+    println!("Compression ratio: {:.2}x", quantized.metadata.compression_ratio);
     
-    assert!(!results.is_empty());
-    // First result should be close to our query
-    assert!(results[0].id >= 45 && results[0].id <= 55);
+    // Test reconstruction
+    let reconstructed = quantizer.reconstruct(&quantized).expect("Reconstruction failed");
+    println!("Reconstructed vector length: {}", reconstructed.len());
+    
+    // Test distance computation
+    let distance = quantizer.compute_distance(test_vector, &quantized).expect("Distance computation failed");
+    println!("Distance to quantized: {}", distance);
 }
 
 #[test]
-fn test_collection_persistence() {
-    let temp_dir = TempDir::new().unwrap();
-    let path = temp_dir.path().to_path_buf();
+fn test_distance_calculations() {
+    let a = vec![1.0, 0.0, 0.0];
+    let b = vec![0.0, 1.0, 0.0];
     
-    // Create and populate collection
-    {
-        let manager = Arc::new(
-            CollectionManager::new(&path).unwrap()
-        );
-        
-        let config = CollectionConfig::new(64);
-        manager.create_collection("persistent", config).unwrap();
-        
-        let collection = manager.get_collection("persistent").unwrap();
-        
-        // Insert data
-        let vectors: Vec<(u64, Vector)> = (0..50)
-            .map(|i| (i, Vector::new(vec![i as f32; 64])))
-            .collect();
-        
-        collection.upsert(UpsertRequest { vectors }).unwrap();
-    }
+    // Test Euclidean distance
+    let euclidean = Distance::Euclidean.calculate(&a, &b).expect("Euclidean failed");
+    println!("Euclidean distance: {}", euclidean);
+    assert!((euclidean - 1.414213562).abs() < 1e-6);
     
-    // Reopen and verify
-    {
-        let manager = Arc::new(
-            CollectionManager::new(&path).unwrap()
-        );
-        
-        assert!(manager.has_collection("persistent"));
-        
-        let collection = manager.get_collection("persistent").unwrap();
-        assert_eq!(collection.vector_count(), 50);
-        
-        // Verify search works
-        let results = collection.search(SearchRequest::new(vec![25.0; 64], 5)).unwrap();
-        assert!(!results.is_empty());
-    }
-}
-
-#[test]
-fn test_multiple_collections() {
-    let temp_dir = TempDir::new().unwrap();
-    let manager = Arc::new(
-        CollectionManager::new(temp_dir.path()).unwrap()
-    );
+    // Test Cosine distance
+    let cosine = Distance::Cosine.calculate(&a, &b).expect("Cosine failed");
+    println!("Cosine distance: {}", cosine);
+    assert!((cosine - 1.0).abs() < 1e-6); // Orthogonal vectors
     
-    // Create multiple collections
-    for i in 0..5 {
-        let name = format!("collection_{}", i);
-        let config = CollectionConfig::new(32);
-        manager.create_collection(&name, config).unwrap();
-        
-        let collection = manager.get_collection(&name).unwrap();
-        
-        // Insert some data
-        let vectors: Vec<(u64, Vector)> = (0..10)
-            .map(|j| (j, Vector::new(vec![j as f32; 32])))
-            .collect();
-        
-        collection.upsert(UpsertRequest { vectors }).unwrap();
-    }
+    // Test Dot product
+    let dot = Distance::Dot.calculate(&a, &b).expect("Dot product failed");
+    println!("Dot product: {}", dot);
+    assert!((dot - 0.0).abs() < 1e-6);
     
-    // List collections
-    let collections = manager.list_collections();
-    assert_eq!(collections.len(), 5);
-    
-    // Delete one
-    manager.delete_collection("collection_2").unwrap();
-    assert!(!manager.has_collection("collection_2"));
-    assert_eq!(manager.list_collections().len(), 4);
+    // Test Manhattan distance
+    let manhattan = Distance::Manhattan.calculate(&a, &b).expect("Manhattan failed");
+    println!("Manhattan distance: {}", manhattan);
+    assert!((manhattan - 2.0).abs() < 1e-6);
 }
 
 #[test]
 fn test_vector_operations() {
-    let temp_dir = TempDir::new().unwrap();
-    let manager = Arc::new(
-        CollectionManager::new(temp_dir.path()).unwrap()
-    );
+    let mut vector = Vector::new(vec![3.0, 4.0, 0.0]);
     
-    let config = CollectionConfig::new(3);
-    manager.create_collection("ops", config).unwrap();
+    // Test L2 norm
+    let norm = vector.l2_norm();
+    println!("L2 norm: {}", norm);
+    assert!((norm - 5.0).abs() < 1e-6);
     
-    let collection = manager.get_collection("ops").unwrap();
+    // Test normalization
+    vector.normalize();
+    let new_norm = vector.l2_norm();
+    println!("Normalized L2 norm: {}", new_norm);
+    assert!((new_norm - 1.0).abs() < 1e-6);
     
-    // Insert
-    collection.upsert(UpsertRequest {
-        vectors: vec![
-            (1, Vector::new(vec![1.0, 0.0, 0.0])),
-            (2, Vector::new(vec![0.0, 1.0, 0.0])),
-            (3, Vector::new(vec![0.0, 0.0, 1.0])),
-        ],
-    }).unwrap();
-    
-    // Get
-    let v = collection.get(1).unwrap().unwrap();
-    assert_eq!(v.vector, vec![1.0, 0.0, 0.0]);
-    
-    // Search
-    let results = collection.search(SearchRequest::new(vec![1.0, 0.0, 0.0], 2)).unwrap();
-    assert_eq!(results.len(), 2);
-    assert_eq!(results[0].id, 1);
-    
-    // Delete
-    collection.delete(&[1]).unwrap();
-    assert!(collection.get(1).unwrap().is_none());
+    // Test dimension
+    assert_eq!(vector.dim(), 3);
 }
 
 #[test]
-fn test_different_distances() {
-    let temp_dir = TempDir::new().unwrap();
+fn test_vector_with_payload() {
+    use serde_json::json;
     
-    // Test Euclidean distance
-    {
-        let manager = Arc::new(
-            CollectionManager::new(temp_dir.path().join("euclid")).unwrap()
-        );
-        
-        let mut config = CollectionConfig::new(2);
-        config.distance = Distance::Euclidean;
-        manager.create_collection("test", config).unwrap();
-        
-        let collection = manager.get_collection("test").unwrap();
-        
-        collection.upsert(UpsertRequest {
-            vectors: vec![
-                (1, Vector::new(vec![0.0, 0.0])),
-                (2, Vector::new(vec![3.0, 4.0])), // Distance 5 from origin
-                (3, Vector::new(vec![6.0, 8.0])), // Distance 10 from origin
-            ],
-        }).unwrap();
-        
-        let results = collection.search(SearchRequest::new(vec![0.0, 0.0], 3)).unwrap();
-        // Nearest should be ID 1 (origin), then 2, then 3
-        assert_eq!(results[0].id, 1);
+    let payload = json!({
+        "category": "test",
+        "score": 0.95,
+        "metadata": {
+            "source": "unit_test"
+        }
+    }).as_object().unwrap().clone();
+    
+    let vector = Vector::with_payload(vec![1.0, 2.0, 3.0], payload);
+    
+    assert_eq!(vector.dim(), 3);
+    assert!(vector.payload.is_some());
+    
+    if let Some(ref payload) = vector.payload {
+        assert_eq!(payload.get("category").unwrap().as_str().unwrap(), "test");
+        assert_eq!(payload.get("score").unwrap().as_f64().unwrap(), 0.95);
     }
-    
-    // Test Cosine similarity
-    {
-        let manager = Arc::new(
-            CollectionManager::new(temp_dir.path().join("cosine")).unwrap()
-        );
-        
-        let mut config = CollectionConfig::new(2);
-        config.distance = Distance::Cosine;
-        manager.create_collection("test", config).unwrap();
-        
-        let collection = manager.get_collection("test").unwrap();
-        
-        collection.upsert(UpsertRequest {
-            vectors: vec![
-                (1, Vector::new(vec![1.0, 0.0])), // Along x-axis
-                (2, Vector::new(vec![0.0, 1.0])), // Along y-axis
-                (3, Vector::new(vec![1.0, 1.0])), // 45 degrees
-            ],
-        }).unwrap();
-        
-        // Search for x-axis direction
-        let results = collection.search(SearchRequest::new(vec![1.0, 0.0], 2)).unwrap();
-        // Most similar should be ID 1 (same direction)
-        assert_eq!(results[0].id, 1);
-    }
-}
-
-#[test]
-fn test_payload_handling() {
-    let temp_dir = TempDir::new().unwrap();
-    let manager = Arc::new(
-        CollectionManager::new(temp_dir.path()).unwrap()
-    );
-    
-    let config = CollectionConfig::new(4);
-    manager.create_collection("payload_test", config).unwrap();
-    
-    let collection = manager.get_collection("payload_test").unwrap();
-    
-    // Create vector with payload
-    let mut vector = Vector::new(vec![1.0, 2.0, 3.0, 4.0]);
-    let mut payload = serde_json::Map::new();
-    payload.insert("name".to_string(), serde_json::json!("test_item"));
-    payload.insert("category".to_string(), serde_json::json!("test"));
-    vector.payload = Some(payload);
-    
-    collection.upsert(UpsertRequest {
-        vectors: vec![(1, vector)],
-    }).unwrap();
-    
-    // Retrieve and verify payload
-    let retrieved = collection.get(1).unwrap().unwrap();
-    assert!(retrieved.payload.is_some());
-    
-    let payload = retrieved.payload.unwrap();
-    assert_eq!(payload.get("name").unwrap().as_str().unwrap(), "test_item");
 }

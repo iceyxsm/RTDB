@@ -169,11 +169,11 @@ RTDB delivers industry-leading performance across all metrics:
 
 ### Index Performance
 
-| Operation | RTDB | Qdrant | Milvus | Advantage |
-|-----------|------|--------|--------|-----------|
-| HNSW Search (10K) | 8.5 µs | ~3.5 ms | ~5 ms | **400x faster** |
-| Index Build (1M) | <1 min | ~5 min | ~10 min | **5-10x faster** |
-| Startup Time | <100ms | ~2s | ~30s | **20-300x faster** |
+|      Operation    |  RTDB  | Qdrant | Milvus |     Advantage     |
+|-------------------|--------|--------|--------|-------------------|
+| HNSW Search (10K) | 8.5 µs | ~3.5 ms| ~5 ms  | **400x faster**   |
+| Index Build (1M)  | <1 min | ~5 min | ~10 min| **5-10x faster**  |
+| Startup Time      | <100ms | ~2s    | ~30s   | **20-300x faster**|
 
 *See [BENCHMARKS.md](docs/BENCHMARKS.md) for comprehensive performance analysis*
 
@@ -278,11 +278,11 @@ cargo build --release --bin rtdb-migrate
 ### Migration Performance
 
 | Source Database | Migration Speed | SIMDX Acceleration | Memory Usage |
-|----------------|-----------------|-------------------|--------------|
-| Qdrant         | 50K vectors/sec | Up to 200x faster | 512MB/worker |
-| Milvus         | 45K vectors/sec | Up to 211x faster | 512MB/worker |
-| Weaviate       | 40K vectors/sec | Up to 233x faster | 512MB/worker |
-| LanceDB        | 60K vectors/sec | Up to 200x faster | 512MB/worker |
+|----------------|------------------|--------------------|--------------|
+| Qdrant         | 50K vectors/sec  | Up to 200x faster  | 512MB/worker |
+| Milvus         | 45K vectors/sec  | Up to 211x faster  | 512MB/worker |
+| Weaviate       | 40K vectors/sec  | Up to 233x faster  | 512MB/worker |
+| LanceDB        | 60K vectors/sec  | Up to 200x faster  | 512MB/worker |
 
 *Benchmarks on Intel Sapphire Rapids with AVX-512, 1536-dimensional vectors*
 

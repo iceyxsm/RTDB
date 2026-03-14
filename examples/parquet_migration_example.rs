@@ -44,7 +44,7 @@ async fn main() -> Result<()> {
 
 /// Example 1: Basic Parquet import/export operations
 async fn basic_parquet_operations() -> Result<()> {
-    println!("\n📁 Example 1: Basic Parquet Operations");
+    println!("\n Example 1: Basic Parquet Operations");
     println!("-------------------------------------");
     
     // Create sample data
@@ -52,7 +52,7 @@ async fn basic_parquet_operations() -> Result<()> {
     let temp_file = "/tmp/rtdb_example.parquet";
     
     // Export to Parquet
-    println!("📤 Exporting {} records to Parquet...", sample_data.len());
+    println!(" Exporting {} records to Parquet...", sample_data.len());
     {
         let mut writer = create_writer(Path::new(temp_file), Some(DataFormat::Parquet)).await?;
         writer.write_batch(&sample_data).await?;
@@ -61,4 +61,4 @@ async fn basic_parquet_operations() -> Result<()> {
     
     // Check file size
     let metadata = std::fs::metadata(temp_file)?;
-    println!("📊 Parquet
+    println!(" Parquet

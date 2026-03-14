@@ -17,11 +17,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     tracing_subscriber::fmt::init();
     
-    println!("🚀 RTDB Parquet Streaming Example");
+    println!(" RTDB Parquet Streaming Example");
     
     // Create sample data
     let sample_data = create_sample_vector_data(10_000);
-    println!("📊 Created {} sample vector records", sample_data.len());
+    println!(" Created {} sample vector records", sample_data.len());
     
     // Configure streaming with production settings
     let config = ParquetStreamConfig {
@@ -38,7 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let temp_file = "example_vectors.parquet";
     
     // Demonstrate writing with streaming
-    println!("\n📝 Writing vectors to Parquet with streaming...");
+    println!("\n Writing vectors to Parquet with streaming...");
     let write_start = Instant::now();
     
     let mut writer = ParquetStreamWriter::new(Path::new(temp_file), config.clone()).await?;
@@ -51,13 +51,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let write_stats = writer.finalize().await?;
     let write_duration = write_start.elapsed();
     
-    println!("✅ Write completed:");
-    println!("   📈 Rows written: {}", write_stats.rows_read);
-    println!("   ⏱️  Duration: {:?}", write_duration);
-    println!("   🚀 Throughput: {:.0} rows/sec", write_stats.rows_per_second);
+    println!(" Write completed:");
+    println!("    Rows written: {}", write_stats.rows_read);
+    println!("    Duration: {:?}", write_duration);
+    println!("    Throughput: {:.0} rows/sec", write_stats.rows_per_second);
     
     // Demonstrate reading with streaming
-    println!("\n📖 Reading vectors from Parquet with streaming...");
+    println!("\n Reading vectors from Parquet with streaming...");
     let read_start = Instant::now();
     
     let mut reader = ParquetStreamReader::new(Path::new(temp_file), config).await?;
@@ -72,7 +72,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         
         // Process first few records as example
         if batch_count == 1 {
-            println!("   🔍 First batch sample:");
+            println!("First batch sample:");
             for (i, record) in batch.iter().take(3).enumerate() {
                 println!("     {}. ID: {}, Vector dim: {}, Metadata keys: {}", 
                     i + 1, record.id, record.vector.len(), record.metadata.len());
@@ -83,36 +83,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let read_stats = reader.get_stats();
     let read_duration = read_start.elapsed();
     
-    println!("✅ Read completed:");
-    println!("   📈 Rows read: {}", total_read);
-    println!("   📦 Batches processed: {}", batch_count);
-    println!("   ⏱️  Duration: {:?}", read_duration);
-    println!("   🚀 Throughput: {:.0} rows/sec", read_stats.rows_per_second);
+    println!(" Read completed:");
+    println!("   Rows read: {}", total_read);
+    println!("   Batches processed: {}", batch_count);
+    println!("   Duration: {:?}", read_duration);
+    println!("   Throughput: {:.0} rows/sec", read_stats.rows_per_second);
     
     // Demonstrate file validation
-    println!("\n🔍 Validating Parquet file...");
+    println!("\n Validating Parquet file...");
     let file_info = rtdb::migration::parquet_streaming::utils::validate_parquet_file(
         Path::new(temp_file)
     ).await?;
     
-    println!("✅ File validation:");
-    println!("   📊 Rows: {}", file_info.num_rows);
-    println!("   📦 Row groups: {}", file_info.num_row_groups);
-    println!("   💾 File size: {:.2} MB", file_info.file_size as f64 / 1024.0 / 1024.0);
-    println!("   🗜️  Compression: {}", file_info.compression);
-    println!("   📋 Schema fields: {}", file_info.schema_fields);
+    println!("File validation:");
+    println!("   Rows: {}", file_info.num_rows);
+    println!("   Row groups: {}", file_info.num_row_groups);
+    println!("   File size: {:.2} MB", file_info.file_size as f64 / 1024.0 / 1024.0);
+    println!("   Compression: {}", file_info.compression);
+    println!("   Schema fields: {}", file_info.schema_fields);
     
     // Demonstrate memory usage estimation
     let memory_usage = rtdb::migration::parquet_streaming::utils::estimate_memory_usage(&sample_data[..100]);
-    println!("   🧠 Memory usage (100 records): {:.2} KB", memory_usage as f64 / 1024.0);
+    println!("   Memory usage (100 records): {:.2} KB", memory_usage as f64 / 1024.0);
     
     // Clean up
     if std::path::Path::new(temp_file).exists() {
         std::fs::remove_file(temp_file)?;
-        println!("\n🧹 Cleaned up temporary file");
+        println!("\n Cleaned up temporary file");
     }
     
-    println!("\n🎉 Example completed successfully!");
+    println!("\n Example completed successfully!");
     
     Ok(())
 }
