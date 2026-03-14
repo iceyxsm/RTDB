@@ -93,6 +93,10 @@ hostname = "0.4"
 config = { version = "0.14", default-features = false, features = ["yaml"] }
 clap = { version = "4.4", features = ["derive", "env"] }
 
+# Migration tools dependencies
+indicatif = "0.17"
+qdrant-client = "1.11"
+
 # Serialization (binary)
 bincode = "1.3"
 

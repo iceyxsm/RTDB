@@ -32,6 +32,8 @@ pub mod parquet_streaming;
 pub mod progress;
 pub mod strategies;
 pub mod validation;
+pub mod simd_optimized;
+pub mod cli;
 
 #[cfg(test)]
 mod tests;
