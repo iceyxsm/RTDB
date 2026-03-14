@@ -33,9 +33,10 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::timeout;
 use tracing::{debug, error, info, warn, instrument};
+use futures::StreamExt;
 
 /// SIMDX-optimized RTDB cluster custom resource
-#[derive(CustomResource, Deserialize, Serialize, Clone, Debug, JsonSchema)]
+#[derive(CustomResource, Deserialize, Serialize, Clone, Debug, JsonSchema, PartialEq)]
 #[kube(
     group = "rtdb.io",
     version = "v1",
@@ -224,13 +225,21 @@ impl OperatorMetrics {
 /// SIMDX-optimized reconciliation logic
 impl RTDBOperatorContext {
     pub fn new(client: Client) -> Self {
-        let recorder = Recorder::new(
-            client.clone(),
-            Reporter {
-                controller: "rtdb-operator".into(),
-                instance: std::env::var("HOSTNAME").ok(),
-            },
-        );
+        let reporter = Reporter {
+            controller: "rtdb-operator".into(),
+            instance: std::env::var("HOSTNAME").ok(),
+        };
+        
+        // Create a default ObjectReference for the operator
+        let object_ref = k8s_openapi::api::core::v1::ObjectReference {
+            api_version: Some("rtdb.io/v1".to_string()),
+            kind: Some("RTDBCluster".to_string()),
+            name: Some("rtdb-operator".to_string()),
+            namespace: Some("default".to_string()),
+            ..Default::default()
+        };
+        
+        let recorder = Recorder::new(client.clone(), reporter, object_ref);
 
         Self {
             client,

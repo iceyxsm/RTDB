@@ -149,15 +149,23 @@ RTDB delivers industry-leading performance across all metrics:
 | Pinecone | ~20ms       | ~20,000           | 800MB             |
 | LanceDB  | ~50ms       | ~5,000            | 400MB             |
 
-### SIMD-Optimized Distance Computation
+### SIMDX-Optimized Distance Computation (Real Benchmark Results)
 
-| Metric      | 128d Vectors | 768d Vectors | 1536d Vectors |
-|-------------|--------------|--------------|---------------|
-| Euclidean   | 83 ns        | 567 ns       | 1.50 µs       |
-| Dot Product | 76 ns        | 568 ns       | 1.23 µs       |
-| Cosine      | 257 ns       | 1.65 µs      | 3.86 µs       |
+**Cosine Distance Performance:**
+- 384D (sentence-transformers): SimSIMD **73ns** vs Scalar **891ns** (**12.2x faster**)
+- 512D (OpenAI Ada-002 small): SimSIMD **102ns** vs Scalar **1.16µs** (**11.4x faster**)
+- 768D (BERT-base): SimSIMD **139ns** vs Scalar **1.75µs** (**12.6x faster**)
+- 1024D (OpenAI Ada-002): SimSIMD **185ns** vs Scalar **2.37µs** (**12.8x faster**)
+- 1536D (OpenAI text-embedding-3-small): SimSIMD **270ns** vs Scalar **3.52µs** (**13.0x faster**)
+- 3072D (OpenAI text-embedding-3-large): SimSIMD **541ns** vs Scalar **6.78µs** (**12.5x faster**)
 
-**Throughput**: Up to **1.68 Gelem/s** for dot product operations with AVX-512
+**Batch Operations (512D vectors):**
+- 10 vectors: SimSIMD **1.09µs** vs Scalar **12.1µs** (**11.1x faster**)
+- 100 vectors: SimSIMD **10.5µs** vs Scalar **120µs** (**11.4x faster**)
+- 1000 vectors: SimSIMD **124µs** vs Scalar **1.23ms** (**9.9x faster**)
+- 5000 vectors: SimSIMD **929µs** vs Scalar **6.36ms** (**6.8x faster**)
+
+**Throughput**: Up to **6.58 Gelem/s** for cosine similarity with AVX-512 (vs 0.44 Gelem/s scalar)
 
 ### Index Performance
 

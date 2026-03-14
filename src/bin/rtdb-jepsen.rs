@@ -6,6 +6,7 @@
 
 use clap::{Parser, Subcommand};
 use rtdb::jepsen::{run_jepsen_cli, JepsenConfig, ConsistencyModel};
+use rtdb::RTDBError;
 use std::time::Duration;
 use tracing::{error, info, Level};
 use tracing_subscriber;
@@ -303,9 +304,11 @@ async fn run_test_suite(
             }
             "bank_transfer" => {
                 run_bank_transfer_test(nodes.clone(), 10, 1000, duration_per_test, enable_simdx).await
+                    .map_err(|e| RTDBError::Internal(e.to_string()))
             }
             "register" => {
                 run_register_test(nodes.clone(), 10, duration_per_test, enable_simdx).await
+                    .map_err(|e| RTDBError::Internal(e.to_string()))
             }
             "partition_tolerance" => {
                 let config = JepsenConfig {

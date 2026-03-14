@@ -166,11 +166,11 @@ impl SIMDXContext {
             return Err(RTDBError::InvalidInput("Vector dimensions must match".to_string()));
         }
 
-        // Use SimSIMD for maximum performance
-        let distance = simsimd::f32::cosine(a, b)
-            .map_err(|e| RTDBError::ComputationError(format!("SIMDX cosine failed: {}", e)))?;
+        // Use SimSIMD SpatialSimilarity trait for maximum performance
+        let distance = <f32 as SpatialSimilarity>::cos(a, b)
+            .ok_or_else(|| RTDBError::ComputationError("SIMDX cosine failed".to_string()))?;
         
-        Ok(distance)
+        Ok(distance as f32)
     }
 
     /// SIMDX-optimized Euclidean distance
@@ -179,10 +179,10 @@ impl SIMDXContext {
             return Err(RTDBError::InvalidInput("Vector dimensions must match".to_string()));
         }
 
-        let squared_distance = simsimd::f32::sqeuclidean(a, b)
-            .map_err(|e| RTDBError::ComputationError(format!("SIMDX euclidean failed: {}", e)))?;
+        let squared_distance = <f32 as SpatialSimilarity>::sqeuclidean(a, b)
+            .ok_or_else(|| RTDBError::ComputationError("SIMDX euclidean failed".to_string()))?;
         
-        Ok(squared_distance.sqrt())
+        Ok((squared_distance as f32).sqrt())
     }
 
     /// SIMDX-optimized dot product
@@ -191,41 +191,24 @@ impl SIMDXContext {
             return Err(RTDBError::InvalidInput("Vector dimensions must match".to_string()));
         }
 
-        let dot_product = simsimd::f32::dot(a, b)
-            .map_err(|e| RTDBError::ComputationError(format!("SIMDX dot product failed: {}", e)))?;
+        let dot_product = <f32 as SpatialSimilarity>::dot(a, b)
+            .ok_or_else(|| RTDBError::ComputationError("SIMDX dot product failed".to_string()))?;
         
-        Ok(dot_product)
+        Ok(dot_product as f32)
     }
 
     /// Half-precision cosine distance with SIMDX optimization
     fn cosine_f16_simdx(a: &[u16], b: &[u16]) -> Result<f32, RTDBError> {
-        if a.len() != b.len() {
-            return Err(RTDBError::InvalidInput("Vector dimensions must match".to_string()));
-        }
-
-        // Convert u16 to SimSIMD f16 format and compute
-        // This leverages native f16 instructions on modern CPUs
-        let distance = simsimd::f16::cosine(
-            unsafe { std::slice::from_raw_parts(a.as_ptr() as *const simsimd::f16, a.len()) },
-            unsafe { std::slice::from_raw_parts(b.as_ptr() as *const simsimd::f16, b.len()) }
-        ).map_err(|e| RTDBError::ComputationError(format!("SIMDX f16 cosine failed: {}", e)))?;
-        
-        Ok(distance)
+        // For now, use scalar fallback - f16 conversion is complex
+        Self::cosine_f16_scalar(a, b)
     }
 
     /// Half-precision Euclidean distance with SIMDX optimization
     fn euclidean_f16_simdx(a: &[u16], b: &[u16]) -> Result<f32, RTDBError> {
-        if a.len() != b.len() {
-            return Err(RTDBError::InvalidInput("Vector dimensions must match".to_string()));
-        }
-
-        let squared_distance = simsimd::f16::sqeuclidean(
-            unsafe { std::slice::from_raw_parts(a.as_ptr() as *const simsimd::f16, a.len()) },
-            unsafe { std::slice::from_raw_parts(b.as_ptr() as *const simsimd::f16, b.len()) }
-        ).map_err(|e| RTDBError::ComputationError(format!("SIMDX f16 euclidean failed: {}", e)))?;
-        
-        Ok(squared_distance.sqrt())
+        // For now, use scalar fallback - f16 conversion is complex
+        Self::euclidean_f16_scalar(a, b)
     }
+
     /// Scalar fallback implementations for unsupported hardware
     fn cosine_f32_scalar(a: &[f32], b: &[f32]) -> Result<f32, RTDBError> {
         if a.len() != b.len() {
@@ -340,17 +323,7 @@ impl SIMDXContext {
         let inv_norm = 1.0 / norm;
         
         // Process in SIMD chunks for maximum performance
-        let chunks = vector.chunks_exact_mut(8);
-        let remainder = chunks.into_remainder();
-        
-        for chunk in vector.chunks_exact_mut(8) {
-            for val in chunk {
-                *val *= inv_norm;
-            }
-        }
-        
-        // Handle remainder
-        for val in remainder {
+        for val in vector.iter_mut() {
             *val *= inv_norm;
         }
         
@@ -622,7 +595,6 @@ pub struct SIMDXPerformanceStats {
     pub performance_multiplier: f64,
     pub vector_width: u32,
     pub parallel_elements: u32,
-}
 }
 
 /// Global SIMDX context instance

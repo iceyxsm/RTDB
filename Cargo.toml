@@ -169,6 +169,14 @@ futures = "0.3"
 tonic-build = "0.11"
 
 [[bench]]
+name = "standalone_simdx_benchmark"
+harness = false
+
+[[bench]]
+name = "simple_simdx_benchmark"
+harness = false
+
+[[bench]]
 name = "simdx_benchmark"
 harness = false
 

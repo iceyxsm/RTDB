@@ -125,6 +125,18 @@ pub enum RTDBError {
     /// Invalid input errors
     #[error("Invalid input: {0}")]
     InvalidInput(String),
+    
+    /// Internal errors
+    #[error("Internal error: {0}")]
+    Internal(String),
+    
+    /// Invalid configuration errors
+    #[error("Invalid configuration: {0}")]
+    InvalidConfiguration(String),
+    
+    /// Connection errors
+    #[error("Connection error: {0}")]
+    ConnectionError(String),
 }
 
 impl From<std::io::Error> for RTDBError {

@@ -279,7 +279,7 @@ pub enum ViolationType {
 }
 
 /// Network partition simulator for chaos engineering
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NetworkPartitionSimulator {
     partitions: Arc<RwLock<HashMap<String, Vec<String>>>>,
     partition_probability: f64,
@@ -341,22 +341,22 @@ impl NetworkPartitionSimulator {
 pub struct JepsenTestExecutor {
     config: JepsenConfig,
     history_analyzer: HistoryAnalyzer,
-    partition_simulator: NetworkPartitionSimulator,
-    operation_counter: AtomicU64,
+    partition_simulator: Arc<NetworkPartitionSimulator>,
+    operation_counter: Arc<AtomicU64>,
     client_semaphore: Arc<Semaphore>,
 }
 
 impl JepsenTestExecutor {
     pub fn new(config: JepsenConfig) -> Self {
         let history_analyzer = HistoryAnalyzer::new(config.consistency_model, config.enable_simdx);
-        let partition_simulator = NetworkPartitionSimulator::new(config.partition_probability);
+        let partition_simulator = Arc::new(NetworkPartitionSimulator::new(config.partition_probability));
         let client_semaphore = Arc::new(Semaphore::new(config.client_count));
 
         Self {
             config,
             history_analyzer,
             partition_simulator,
-            operation_counter: AtomicU64::new(0),
+            operation_counter: Arc::new(AtomicU64::new(0)),
             client_semaphore,
         }
     }
@@ -379,7 +379,7 @@ impl JepsenTestExecutor {
             let nodes_clone = cluster_nodes.clone();
             let config_clone = self.config.clone();
             let semaphore_clone = self.client_semaphore.clone();
-            let counter_clone = self.operation_counter.clone();
+            let counter_clone = Arc::clone(&self.operation_counter);
             
             let handle = tokio::spawn(async move {
                 Self::run_client_operations(
@@ -398,7 +398,7 @@ impl JepsenTestExecutor {
 
         // Spawn partition chaos monkey
         let partition_handle = {
-            let simulator = self.partition_simulator.clone();
+            let simulator = Arc::clone(&self.partition_simulator);
             let nodes = cluster_nodes.clone();
             let partition_prob = self.config.partition_probability;
             
@@ -468,7 +468,7 @@ impl JepsenTestExecutor {
         cluster_nodes: Vec<String>,
         config: JepsenConfig,
         semaphore: Arc<Semaphore>,
-        counter: AtomicU64,
+        counter: Arc<AtomicU64>,
         duration: Duration,
     ) -> Result<(), RTDBError> {
         let _permit = semaphore.acquire().await.map_err(|e| {
@@ -570,7 +570,7 @@ impl JepsenTestExecutor {
 
     /// Run partition chaos monkey to simulate network failures
     async fn run_partition_chaos_monkey(
-        simulator: NetworkPartitionSimulator,
+        simulator: Arc<NetworkPartitionSimulator>,
         nodes: Vec<String>,
         partition_probability: f64,
         duration: Duration,
@@ -602,7 +602,7 @@ impl JepsenTestExecutor {
             active_partitions.retain(|(partition_id, created_at)| {
                 if created_at.elapsed() > Duration::from_secs(120) {
                     tokio::spawn({
-                        let simulator = simulator.clone();
+                        let simulator = Arc::clone(&simulator);
                         let partition_id = partition_id.clone();
                         async move {
                             let _ = simulator.heal_partition(&partition_id).await;
