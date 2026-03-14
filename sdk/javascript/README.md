@@ -8,13 +8,13 @@ Official JavaScript/TypeScript client library for RTDB vector database with full
 
 ## Features
 
-- 🚀 **High Performance**: Sub-5ms P99 latency with HTTP/2 and connection pooling
-- 🔄 **Full Qdrant Compatibility**: Drop-in replacement for Qdrant JavaScript client
-- 📦 **TypeScript First**: Complete type definitions with IntelliSense support
-- 🛡️ **Production Ready**: Retry logic, error handling, and comprehensive validation
-- 🔧 **Developer Friendly**: Fluent APIs, utility functions, and extensive examples
-- 🌐 **Universal**: Works in Node.js, browsers, and edge environments
-- ⚡ **Optimized**: Connection pooling, request batching, and smart caching
+- **High Performance**: Sub-5ms P99 latency with HTTP/2 and connection pooling
+- **Full Qdrant Compatibility**: Drop-in replacement for Qdrant JavaScript client
+- **TypeScript First**: Complete type definitions with IntelliSense support
+- **Production Ready**: Retry logic, error handling, and comprehensive validation
+- **Developer Friendly**: Fluent APIs, utility functions, and extensive examples
+- **Universal**: Works in Node.js, browsers, and edge environments
+- **Optimized**: Connection pooling, request batching, and smart caching
 
 ## Installation
 

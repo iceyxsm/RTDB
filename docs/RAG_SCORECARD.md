@@ -95,17 +95,17 @@ Quick reference for RAG database selection.
 
 ```
 Do you need real-time (<50ms) responses?
-├── YES → RTDB
-└── NO → Continue
+├── YES -> RTDB
+└── NO -> Continue
     Do you need multi-modal (text + image)?
-    ├── YES → Weaviate
-    └── NO → Continue
+    ├── YES -> Weaviate
+    └── NO -> Continue
         Is cost a primary concern?
-        ├── YES → RTDB
-        └── NO → Continue
+        ├── YES -> RTDB
+        └── NO -> Continue
             Do you want zero operations?
-            ├── YES → Pinecone
-            └── NO → Qdrant or RTDB
+            ├── YES -> Pinecone
+            └── NO -> Qdrant or RTDB
 ```
 
 ---

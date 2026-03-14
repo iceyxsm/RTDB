@@ -11,7 +11,7 @@ const VECTOR_DIM = 384;
 const COLLECTION_NAME = `benchmark_${Date.now()}`;
 
 async function runBenchmarks() {
-  console.log('🚀 RTDB JavaScript SDK Performance Benchmarks\n');
+  console.log(' RTDB JavaScript SDK Performance Benchmarks\n');
   
   const client = new RTDBClient({
     url: RTDB_URL,
@@ -21,7 +21,7 @@ async function runBenchmarks() {
 
   try {
     // Setup
-    console.log('📋 Setup');
+    console.log(' Setup');
     console.log(`   Server: ${RTDB_URL}`);
     console.log(`   Vector Dimension: ${VECTOR_DIM}`);
     console.log(`   Collection: ${COLLECTION_NAME}\n`);
@@ -38,10 +38,10 @@ async function runBenchmarks() {
       distance: 'Cosine'
     });
 
-    console.log('✅ Collection created\n');
+    console.log(' Collection created\n');
 
     // Benchmark 1: Single Point Operations
-    console.log('📊 Benchmark 1: Single Point Operations');
+    console.log(' Benchmark 1: Single Point Operations');
     
     const singlePoint = new PointBuilder()
       .id('benchmark-single')
@@ -73,7 +73,7 @@ async function runBenchmarks() {
     console.log(`   ${singleSearch.name}: ${singleSearch.avgDuration.toFixed(2)}ms avg (${singleSearch.minDuration.toFixed(2)}-${singleSearch.maxDuration.toFixed(2)}ms)`);
 
     // Benchmark 2: Batch Operations
-    console.log('\n📊 Benchmark 2: Batch Operations');
+    console.log('\n Benchmark 2: Batch Operations');
 
     const batchSizes = [10, 100, 1000];
     
@@ -103,7 +103,7 @@ async function runBenchmarks() {
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Benchmark 3: Search Performance
-    console.log('\n📊 Benchmark 3: Search Performance');
+    console.log('\n Benchmark 3: Search Performance');
 
     const searchLimits = [1, 10, 100];
     
@@ -123,7 +123,7 @@ async function runBenchmarks() {
     }
 
     // Benchmark 4: Concurrent Operations
-    console.log('\n📊 Benchmark 4: Concurrent Operations');
+    console.log('\n Benchmark 4: Concurrent Operations');
 
     const concurrencyLevels = [1, 5, 10, 20];
     
@@ -147,7 +147,7 @@ async function runBenchmarks() {
     }
 
     // Benchmark 5: Batch Search
-    console.log('\n📊 Benchmark 5: Batch Search');
+    console.log('\n Benchmark 5: Batch Search');
 
     const batchSearchSizes = [1, 5, 10, 20];
     
@@ -170,7 +170,7 @@ async function runBenchmarks() {
     }
 
     // Benchmark 6: Memory and Vector Operations
-    console.log('\n📊 Benchmark 6: Vector Operations');
+    console.log('\n Benchmark 6: Vector Operations');
 
     const vectorA = VectorUtils.random(VECTOR_DIM);
     const vectorB = VectorUtils.random(VECTOR_DIM);
@@ -206,7 +206,7 @@ async function runBenchmarks() {
     }
 
     // Benchmark 7: Large Dataset Performance
-    console.log('\n📊 Benchmark 7: Large Dataset Performance');
+    console.log('\n Benchmark 7: Large Dataset Performance');
 
     // Insert a larger dataset
     const largeDatasetSize = 10000;
@@ -265,7 +265,7 @@ async function runBenchmarks() {
     console.log(`   ${countBench.name}: ${countBench.avgDuration.toFixed(2)}ms avg`);
 
     // Final statistics
-    console.log('\n📈 Final Statistics');
+    console.log('\n Final Statistics');
     const finalCount = await client.count(COLLECTION_NAME);
     const collectionInfo = await client.getCollection(COLLECTION_NAME);
     
@@ -275,14 +275,14 @@ async function runBenchmarks() {
     console.log(`   Status: ${collectionInfo.status}`);
 
     // Performance Summary
-    console.log('\n🎯 Performance Summary');
+    console.log('\n Performance Summary');
     console.log(`   Single Search Latency: ${singleSearch.avgDuration.toFixed(2)}ms`);
     console.log(`   Batch Insert Throughput: ${(1000 / batchUpsert.avgDuration * 1000).toFixed(0)} points/sec`);
     console.log(`   Large Dataset Search: ${largeSearchBench.avgDuration.toFixed(2)}ms`);
     console.log(`   Vector Operations: ${(1000 / vectorOps[0].fn().avgDuration).toFixed(0)}K ops/sec`);
 
   } catch (error) {
-    console.error('❌ Benchmark failed:', error.message);
+    console.error(' Benchmark failed:', error.message);
     if (error.status) {
       console.error('   Status:', error.status);
     }
@@ -290,9 +290,9 @@ async function runBenchmarks() {
     // Cleanup
     try {
       await client.deleteCollection(COLLECTION_NAME);
-      console.log('\n🧹 Cleanup completed');
+      console.log('\n Cleanup completed');
     } catch (error) {
-      console.error('⚠️  Cleanup failed:', error.message);
+      console.error('  Cleanup failed:', error.message);
     }
     
     client.close();
@@ -303,7 +303,7 @@ async function runBenchmarks() {
 function logMemoryUsage() {
   if (typeof process !== 'undefined' && process.memoryUsage) {
     const usage = process.memoryUsage();
-    console.log('\n💾 Memory Usage:');
+    console.log('\n Memory Usage:');
     console.log(`   RSS: ${Math.round(usage.rss / 1024 / 1024)}MB`);
     console.log(`   Heap Used: ${Math.round(usage.heapUsed / 1024 / 1024)}MB`);
     console.log(`   Heap Total: ${Math.round(usage.heapTotal / 1024 / 1024)}MB`);
@@ -318,10 +318,10 @@ if (require.main === module) {
   runBenchmarks()
     .then(() => {
       logMemoryUsage();
-      console.log('\n✅ All benchmarks completed successfully!');
+      console.log('\n All benchmarks completed successfully!');
     })
     .catch(error => {
-      console.error('\n❌ Benchmarks failed:', error);
+      console.error('\n Benchmarks failed:', error);
       process.exit(1);
     });
 }

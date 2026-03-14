@@ -258,7 +258,7 @@ async function advancedExample() {
     console.log('\n=== Advanced Demo Completed Successfully ===');
 
   } catch (error) {
-    console.error('❌ Error:', error.message);
+    console.error('Error:', error.message);
     if (error.status) {
       console.error('   Status:', error.status);
     }
@@ -284,15 +284,15 @@ async function vectorSimilarityDemo() {
   console.log();
 
   console.log('Similarities:');
-  console.log(`A ↔ B Cosine: ${VectorUtils.cosineSimilarity(vectorA, vectorB).toFixed(4)}`);
-  console.log(`A ↔ C Cosine: ${VectorUtils.cosineSimilarity(vectorA, vectorC).toFixed(4)}`);
-  console.log(`B ↔ C Cosine: ${VectorUtils.cosineSimilarity(vectorB, vectorC).toFixed(4)}`);
+  console.log(`A <-> B Cosine: ${VectorUtils.cosineSimilarity(vectorA, vectorB).toFixed(4)}`);
+  console.log(`A <-> C Cosine: ${VectorUtils.cosineSimilarity(vectorA, vectorC).toFixed(4)}`);
+  console.log(`B <-> C Cosine: ${VectorUtils.cosineSimilarity(vectorB, vectorC).toFixed(4)}`);
   console.log();
 
   console.log('Distances:');
-  console.log(`A ↔ B Euclidean: ${VectorUtils.euclideanDistance(vectorA, vectorB).toFixed(4)}`);
-  console.log(`A ↔ C Euclidean: ${VectorUtils.euclideanDistance(vectorA, vectorC).toFixed(4)}`);
-  console.log(`B ↔ C Euclidean: ${VectorUtils.euclideanDistance(vectorB, vectorC).toFixed(4)}`);
+  console.log(`A <-> B Euclidean: ${VectorUtils.euclideanDistance(vectorA, vectorB).toFixed(4)}`);
+  console.log(`A <-> C Euclidean: ${VectorUtils.euclideanDistance(vectorA, vectorC).toFixed(4)}`);
+  console.log(`B <-> C Euclidean: ${VectorUtils.euclideanDistance(vectorB, vectorC).toFixed(4)}`);
   console.log();
 
   console.log('Dot Products:');

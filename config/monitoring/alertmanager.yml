@@ -125,7 +125,7 @@ receivers:
       - channel: '#warnings'
         send_resolved: true
         color: 'warning'
-        title: '⚠️ {{ .GroupLabels.alertname }}'
+        title: 'WARNING: {{ .GroupLabels.alertname }}'
         text: |
           {{ range .Alerts }}
           *{{ .Annotations.summary }}*
@@ -138,7 +138,7 @@ receivers:
       - channel: '#replication-alerts'
         send_resolved: true
         color: 'danger'
-        title: '🔄 Replication Issue: {{ .GroupLabels.alertname }}'
+        title: ' Replication Issue: {{ .GroupLabels.alertname }}'
         text: |
           {{ range .Alerts }}
           *{{ .Annotations.summary }}*
@@ -153,7 +153,7 @@ receivers:
       - channel: '#ops-resources'
         send_resolved: true
         color: '{{ if eq .CommonLabels.severity "critical" }}danger{{ else }}warning{{ end }}'
-        title: '💾 {{ .GroupLabels.alertname }}'
+        title: ' {{ .GroupLabels.alertname }}'
         text: |
           {{ range .Alerts }}
           *{{ .Annotations.summary }}*
@@ -186,7 +186,7 @@ mute_time_intervals:
 templates:
   - name: slack.title
     template: |
-      {{ if eq .CommonLabels.severity "critical" }}🚨{{ else }}⚠️{{ end }} 
+      {{ if eq .CommonLabels.severity "critical" }} {{ else }} {{ end }} 
       {{ .GroupLabels.alertname }} - {{ .CommonAnnotations.summary }}
   
   - name: slack.text

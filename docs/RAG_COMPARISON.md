@@ -287,7 +287,7 @@ let smart_results = db.smart_search(SmartSearchRequest {
                         ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                   Context Assembly                          │
-│  Top-K chunks → Format for LLM → Send to OpenAI/Local       │
+│  Top-K chunks -> Format for LLM -> Send to OpenAI/Local       │
 └─────────────────────────────────────────────────────────────┘
                         ▼
 ┌─────────────────────────────────────────────────────────────┐

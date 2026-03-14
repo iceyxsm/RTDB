@@ -30,19 +30,19 @@ RTDB provides production-grade migration tools to seamlessly migrate data from o
 
 ### 2. Dual-Write Migration
 - **Use Case**: Zero-downtime migrations for production systems
-- **Process**: Write to both systems → Backfill → Verify → Switch
+- **Process**: Write to both systems -> Backfill -> Verify -> Switch
 - **Benefits**: No downtime, consistency verification
 - **Complexity**: Higher operational complexity
 
 ### 3. Blue-Green Migration
 - **Use Case**: Complete environment switches
-- **Process**: Prepare green → Migrate → Warm up → Switch → Verify
+- **Process**: Prepare green -> Migrate -> Warm up -> Switch -> Verify
 - **Benefits**: Full rollback capability, isolated environments
 - **Resources**: Requires duplicate infrastructure
 
 ### 4. Snapshot Migration
 - **Use Case**: Point-in-time consistent migrations
-- **Process**: Create snapshot → Transfer → Apply incremental → Verify
+- **Process**: Create snapshot -> Transfer -> Apply incremental -> Verify
 - **Benefits**: Consistency guarantees, incremental updates
 - **Requirements**: Source system snapshot support
 
@@ -50,7 +50,7 @@ RTDB provides production-grade migration tools to seamlessly migrate data from o
 
 ### Data Transformation
 - **Field Renaming**: Map field names between systems
-- **Type Conversion**: Convert between data types (string↔number, array↔string)
+- **Type Conversion**: Convert between data types (string<->number, array<->string)
 - **Value Mapping**: Map categorical values using lookup tables
 - **Filtering**: Apply conditions to include/exclude records
 

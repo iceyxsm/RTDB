@@ -23,7 +23,7 @@ async fn main() -> Result<()> {
     // Initialize logging
     tracing_subscriber::init();
     
-    println!("🚀 RTDB Parquet Migration Example");
+    println!(" RTDB Parquet Migration Example");
     println!("==================================");
     
     // Example 1: Basic Parquet Import/Export
@@ -38,7 +38,7 @@ async fn main() -> Result<()> {
     // Example 4: Production Migration Workflow
     production_migration_workflow().await?;
     
-    println!("\n✅ All examples completed successfully!");
+    println!("\nAll examples completed successfully!");
     Ok(())
 }
 

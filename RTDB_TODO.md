@@ -65,7 +65,7 @@ RTDB is a next-generation vector database written in Rust that:
   - [ ] Go client compatibility
   - [ ] Java client compatibility
 
-#### 0.1.2 Milvus Compatibility Layer ✅ COMPLETED
+#### 0.1.2 Milvus Compatibility Layer - COMPLETED
 - [x] **REST API Implementation** (Port 19530)
   - [x] v2 Collections API (create, drop, list, describe, has, load, release, get_load_state)
   - [x] v2 Vector Operations API (insert, search, query, delete)
@@ -94,7 +94,7 @@ RTDB is a next-generation vector database written in Rust that:
   - [x] Flexible schema support with dynamic fields
   - [x] Batch processing for high-throughput scenarios
 
-#### 0.1.3 Weaviate Compatibility Layer ✅ COMPLETED
+#### 0.1.3 Weaviate Compatibility Layer - COMPLETED
 - [x] **GraphQL API Support**
   - [x] GraphQL schema introspection and query execution
   - [x] nearText, nearVector queries with parameter parsing

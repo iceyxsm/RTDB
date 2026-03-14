@@ -717,9 +717,9 @@ impl CliHandler {
         use std::path::PathBuf;
         use uuid::Uuid;
 
-        println!("🚀 Starting migration from {} ({}) to {}", from_type, from_url, to_url);
+        println!("Starting migration from {} ({}) to {}", from_type, from_url, to_url);
         if dry_run {
-            println!("🔍 DRY RUN MODE - No changes will be made");
+            println!("DRY RUN MODE - No changes will be made");
         }
 
         // Parse source type
@@ -826,7 +826,7 @@ impl CliHandler {
         // Create migration manager
         let migration_manager = MigrationManager::new(migration_config.checkpoint_dir.clone())?;
 
-        println!("📋 Migration configuration:");
+        println!("Migration configuration:");
         println!("  ID: {}", migration_config.id);
         println!("  Source: {} ({})", from_type, from_url);
         if let Some(src_col) = &migration_config.source_collection {
@@ -848,12 +848,12 @@ impl CliHandler {
         }
 
         if resume {
-            println!("🔄 Attempting to resume from checkpoint...");
+            println!("Attempting to resume from checkpoint...");
         }
 
         // Start migration
         let migration_id = migration_manager.start_migration(migration_config).await?;
-        println!("✅ Migration started with ID: {}", migration_id);
+        println!("Migration started with ID: {}", migration_id);
 
         // Monitor progress with enhanced display
         let mut last_progress = None;
@@ -880,18 +880,18 @@ impl CliHandler {
                         format!("{} records", progress.processed_records)
                     };
 
-                    println!("📊 Progress: {} - {:.0} records/sec - Status: {:?} - Elapsed: {:?}", 
+                    println!("Progress: {} - {:.0} records/sec - Status: {:?} - Elapsed: {:?}", 
                             completion, progress.throughput_per_second, progress.status, elapsed);
 
                     if progress.failed_records > 0 {
-                        println!("  ❌ Failed records: {}", progress.failed_records);
+                        println!("  Failed records: {}", progress.failed_records);
                     }
 
                     if let Some(eta) = progress.estimated_completion {
                         let now = chrono::Utc::now();
                         if eta > now {
                             let remaining = eta.signed_duration_since(now);
-                            println!("  ⏱️  ETA: {}m {}s", remaining.num_minutes(), remaining.num_seconds() % 60);
+                            println!("  ETA: {}m {}s", remaining.num_minutes(), remaining.num_seconds() % 60);
                         }
                     }
                 }
@@ -899,29 +899,29 @@ impl CliHandler {
                 match progress.status {
                     crate::migration::MigrationStatus::Completed => {
                         let total_time = start_time.elapsed();
-                        println!("🎉 Migration completed successfully!");
-                        println!("  📈 Total processed: {}", progress.processed_records);
-                        println!("  ⏱️  Total time: {:?}", total_time);
+                        println!("Migration completed successfully!");
+                        println!("  Total processed: {}", progress.processed_records);
+                        println!("  Total time: {:?}", total_time);
                         if progress.failed_records > 0 {
-                            println!("  ❌ Failed records: {}", progress.failed_records);
+                            println!("  Failed records: {}", progress.failed_records);
                         }
                         let avg_throughput = progress.processed_records as f64 / total_time.as_secs_f64();
-                        println!("  📊 Average throughput: {:.0} records/sec", avg_throughput);
+                        println!("  Average throughput: {:.0} records/sec", avg_throughput);
                         break;
                     }
                     crate::migration::MigrationStatus::Failed => {
-                        println!("💥 Migration failed!");
+                        println!("Migration failed!");
                         if !progress.error_messages.is_empty() {
-                            println!("  🔍 Errors:");
+                            println!("  Errors:");
                             for error in &progress.error_messages {
                                 println!("    - {}", error);
                             }
                         }
-                        println!("  💡 Tip: Use --resume to continue from the last checkpoint");
+                        println!("  Tip: Use --resume to continue from the last checkpoint");
                         return Err(crate::RTDBError::Config("Migration failed".to_string()));
                     }
                     crate::migration::MigrationStatus::Cancelled => {
-                        println!("⏹️  Migration was cancelled");
+                        println!("Migration was cancelled");
                         break;
                     }
                     _ => {}
@@ -929,7 +929,7 @@ impl CliHandler {
 
                 last_progress = Some(progress);
             } else {
-                println!("❓ Migration not found - it may have completed");
+                println!("Migration not found - it may have completed");
                 break;
             }
         }
@@ -1289,7 +1289,7 @@ impl CliHandler {
         use crate::migration::MigrationManager;
         use std::path::PathBuf;
 
-        println!("📋 Active Migrations:");
+        println!("Active Migrations:");
         
         let checkpoint_dir = PathBuf::from("./migration_checkpoints");
         let migration_manager = MigrationManager::new(checkpoint_dir)?;
@@ -1301,11 +1301,11 @@ impl CliHandler {
         } else {
             for migration in migrations {
                 let status_icon = match migration.status {
-                    crate::migration::MigrationStatus::Running => "🔄",
-                    crate::migration::MigrationStatus::Completed => "✅",
-                    crate::migration::MigrationStatus::Failed => "❌",
-                    crate::migration::MigrationStatus::Cancelled => "⏹️",
-                    _ => "❓",
+                    crate::migration::MigrationStatus::Running => "Running",
+                    crate::migration::MigrationStatus::Completed => "Completed",
+                    crate::migration::MigrationStatus::Failed => "Failed",
+                    crate::migration::MigrationStatus::Cancelled => "Cancelled",
+                    _ => "Unknown",
                 };
                 
                 println!("  {} {} - {} -> {} ({:?})", 
@@ -1345,7 +1345,7 @@ impl CliHandler {
         let migration_manager = MigrationManager::new(checkpoint_dir)?;
         
         if let Some(progress) = migration_manager.get_progress(id).await {
-            println!("📊 Migration Status: {}", migration_id);
+            println!("Migration Status: {}", migration_id);
             println!("  Status: {:?}", progress.status);
             
             if let Some(total) = progress.total_records {
@@ -1372,7 +1372,7 @@ impl CliHandler {
                 }
             }
         } else {
-            println!("❓ Migration {} not found", migration_id);
+            println!("Migration {} not found", migration_id);
         }
         
         Ok(())
@@ -1390,10 +1390,10 @@ impl CliHandler {
         let checkpoint_dir = PathBuf::from("./migration_checkpoints");
         let migration_manager = MigrationManager::new(checkpoint_dir)?;
         
-        println!("⏹️  Cancelling migration {}...", migration_id);
+        println!("Cancelling migration {}...", migration_id);
         
         migration_manager.cancel_migration(id).await?;
-        println!("✅ Migration cancelled successfully");
+        println!("Migration cancelled successfully");
         
         Ok(())
     }
@@ -1410,10 +1410,10 @@ impl CliHandler {
         let checkpoint_dir = PathBuf::from("./migration_checkpoints");
         let migration_manager = MigrationManager::new(checkpoint_dir)?;
         
-        println!("🔄 Resuming migration {}...", migration_id);
+        println!("Resuming migration {}...", migration_id);
         
         if migration_manager.resume_migration(id).await? {
-            println!("✅ Migration resumed successfully");
+            println!("Migration resumed successfully");
             
             // Monitor progress like in the main migrate command
             let mut last_progress = None;
@@ -1439,21 +1439,21 @@ impl CliHandler {
                             format!("{} records", progress.processed_records)
                         };
 
-                        println!("📊 Progress: {} - {:.0} records/sec - Status: {:?} - Elapsed: {:?}", 
+                        println!("Progress: {} - {:.0} records/sec - Status: {:?} - Elapsed: {:?}", 
                                 completion, progress.throughput_per_second, progress.status, elapsed);
                     }
 
                     match progress.status {
                         crate::migration::MigrationStatus::Completed => {
-                            println!("🎉 Migration completed successfully!");
+                            println!("Migration completed successfully!");
                             break;
                         }
                         crate::migration::MigrationStatus::Failed => {
-                            println!("💥 Migration failed again!");
+                            println!("Migration failed again!");
                             return Err(crate::RTDBError::Config("Migration failed".to_string()));
                         }
                         crate::migration::MigrationStatus::Cancelled => {
-                            println!("⏹️  Migration was cancelled");
+                            println!("Migration was cancelled");
                             break;
                         }
                         _ => {}
@@ -1469,7 +1469,7 @@ impl CliHandler {
                 }
             }
         } else {
-            println!("❓ Migration not found or cannot be resumed");
+            println!("Migration not found or cannot be resumed");
         }
         
         Ok(())
@@ -1483,16 +1483,16 @@ impl CliHandler {
         let checkpoint_path = PathBuf::from(checkpoint_dir);
         
         if !checkpoint_path.exists() {
-            println!("📁 Checkpoint directory does not exist: {}", checkpoint_dir);
+            println!("Checkpoint directory does not exist: {}", checkpoint_dir);
             return Ok(());
         }
 
-        println!("🧹 Cleaning up migration checkpoints in {}...", checkpoint_dir);
+        println!("Cleaning up migration checkpoints in {}...", checkpoint_dir);
         
         if force {
-            println!("⚠️  Force mode: removing ALL checkpoints including active migrations");
+            println!("Force mode: removing ALL checkpoints including active migrations");
             fs::remove_dir_all(&checkpoint_path).await?;
-            println!("✅ All checkpoints removed");
+            println!("All checkpoints removed");
         } else {
             // Only remove completed/failed migration checkpoints
             let mut entries = fs::read_dir(&checkpoint_path).await?;
@@ -1517,7 +1517,7 @@ impl CliHandler {
                 }
             }
             
-            println!("✅ Removed {} completed/failed migration checkpoints", removed_count);
+            println!("Removed {} completed/failed migration checkpoints", removed_count);
         }
         
         Ok(())
