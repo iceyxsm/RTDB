@@ -117,6 +117,14 @@ pub enum RTDBError {
     /// Migration errors
     #[error("Migration error: {0}")]
     Migration(String),
+    
+    /// Computation errors
+    #[error("Computation error: {0}")]
+    ComputationError(String),
+    
+    /// Invalid input errors
+    #[error("Invalid input: {0}")]
+    InvalidInput(String),
 }
 
 impl From<std::io::Error> for RTDBError {
@@ -180,11 +188,15 @@ impl Vector {
         self.data.iter().map(|x| x * x).sum::<f32>().sqrt()
     }
     
-    /// Normalize vector to unit length
+    /// Normalize vector to unit length using SIMDX optimization
     pub fn normalize(&mut self) {
-        let norm = self.l2_norm();
-        if norm > 0.0 {
-            self.data.iter_mut().for_each(|x| *x /= norm);
+        let simdx_context = crate::simdx::get_simdx_context();
+        if let Err(e) = simdx_context.normalize_vector(&mut self.data) {
+            // Fallback to scalar normalization if SIMDX fails
+            let norm = self.l2_norm();
+            if norm > 0.0 {
+                self.data.iter_mut().for_each(|x| *x /= norm);
+            }
         }
     }
 }
@@ -222,7 +234,7 @@ pub enum Distance {
 }
 
 impl Distance {
-    /// Calculate distance between two vectors
+    /// Calculate distance between two vectors using SIMDX optimization
     pub fn calculate(&self, a: &[f32], b: &[f32]) -> Result<f32> {
         if a.len() != b.len() {
             return Err(RTDBError::InvalidDimension {
@@ -231,27 +243,21 @@ impl Distance {
             });
         }
         
+        // Use SIMDX for optimal performance when available
+        let simdx_context = crate::simdx::get_simdx_context();
+        
         let score = match self {
             Distance::Euclidean => {
-                a.iter().zip(b.iter())
-                    .map(|(x, y)| (x - y).powi(2))
-                    .sum::<f32>()
-                    .sqrt()
+                simdx_context.euclidean_distance(a, b)?
             }
             Distance::Cosine => {
-                let dot: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
-                let norm_a: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
-                let norm_b: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
-                if norm_a == 0.0 || norm_b == 0.0 {
-                    0.0
-                } else {
-                    dot / (norm_a * norm_b)
-                }
+                simdx_context.cosine_distance(a, b)?
             }
             Distance::Dot => {
-                a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
+                simdx_context.dot_product(a, b)?
             }
             Distance::Manhattan => {
+                // Manhattan distance not yet SIMDX optimized, use scalar
                 a.iter().zip(b.iter())
                     .map(|(x, y)| (x - y).abs())
                     .sum()

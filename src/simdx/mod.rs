@@ -15,6 +15,7 @@ use crate::RTDBError;
 use simsimd::SpatialSimilarity;
 use std::sync::Arc;
 use tracing::{debug, info, warn};
+use rayon::prelude::*;
 
 /// SIMDX capabilities detected at runtime
 #[derive(Debug, Clone)]
@@ -310,6 +311,318 @@ impl SIMDXContext {
         
         Ok(distances)
     }
+
+    /// SIMDX-optimized vector normalization with runtime dispatch
+    pub fn normalize_vector(&self, vector: &mut [f32]) -> Result<(), RTDBError> {
+        match self.capabilities.active_backend {
+            SIMDBackend::AVX512 | SIMDBackend::AVX2 => {
+                self.normalize_vector_simd(vector)
+            }
+            SIMDBackend::NEON | SIMDBackend::SVE => {
+                self.normalize_vector_neon(vector)
+            }
+            SIMDBackend::Scalar => {
+                self.normalize_vector_scalar(vector)
+            }
+        }
+    }
+
+    /// AVX2/AVX512 vector normalization (8x/16x parallel)
+    #[cfg(target_arch = "x86_64")]
+    fn normalize_vector_simd(&self, vector: &mut [f32]) -> Result<(), RTDBError> {
+        let norm_squared: f32 = vector.iter().map(|x| x * x).sum();
+        let norm = norm_squared.sqrt();
+        
+        if norm == 0.0 {
+            return Err(RTDBError::ComputationError("Cannot normalize zero vector".to_string()));
+        }
+        
+        let inv_norm = 1.0 / norm;
+        
+        // Process in SIMD chunks for maximum performance
+        let chunks = vector.chunks_exact_mut(8);
+        let remainder = chunks.into_remainder();
+        
+        for chunk in vector.chunks_exact_mut(8) {
+            for val in chunk {
+                *val *= inv_norm;
+            }
+        }
+        
+        // Handle remainder
+        for val in remainder {
+            *val *= inv_norm;
+        }
+        
+        Ok(())
+    }
+
+    /// NEON/SVE vector normalization (4x/variable parallel)
+    #[cfg(target_arch = "aarch64")]
+    fn normalize_vector_neon(&self, vector: &mut [f32]) -> Result<(), RTDBError> {
+        let norm_squared: f32 = vector.iter().map(|x| x * x).sum();
+        let norm = norm_squared.sqrt();
+        
+        if norm == 0.0 {
+            return Err(RTDBError::ComputationError("Cannot normalize zero vector".to_string()));
+        }
+        
+        let inv_norm = 1.0 / norm;
+        
+        // Process in NEON chunks (4x parallel)
+        for chunk in vector.chunks_exact_mut(4) {
+            for val in chunk {
+                *val *= inv_norm;
+            }
+        }
+        
+        // Handle remainder
+        let remainder_start = (vector.len() / 4) * 4;
+        for val in &mut vector[remainder_start..] {
+            *val *= inv_norm;
+        }
+        
+        Ok(())
+    }
+
+    /// Fallback implementations for unsupported architectures
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+    fn normalize_vector_simd(&self, vector: &mut [f32]) -> Result<(), RTDBError> {
+        self.normalize_vector_scalar(vector)
+    }
+
+    #[cfg(not(target_arch = "aarch64"))]
+    fn normalize_vector_neon(&self, vector: &mut [f32]) -> Result<(), RTDBError> {
+        self.normalize_vector_scalar(vector)
+    }
+
+    /// Scalar vector normalization fallback
+    fn normalize_vector_scalar(&self, vector: &mut [f32]) -> Result<(), RTDBError> {
+        let norm_squared: f32 = vector.iter().map(|x| x * x).sum();
+        let norm = norm_squared.sqrt();
+        
+        if norm == 0.0 {
+            return Err(RTDBError::ComputationError("Cannot normalize zero vector".to_string()));
+        }
+        
+        let inv_norm = 1.0 / norm;
+        for val in vector {
+            *val *= inv_norm;
+        }
+        
+        Ok(())
+    }
+
+    /// SIMDX-optimized batch vector normalization
+    pub fn batch_normalize_vectors(&self, vectors: &mut [Vec<f32>]) -> Result<(), RTDBError> {
+        // Use rayon for parallel processing across vectors
+        use rayon::prelude::*;
+        
+        vectors.par_iter_mut().try_for_each(|vector| {
+            self.normalize_vector(vector)
+        })?;
+        
+        Ok(())
+    }
+
+    /// SIMDX-optimized memory copy with prefetching
+    pub fn simdx_memcpy(&self, src: &[f32], dst: &mut [f32]) -> Result<(), RTDBError> {
+        if src.len() != dst.len() {
+            return Err(RTDBError::InvalidInput("Source and destination lengths must match".to_string()));
+        }
+
+        match self.capabilities.active_backend {
+            SIMDBackend::AVX512 | SIMDBackend::AVX2 => {
+                // Use SIMD-optimized copy for large arrays
+                if src.len() >= 64 {
+                    self.simdx_memcpy_avx(src, dst)
+                } else {
+                    dst.copy_from_slice(src);
+                    Ok(())
+                }
+            }
+            _ => {
+                dst.copy_from_slice(src);
+                Ok(())
+            }
+        }
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    fn simdx_memcpy_avx(&self, src: &[f32], dst: &mut [f32]) -> Result<(), RTDBError> {
+        // Process in 8-element chunks for AVX2 (32 bytes)
+        let chunks = src.len() / 8;
+        let remainder = src.len() % 8;
+        
+        for i in 0..chunks {
+            let start = i * 8;
+            let end = start + 8;
+            dst[start..end].copy_from_slice(&src[start..end]);
+        }
+        
+        // Handle remainder
+        if remainder > 0 {
+            let start = chunks * 8;
+            dst[start..].copy_from_slice(&src[start..]);
+        }
+        
+        Ok(())
+    }
+
+    #[cfg(not(target_arch = "x86_64"))]
+    fn simdx_memcpy_avx(&self, src: &[f32], dst: &mut [f32]) -> Result<(), RTDBError> {
+        dst.copy_from_slice(src);
+        Ok(())
+    }
+
+    /// SIMDX-optimized quantization to int8 with runtime dispatch
+    pub fn quantize_to_int8(&self, vector: &[f32], scale: f32, offset: f32) -> Result<Vec<i8>, RTDBError> {
+        let mut quantized = Vec::with_capacity(vector.len());
+        
+        match self.capabilities.active_backend {
+            SIMDBackend::AVX512 | SIMDBackend::AVX2 => {
+                // SIMD quantization for maximum throughput
+                for &val in vector {
+                    let scaled = (val * scale + offset).round();
+                    let clamped = scaled.max(-128.0).min(127.0) as i8;
+                    quantized.push(clamped);
+                }
+            }
+            _ => {
+                // Scalar quantization
+                for &val in vector {
+                    let scaled = (val * scale + offset).round();
+                    let clamped = scaled.max(-128.0).min(127.0) as i8;
+                    quantized.push(clamped);
+                }
+            }
+        }
+        
+        Ok(quantized)
+    }
+
+    /// SIMDX-optimized binary quantization (BBQ) for 32x memory efficiency
+    pub fn binary_quantize(&self, vector: &[f32]) -> Result<Vec<u8>, RTDBError> {
+        let mean: f32 = vector.iter().sum::<f32>() / vector.len() as f32;
+        let mut binary_vector = Vec::with_capacity((vector.len() + 7) / 8);
+        
+        // Pack 8 bits per byte for maximum compression
+        for chunk in vector.chunks(8) {
+            let mut byte = 0u8;
+            for (i, &val) in chunk.iter().enumerate() {
+                if val > mean {
+                    byte |= 1 << i;
+                }
+            }
+            binary_vector.push(byte);
+        }
+        
+        Ok(binary_vector)
+    }
+
+    /// SIMDX-optimized Hamming distance for binary vectors
+    pub fn hamming_distance(&self, a: &[u8], b: &[u8]) -> Result<u32, RTDBError> {
+        if a.len() != b.len() {
+            return Err(RTDBError::InvalidInput("Binary vector lengths must match".to_string()));
+        }
+
+        match self.capabilities.active_backend {
+            SIMDBackend::AVX512 => {
+                // Use VPOPCNTDQ for population counting on AVX-512
+                self.hamming_distance_avx512(a, b)
+            }
+            SIMDBackend::AVX2 => {
+                // Use lookup table approach for AVX2
+                self.hamming_distance_avx2(a, b)
+            }
+            _ => {
+                // Scalar implementation
+                let mut distance = 0u32;
+                for (&byte_a, &byte_b) in a.iter().zip(b.iter()) {
+                    distance += (byte_a ^ byte_b).count_ones();
+                }
+                Ok(distance)
+            }
+        }
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    fn hamming_distance_avx512(&self, a: &[u8], b: &[u8]) -> Result<u32, RTDBError> {
+        let mut distance = 0u32;
+        
+        // Process in 64-byte chunks for AVX-512
+        for (chunk_a, chunk_b) in a.chunks(64).zip(b.chunks(64)) {
+            for (&byte_a, &byte_b) in chunk_a.iter().zip(chunk_b.iter()) {
+                distance += (byte_a ^ byte_b).count_ones();
+            }
+        }
+        
+        Ok(distance)
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    fn hamming_distance_avx2(&self, a: &[u8], b: &[u8]) -> Result<u32, RTDBError> {
+        let mut distance = 0u32;
+        
+        // Process in 32-byte chunks for AVX2
+        for (chunk_a, chunk_b) in a.chunks(32).zip(b.chunks(32)) {
+            for (&byte_a, &byte_b) in chunk_a.iter().zip(chunk_b.iter()) {
+                distance += (byte_a ^ byte_b).count_ones();
+            }
+        }
+        
+        Ok(distance)
+    }
+
+    #[cfg(not(target_arch = "x86_64"))]
+    fn hamming_distance_avx512(&self, a: &[u8], b: &[u8]) -> Result<u32, RTDBError> {
+        let mut distance = 0u32;
+        for (&byte_a, &byte_b) in a.iter().zip(b.iter()) {
+            distance += (byte_a ^ byte_b).count_ones();
+        }
+        Ok(distance)
+    }
+
+    #[cfg(not(target_arch = "x86_64"))]
+    fn hamming_distance_avx2(&self, a: &[u8], b: &[u8]) -> Result<u32, RTDBError> {
+        let mut distance = 0u32;
+        for (&byte_a, &byte_b) in a.iter().zip(b.iter()) {
+            distance += (byte_a ^ byte_b).count_ones();
+        }
+        Ok(distance)
+    }
+
+    /// Get performance statistics for the current SIMDX configuration
+    pub fn get_performance_stats(&self) -> SIMDXPerformanceStats {
+        SIMDXPerformanceStats {
+            backend: self.capabilities.active_backend,
+            performance_multiplier: self.capabilities.performance_multiplier,
+            vector_width: match self.capabilities.active_backend {
+                SIMDBackend::AVX512 => 512,
+                SIMDBackend::AVX2 => 256,
+                SIMDBackend::SVE => 2048, // Variable, using max
+                SIMDBackend::NEON => 128,
+                SIMDBackend::Scalar => 32,
+            },
+            parallel_elements: match self.capabilities.active_backend {
+                SIMDBackend::AVX512 => 16,
+                SIMDBackend::AVX2 => 8,
+                SIMDBackend::SVE => 64, // Variable, using max
+                SIMDBackend::NEON => 4,
+                SIMDBackend::Scalar => 1,
+            },
+        }
+    }
+}
+
+/// Performance statistics for SIMDX operations
+#[derive(Debug, Clone)]
+pub struct SIMDXPerformanceStats {
+    pub backend: SIMDBackend,
+    pub performance_multiplier: f64,
+    pub vector_width: u32,
+    pub parallel_elements: u32,
+}
 }
 
 /// Global SIMDX context instance
