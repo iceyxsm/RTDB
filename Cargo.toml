@@ -203,6 +203,14 @@ name = "grpc_benchmark"
 harness = false
 required-features = ["grpc"]
 
+[[bench]]
+name = "production_benchmark"
+harness = false
+
+[[bench]]
+name = "competitive_benchmark"
+harness = false
+
 [profile.release]
 opt-level = 3
 lto = "fat"

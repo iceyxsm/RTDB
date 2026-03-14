@@ -1,9 +1,9 @@
 apiVersion: v2
 name: rtdb
-description: Production-grade RTDB vector database Helm chart with SIMDX optimizations
+description: Production-grade RTDB vector database Helm chart
 type: application
 version: 1.0.0
-appVersion: "1.0.0"
+appVersion: "0.1.0"
 home: https://github.com/iceyxsm/RTDB
 sources:
   - https://github.com/iceyxsm/RTDB
@@ -12,11 +12,12 @@ maintainers:
     email: team@rtdb.io
 keywords:
   - vector-database
-  - machine-learning
-  - similarity-search
   - rag
-  - embeddings
-  - simdx
+  - search
+  - embedding
+  - ann
+  - machine-learning
+  - ai
 annotations:
   category: Database
   licenses: Apache-2.0

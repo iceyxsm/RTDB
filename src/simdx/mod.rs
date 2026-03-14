@@ -7,6 +7,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tracing::{debug, info, warn};
 
+pub mod advanced_optimizations;
+pub use advanced_optimizations::*;
+
 /// SIMDX engine with hardware detection and optimization
 pub struct SIMDXEngine {
     capabilities: SIMDCapabilities,

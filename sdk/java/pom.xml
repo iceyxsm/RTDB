@@ -11,8 +11,15 @@
     <packaging>jar</packaging>
 
     <name>RTDB Java Client</name>
-    <description>Production-grade Java client for RTDB vector database with SIMDX optimizations</description>
+    <description>Production-grade Java client for RTDB vector database</description>
     <url>https://github.com/iceyxsm/RTDB</url>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
 
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
@@ -20,101 +27,67 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         
         <!-- Dependency versions -->
-        <grpc.version>1.65.1</grpc.version>
-        <protobuf.version>3.25.3</protobuf.version>
-        <netty.version>4.1.112.Final</netty.version>
-        <jackson.version>2.17.2</jackson.version>
-        <slf4j.version>2.0.13</slf4j.version>
-        <junit.version>5.10.3</junit.version>
-        <mockito.version>5.12.0</mockito.version>
+        <okhttp.version>4.12.0</okhttp.version>
+        <jackson.version>2.16.1</jackson.version>
+        <slf4j.version>2.0.9</slf4j.version>
+        <micrometer.version>1.12.2</micrometer.version>
+        <resilience4j.version>2.2.0</resilience4j.version>
+        <junit.version>5.10.1</junit.version>
+        <mockito.version>5.8.0</mockito.version>
     </properties>
 
     <dependencies>
-        <!-- gRPC dependencies -->
-        <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-netty-shaded</artifactId>
-            <version>${grpc.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-protobuf</artifactId>
-            <version>${grpc.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-stub</artifactId>
-            <version>${grpc.version}</version>
-        </dependency>
-        
-        <!-- Protocol Buffers -->
-        <dependency>
-            <groupId>com.google.protobuf</groupId>
-            <artifactId>protobuf-java</artifactId>
-            <version>${protobuf.version}</version>
-        </dependency>
-        
-        <!-- HTTP client for REST API -->
+        <!-- HTTP Client -->
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
-            <version>4.12.0</version>
+            <version>${okhttp.version}</version>
         </dependency>
         
-        <!-- JSON processing -->
+        <!-- JSON Processing -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>${jackson.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-annotations</artifactId>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
             <version>${jackson.version}</version>
         </dependency>
-        
+
         <!-- Logging -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>${slf4j.version}</version>
         </dependency>
-        
+
         <!-- Metrics -->
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-core</artifactId>
-            <version>1.13.2</version>
+            <version>${micrometer.version}</version>
         </dependency>
-        
-        <!-- Circuit breaker -->
+
+        <!-- Resilience -->
         <dependency>
             <groupId>io.github.resilience4j</groupId>
             <artifactId>resilience4j-circuitbreaker</artifactId>
-            <version>2.2.0</version>
+            <version>${resilience4j.version}</version>
         </dependency>
         <dependency>
             <groupId>io.github.resilience4j</groupId>
             <artifactId>resilience4j-retry</artifactId>
-            <version>2.2.0</version>
+            <version>${resilience4j.version}</version>
         </dependency>
-        
-        <!-- Caffeine cache for performance -->
         <dependency>
-            <groupId>com.github.ben-manes.caffeine</groupId>
-            <artifactId>caffeine</artifactId>
-            <version>3.1.8</version>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-ratelimiter</artifactId>
+            <version>${resilience4j.version}</version>
         </dependency>
-        
-        <!-- Vector API for SIMDX (Java 17+, optional) -->
-        <dependency>
-            <groupId>org.openjdk.jmh</groupId>
-            <artifactId>jmh-core</artifactId>
-            <version>1.37</version>
-            <optional>true</optional>
-        </dependency>
-        
-        <!-- Test dependencies -->
+
+        <!-- Test Dependencies -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
@@ -128,9 +101,9 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>1.20.1</version>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>mockwebserver</artifactId>
+            <version>${okhttp.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -140,56 +113,42 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.13.0</version>
+                <version>3.11.0</version>
                 <configuration>
                     <source>11</source>
                     <target>11</target>
-                    <compilerArgs>
-                        <arg>--add-modules</arg>
-                        <arg>jdk.incubator.vector</arg>
-                    </compilerArgs>
                 </configuration>
             </plugin>
             
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.3.1</version>
-                <configuration>
-                    <argLine>--add-modules jdk.incubator.vector</argLine>
-                </configuration>
+                <version>3.2.3</version>
             </plugin>
             
-            <!-- Protocol Buffers compiler -->
             <plugin>
-                <groupId>org.xolstice.maven.plugins</groupId>
-                <artifactId>protobuf-maven-plugin</artifactId>
-                <version>0.6.1</version>
-                <configuration>
-                    <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
-                    <pluginId>grpc-java</pluginId>
-                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
-                </configuration>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.3.0</version>
                 <executions>
                     <execution>
+                        <id>attach-sources</id>
                         <goals>
-                            <goal>compile</goal>
-                            <goal>compile-custom</goal>
+                            <goal>jar</goal>
                         </goals>
                     </execution>
                 </executions>
             </plugin>
             
-            <!-- OS detector for protobuf -->
             <plugin>
-                <groupId>kr.motd.maven</groupId>
-                <artifactId>os-maven-plugin</artifactId>
-                <version>1.7.1</version>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.6.3</version>
                 <executions>
                     <execution>
-                        <phase>initialize</phase>
+                        <id>attach-javadocs</id>
                         <goals>
-                            <goal>detect</goal>
+                            <goal>jar</goal>
                         </goals>
                     </execution>
                 </executions>

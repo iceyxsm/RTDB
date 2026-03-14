@@ -1,421 +1,246 @@
-// Package rtdb provides a high-performance Go client for RTDB vector database
-// with production-grade features including connection pooling, retry logic,
-// circuit breaker, and SIMDX-optimized operations.
+// Package rtdb provides a production-grade Go client for RTDB vector database
 package rtdb
 
 import (
 	"context"
-	"crypto/tls"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"sync"
 	"time"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/keepalive"
-	"google.golang.org/grpc/status"
+	"github.com/go-resty/resty/v2"
+	"github.com/google/uuid"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/sony/gobreaker"
+	"go.uber.org/zap"
+	"golang.org/x/time/rate"
 )
 
 // Client represents a high-performance RTDB client with production features
 type Client struct {
-	conn         *grpc.ClientConn
-	config       *Config
-	circuitBreaker *CircuitBreaker
-	metrics      *ClientMetrics
-	mu           sync.RWMutex
-	closed       bool
+	config         *Config
+	httpClient     *resty.Client
+	circuitBreaker *gobreaker.CircuitBreaker
+	rateLimiter    *rate.Limiter
+	metrics        *Metrics
+	logger         *zap.Logger
+	mu             sync.RWMutex
 }
 
-// Config holds client configuration with production-grade defaults
+// Config holds the client configuration
 type Config struct {
-	// Connection settings
-	Address     string
-	Port        int
-	APIKey      string
-	TLSConfig   *tls.Config
-	
-	// Performance settings
-	MaxConnections    int
-	ConnectionTimeout time.Duration
-	RequestTimeout    time.Duration
-	
-	// Retry settings
-	MaxRetries      int
-	RetryBackoff    time.Duration
-	RetryMultiplier float64
-	
-	// Circuit breaker settings
-	FailureThreshold int
-	RecoveryTimeout  time.Duration
-	
-	// SIMDX optimization settings
-	EnableSIMDX     bool
-	BatchSize       int
-	PrefetchSize    int
+	Endpoint           string        `json:"endpoint"`
+	Timeout            time.Duration `json:"timeout"`
+	RetryCount         int           `json:"retry_count"`
+	RetryWaitTime      time.Duration `json:"retry_wait_time"`
+	MaxRetryWaitTime   time.Duration `json:"max_retry_wait_time"`
+	RateLimitRPS       float64       `json:"rate_limit_rps"`
+	RateLimitBurst     int           `json:"rate_limit_burst"`
+	MaxIdleConns       int           `json:"max_idle_conns"`
+	MaxConnsPerHost    int           `json:"max_conns_per_host"`
+	IdleConnTimeout    time.Duration `json:"idle_conn_timeout"`
+	CircuitBreakerName string        `json:"circuit_breaker_name"`
+	UserAgent          string        `json:"user_agent"`
+	APIKey             string        `json:"api_key"`
+	BatchSize          int           `json:"batch_size"`
 }
 
-// DefaultConfig returns production-optimized default configuration
-func DefaultConfig() *Config {
+// DefaultConfig returns a production-ready default configuration
+func DefaultConfig(endpoint string) *Config {
 	return &Config{
-		Address:           "localhost",
-		Port:              6334, // gRPC port
-		MaxConnections:    10,
-		ConnectionTimeout: 30 * time.Second,
-		RequestTimeout:    10 * time.Second,
-		MaxRetries:        3,
-		RetryBackoff:      100 * time.Millisecond,
-		RetryMultiplier:   2.0,
-		FailureThreshold:  5,
-		RecoveryTimeout:   30 * time.Second,
-		EnableSIMDX:       true,
-		BatchSize:         1000,
-		PrefetchSize:      64,
+		Endpoint:           endpoint,
+		Timeout:            30 * time.Second,
+		RetryCount:         3,
+		RetryWaitTime:      1 * time.Second,
+		MaxRetryWaitTime:   10 * time.Second,
+		RateLimitRPS:       1000.0, // 1K RPS default
+		RateLimitBurst:     100,
+		MaxIdleConns:       100,
+		MaxConnsPerHost:    10,
+		IdleConnTimeout:    90 * time.Second,
+		CircuitBreakerName: "rtdb-client",
+		UserAgent:          fmt.Sprintf("rtdb-go-client/1.0.0"),
+		BatchSize:          100,
 	}
 }
 
-// NewClient creates a new RTDB client with production-grade features
+// NewClient creates a new RTDB client with the given configuration
 func NewClient(config *Config) (*Client, error) {
 	if config == nil {
-		config = DefaultConfig()
+		return nil, fmt.Errorf("config cannot be nil")
 	}
 
-	// Setup gRPC connection with performance optimizations
-	opts := []grpc.DialOption{
-		grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			Time:                30 * time.Second,
-			Timeout:             5 * time.Second,
-			PermitWithoutStream: true,
-		}),
-		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(64*1024*1024), // 64MB
-			grpc.MaxCallSendMsgSize(64*1024*1024), // 64MB
-		),
-	}
-
-	// TLS configuration
-	if config.TLSConfig != nil {
-		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(config.TLSConfig)))
-	} else {
-		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	}
-
-	// Connection pooling for high throughput
-	opts = append(opts, grpc.WithDefaultServiceConfig(`{
-		"methodConfig": [{
-			"name": [{"service": "rtdb.Points"}],
-			"retryPolicy": {
-				"MaxAttempts": 4,
-				"InitialBackoff": "0.1s",
-				"MaxBackoff": "1s",
-				"BackoffMultiplier": 2.0,
-				"RetryableStatusCodes": ["UNAVAILABLE", "DEADLINE_EXCEEDED"]
-			}
-		}]
-	}`))
-
-	address := fmt.Sprintf("%s:%d", config.Address, config.Port)
-	conn, err := grpc.Dial(address, opts...)
+	// Initialize logger
+	logger, err := zap.NewProduction()
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to RTDB: %w", err)
+		return nil, fmt.Errorf("failed to initialize logger: %w", err)
+	}
+
+	// Initialize metrics
+	metrics := NewMetrics()
+
+	// Initialize rate limiter
+	rateLimiter := rate.NewLimiter(rate.Limit(config.RateLimitRPS), config.RateLimitBurst)
+
+	// Initialize circuit breaker
+	cbSettings := gobreaker.Settings{
+		Name:        config.CircuitBreakerName,
+		MaxRequests: 3,
+		Interval:    10 * time.Second,
+		Timeout:     30 * time.Second,
+		ReadyToTrip: func(counts gobreaker.Counts) bool {
+			failureRatio := float64(counts.TotalFailures) / float64(counts.Requests)
+			return counts.Requests >= 3 && failureRatio >= 0.6
+		},
+		OnStateChange: func(name string, from gobreaker.State, to gobreaker.State) {
+			logger.Info("Circuit breaker state changed",
+				zap.String("name", name),
+				zap.String("from", from.String()),
+				zap.String("to", to.String()))
+		},
+	}
+	circuitBreaker := gobreaker.NewCircuitBreaker(cbSettings)
+
+	// Initialize HTTP client
+	httpClient := resty.New().
+		SetTimeout(config.Timeout).
+		SetRetryCount(config.RetryCount).
+		SetRetryWaitTime(config.RetryWaitTime).
+		SetRetryMaxWaitTime(config.MaxRetryWaitTime).
+		SetHeader("User-Agent", config.UserAgent).
+		SetHeader("Content-Type", "application/json").
+		OnBeforeRequest(func(c *resty.Client, req *resty.Request) error {
+			// Rate limiting
+			if err := rateLimiter.Wait(context.Background()); err != nil {
+				return fmt.Errorf("rate limit exceeded: %w", err)
+			}
+			
+			// Add API key if configured
+			if config.APIKey != "" {
+				req.SetHeader("Authorization", "Bearer "+config.APIKey)
+			}
+			
+			return nil
+		}).
+		OnAfterResponse(func(c *resty.Client, resp *resty.Response) error {
+			// Record metrics
+			metrics.RecordRequest(resp.Request.Method, resp.StatusCode(), resp.Time())
+			return nil
+		})
+
+	// Configure HTTP transport
+	httpClient.GetClient().Transport = &http.Transport{
+		MaxIdleConns:        config.MaxIdleConns,
+		MaxIdleConnsPerHost: config.MaxConnsPerHost,
+		IdleConnTimeout:     config.IdleConnTimeout,
 	}
 
 	client := &Client{
-		conn:           conn,
 		config:         config,
-		circuitBreaker: NewCircuitBreaker(config.FailureThreshold, config.RecoveryTimeout),
-		metrics:        NewClientMetrics(),
+		httpClient:     httpClient,
+		circuitBreaker: circuitBreaker,
+		rateLimiter:    rateLimiter,
+		metrics:        metrics,
+		logger:         logger,
 	}
+
+	// Perform health check
+	if err := client.HealthCheck(context.Background()); err != nil {
+		logger.Warn("Initial health check failed", zap.Error(err))
+	}
+
+	logger.Info("RTDB client initialized successfully",
+		zap.String("endpoint", config.Endpoint))
 
 	return client, nil
 }
-
-// Vector represents a vector with metadata
-type Vector struct {
-	ID       string                 `json:"id"`
-	Vector   []float32              `json:"vector"`
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
-}
-
-// SearchRequest represents a vector search request with SIMDX optimizations
-type SearchRequest struct {
-	CollectionName string                 `json:"collection_name"`
-	Vector         []float32              `json:"vector"`
-	Limit          int                    `json:"limit"`
-	Filter         map[string]interface{} `json:"filter,omitempty"`
-	WithPayload    bool                   `json:"with_payload"`
-	WithVector     bool                   `json:"with_vector"`
-	ScoreThreshold *float32               `json:"score_threshold,omitempty"`
-	
-	// SIMDX optimization hints
-	UseSIMDX       bool `json:"use_simdx,omitempty"`
-	BatchOptimize  bool `json:"batch_optimize,omitempty"`
-}
-
-// SearchResult represents a search result with performance metrics
-type SearchResult struct {
-	ID       string                 `json:"id"`
-	Score    float32                `json:"score"`
-	Vector   []float32              `json:"vector,omitempty"`
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
-}
-
-// SearchResponse contains search results and performance metrics
-type SearchResponse struct {
-	Results []SearchResult `json:"results"`
-	Metrics *QueryMetrics  `json:"metrics,omitempty"`
-}
-
-// QueryMetrics provides detailed performance information
-type QueryMetrics struct {
-	QueryTime       time.Duration `json:"query_time"`
-	IndexTime       time.Duration `json:"index_time"`
-	SIMDXAccelerated bool         `json:"simdx_accelerated"`
-	VectorsScanned  int64        `json:"vectors_scanned"`
-	CacheHits       int64        `json:"cache_hits"`
-}
-
-// Search performs vector similarity search with SIMDX acceleration
-func (c *Client) Search(ctx context.Context, req *SearchRequest) (*SearchResponse, error) {
-	c.mu.RLock()
-	if c.closed {
-		c.mu.RUnlock()
-		return nil, fmt.Errorf("client is closed")
-	}
-	c.mu.RUnlock()
-
+// HealthCheck performs a health check against the RTDB server
+func (c *Client) HealthCheck(ctx context.Context) error {
 	start := time.Now()
 	
-	// Circuit breaker protection
-	if !c.circuitBreaker.Allow() {
-		c.metrics.IncrementCircuitBreakerOpen()
-		return nil, fmt.Errorf("circuit breaker is open")
-	}
-
-	// Apply timeout
-	if c.config.RequestTimeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, c.config.RequestTimeout)
-		defer cancel()
-	}
-
-	// Execute search with retry logic
-	var response *SearchResponse
-	var err error
-	
-	for attempt := 0; attempt <= c.config.MaxRetries; attempt++ {
-		response, err = c.executeSearch(ctx, req)
-		if err == nil {
-			c.circuitBreaker.RecordSuccess()
-			c.metrics.RecordRequest(time.Since(start), true)
-			return response, nil
-		}
-
-		// Check if error is retryable
-		if !isRetryableError(err) || attempt == c.config.MaxRetries {
-			break
-		}
-
-		// Exponential backoff
-		backoff := time.Duration(float64(c.config.RetryBackoff) * 
-			pow(c.config.RetryMultiplier, float64(attempt)))
+	result, err := c.circuitBreaker.Execute(func() (interface{}, error) {
+		resp, err := c.httpClient.R().
+			SetContext(ctx).
+			Get(c.config.Endpoint + "/health")
 		
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-time.After(backoff):
+		if err != nil {
+			return nil, err
 		}
+		
+		if resp.StatusCode() != http.StatusOK {
+			return nil, fmt.Errorf("health check failed with status: %d", resp.StatusCode())
+		}
+		
+		return resp, nil
+	})
+	
+	latency := time.Since(start)
+	c.metrics.RecordHealthCheck(latency, err == nil)
+	
+	if err != nil {
+		c.logger.Error("Health check failed", zap.Error(err), zap.Duration("latency", latency))
+		return err
 	}
-
-	c.circuitBreaker.RecordFailure()
-	c.metrics.RecordRequest(time.Since(start), false)
-	return nil, err
+	
+	c.logger.Debug("Health check successful", zap.Duration("latency", latency))
+	return nil
 }
 
-// executeSearch performs the actual search operation
-func (c *Client) executeSearch(ctx context.Context, req *SearchRequest) (*SearchResponse, error) {
-	// This would integrate with the actual gRPC service
-	// For now, returning a mock response to demonstrate the structure
+// CreateCollection creates a new vector collection
+func (c *Client) CreateCollection(ctx context.Context, name string, dimension int) (*Collection, error) {
+	start := time.Now()
 	
-	// Apply SIMDX optimizations if enabled
-	if c.config.EnableSIMDX && req.UseSIMDX {
-		// SIMDX-optimized vector preprocessing
-		req.Vector = c.optimizeVectorForSIMDX(req.Vector)
-	}
-
-	// Simulate search operation
-	results := []SearchResult{
-		{
-			ID:    "example_1",
-			Score: 0.95,
-			Vector: req.Vector, // Echo back for demo
-			Metadata: map[string]interface{}{
-				"category": "example",
-				"timestamp": time.Now().Unix(),
+	request := map[string]interface{}{
+		"name": name,
+		"config": map[string]interface{}{
+			"params": map[string]interface{}{
+				"vectors": map[string]interface{}{
+					"size":     dimension,
+					"distance": "Cosine",
+				},
 			},
 		},
 	}
-
-	return &SearchResponse{
-		Results: results,
-		Metrics: &QueryMetrics{
-			QueryTime:        time.Millisecond * 2,
-			IndexTime:        time.Microsecond * 500,
-			SIMDXAccelerated: req.UseSIMDX,
-			VectorsScanned:   1000,
-			CacheHits:        50,
-		},
-	}, nil
-}
-
-// optimizeVectorForSIMDX applies SIMDX-specific optimizations
-func (c *Client) optimizeVectorForSIMDX(vector []float32) []float32 {
-	// Ensure vector length is SIMD-friendly (multiple of 8 for AVX2, 16 for AVX-512)
-	targetLen := ((len(vector) + 15) / 16) * 16 // Round up to nearest 16
-	if len(vector) == targetLen {
-		return vector
-	}
-
-	optimized := make([]float32, targetLen)
-	copy(optimized, vector)
-	// Zero-pad the remaining elements for optimal SIMD performance
-	return optimized
-}
-
-// Insert adds vectors to a collection with batch optimization
-func (c *Client) Insert(ctx context.Context, collectionName string, vectors []Vector) error {
-	c.mu.RLock()
-	if c.closed {
-		c.mu.RUnlock()
-		return fmt.Errorf("client is closed")
-	}
-	c.mu.RUnlock()
-
-	// Batch processing for optimal performance
-	batchSize := c.config.BatchSize
-	for i := 0; i < len(vectors); i += batchSize {
-		end := i + batchSize
-		if end > len(vectors) {
-			end = len(vectors)
+	
+	result, err := c.circuitBreaker.Execute(func() (interface{}, error) {
+		resp, err := c.httpClient.R().
+			SetContext(ctx).
+			SetBody(request).
+			Put(c.config.Endpoint + "/collections/" + name)
+		
+		if err != nil {
+			return nil, err
 		}
 		
-		batch := vectors[i:end]
-		if err := c.insertBatch(ctx, collectionName, batch); err != nil {
-			return fmt.Errorf("failed to insert batch %d-%d: %w", i, end-1, err)
+		if resp.StatusCode() >= 400 {
+			return nil, fmt.Errorf("create collection failed: %s", resp.String())
 		}
-	}
-
-	return nil
-}
-
-// insertBatch inserts a batch of vectors
-func (c *Client) insertBatch(ctx context.Context, collectionName string, vectors []Vector) error {
-	// Apply SIMDX optimizations to vectors
-	if c.config.EnableSIMDX {
-		for i := range vectors {
-			vectors[i].Vector = c.optimizeVectorForSIMDX(vectors[i].Vector)
+		
+		var collection Collection
+		if err := json.Unmarshal(resp.Body(), &collection); err != nil {
+			return nil, fmt.Errorf("failed to parse response: %w", err)
 		}
+		
+		return &collection, nil
+	})
+	
+	latency := time.Since(start)
+	c.metrics.RecordOperation("create_collection", latency, err == nil)
+	
+	if err != nil {
+		c.logger.Error("Failed to create collection",
+			zap.String("name", name),
+			zap.Int("dimension", dimension),
+			zap.Error(err))
+		return nil, err
 	}
-
-	// Simulate batch insert
-	time.Sleep(time.Millisecond * 10) // Simulate processing time
-	return nil
-}
-
-// CreateCollection creates a new collection with optimized settings
-func (c *Client) CreateCollection(ctx context.Context, name string, vectorSize int) error {
-	c.mu.RLock()
-	if c.closed {
-		c.mu.RUnlock()
-		return fmt.Errorf("client is closed")
-	}
-	c.mu.RUnlock()
-
-	// Collection creation with SIMDX-optimized parameters
-	config := map[string]interface{}{
-		"vector_size": vectorSize,
-		"distance":    "Cosine",
-		"hnsw_config": map[string]interface{}{
-			"m":              16,  // Optimized for SIMDX
-			"ef_construct":   200,
-			"full_scan_threshold": 10000,
-		},
-		"quantization_config": map[string]interface{}{
-			"scalar": map[string]interface{}{
-				"type":       "int8",
-				"quantile":   0.99,
-				"always_ram": true,
-			},
-		},
-		"optimizer_config": map[string]interface{}{
-			"deleted_threshold":    0.2,
-			"vacuum_min_vector_number": 1000,
-			"default_segment_number":   0,
-			"max_segment_size":         nil,
-			"memmap_threshold":         nil,
-			"indexing_threshold":       20000,
-			"flush_interval_sec":       5,
-			"max_optimization_threads": nil,
-		},
-	}
-
-	// Simulate collection creation
-	_ = config
-	time.Sleep(time.Millisecond * 100)
-	return nil
-}
-
-// Close closes the client connection
-func (c *Client) Close() error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if c.closed {
-		return nil
-	}
-
-	c.closed = true
-	return c.conn.Close()
-}
-
-// Health checks the health of the RTDB service
-func (c *Client) Health(ctx context.Context) error {
-	c.mu.RLock()
-	if c.closed {
-		c.mu.RUnlock()
-		return fmt.Errorf("client is closed")
-	}
-	c.mu.RUnlock()
-
-	// Implement health check
-	return nil
-}
-
-// isRetryableError determines if an error should trigger a retry
-func isRetryableError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	st, ok := status.FromError(err)
-	if !ok {
-		return false
-	}
-
-	switch st.Code() {
-	case codes.Unavailable, codes.DeadlineExceeded, codes.ResourceExhausted:
-		return true
-	default:
-		return false
-	}
-}
-
-// pow calculates base^exp for float64
-func pow(base, exp float64) float64 {
-	result := 1.0
-	for i := 0; i < int(exp); i++ {
-		result *= base
-	}
-	return result
+	
+	collection := result.(*Collection)
+	c.logger.Info("Collection created successfully",
+		zap.String("name", name),
+		zap.Int("dimension", dimension),
+		zap.Duration("latency", latency))
+	
+	return collection, nil
 }

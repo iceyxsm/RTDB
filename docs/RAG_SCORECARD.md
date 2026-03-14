@@ -6,14 +6,14 @@ Quick reference for RAG database selection.
 
 ## Overall RAG Suitability Score
 
-| Rank | Database   | Score      | Best For                      |
-|------|------------|------------|-------------------------------|
+| Rank | Database   | Score      | Best For                        |
+|------|------------|------------|---------------------------------|
 | 1    | **RTDB**   | **9.6/10** | Real-time, edge, cost-sensitive |
-| 2    | Weaviate   | 8.6/10     | Document NLP, multi-modal     |
-| 3    | Pinecone   | 8.2/10     | Managed, quick start          |
-| 4    | Qdrant     | 8.0/10     | General purpose               |
-| 5    | Milvus     | 7.5/10     | Large scale, GPU              |
-| 6    | Chroma     | 6.0/10     | Prototyping                   |
+| 2    | Weaviate   | 8.6/10     | Document NLP, multi-modal       |
+| 3    | Pinecone   | 8.2/10     | Managed, quick start            |
+| 4    | Qdrant     | 8.0/10     | General purpose                 |
+| 5    | Milvus     | 7.5/10     | Large scale, GPU                |
+| 6    | Chroma     | 6.0/10     | Prototyping                     |
 
 ---
 

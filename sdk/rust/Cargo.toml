@@ -1,0 +1,60 @@
+[package]
+name = "rtdb-client"
+version = "0.1.0"
+edition = "2021"
+authors = ["RTDB Team"]
+description = "Production-grade Rust client for RTDB vector database"
+license = "Apache-2.0"
+repository = "https://github.com/iceyxsm/RTDB"
+keywords = ["vector-database", "client", "rag", "search", "embedding"]
+categories = ["database", "api-bindings"]
+rust-version = "1.75"
+
+[features]
+default = ["tls"]
+tls = ["reqwest/rustls-tls"]
+native-tls = ["reqwest/native-tls"]
+grpc = ["tonic", "prost"]
+
+[dependencies]
+# HTTP client
+reqwest = { version = "0.11", features = ["json", "gzip"], default-features = false }
+tokio = { version = "1.35", features = ["full"] }
+
+# gRPC client (optional)
+tonic = { version = "0.11", optional = true }
+prost = { version = "0.12", optional = true }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Utilities
+uuid = { version = "1.6", features = ["v4", "serde"] }
+url = "2.5"
+chrono = { version = "0.4", features = ["serde"] }
+
+# Async utilities
+async-trait = "0.1"
+futures = "0.3"
+
+# Metrics and observability
+tracing = "0.1"
+metrics = "0.22"
+
+# Circuit breaker for resilience
+circuit_breaker = "0.1"
+backoff = "0.4"
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.9"
+criterion = { version = "0.5", features = ["async_tokio"] }
+
+[[bench]]
+name = "client_benchmark"
+harness = false
