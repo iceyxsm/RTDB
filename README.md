@@ -172,14 +172,14 @@ RTDB delivers industry-leading performance across all metrics:
 - **Fault Tolerance** - Checkpoint system for resumable long-running migrations
 - **Real-Time Monitoring** - Progress bars with throughput statistics and ETA
 
-### 🏢 Enterprise Clustering
+###  Enterprise Clustering
 - **Raft Consensus** - Production-tested distributed consensus with leader election
 - **Automatic Failover** - Phi Accrual failure detection with configurable thresholds
 - **Data Replication** - Synchronous/asynchronous replication with quorum writes
 - **Consistent Hashing** - 256 virtual shards with automatic rebalancing
 - **Cross-Region Support** - WAN-optimized replication with conflict resolution
 
-### 🔒 Security & Authentication
+###  Security & Authentication
 - **RBAC System** - Role-based access control (Admin/Writer/Reader roles)
 - **API Authentication** - API key and Bearer token authentication
 - **Encryption** - TLS 1.3 in transit, AES-256 at rest (planned)
