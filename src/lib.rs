@@ -24,6 +24,10 @@ pub mod quantization;
 pub mod filter;
 pub mod migration;
 pub mod jepsen;
+pub mod simdx;
+pub mod k8s;
+pub mod sdk;
+pub mod testing;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;

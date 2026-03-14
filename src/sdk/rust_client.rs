@@ -317,3 +317,4 @@ impl RTDBClient {
             connection_pool,
         })
     }
+}

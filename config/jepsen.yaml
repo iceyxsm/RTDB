@@ -1,0 +1,275 @@
+# RTDB Jepsen Testing Configuration
+# Production-grade distributed systems correctness validation
+
+# Test execution settings
+execution:
+  # Default test duration in seconds
+  default_duration: 300
+  
+  # Number of concurrent clients per test
+  default_clients: 8
+  
+  # Operations per second per client
+  default_rate: 100
+  
+  # Maximum operation timeout in milliseconds
+  max_timeout_ms: 5000
+  
+  # Enable SIMDX optimizations for analysis
+  enable_simdx: true
+
+# Network partition simulation
+partitions:
+  # Probability of creating network partitions (0.0 to 1.0)
+  probability: 0.1
+  
+  # Minimum partition duration in seconds
+  min_duration: 30
+  
+  # Maximum partition duration in seconds
+  max_duration: 120
+  
+  # Maximum percentage of nodes to partition
+  max_partition_size: 0.5
+
+# Consistency models to test
+consistency:
+  # Primary consistency model
+  model: "Linearizable"  # Linearizable, Sequential, Eventual
+  
+  # Enable additional consistency checks
+  check_serializability: true
+  check_snapshot_isolation: true
+  check_read_committed: true
+
+# Test suite configuration
+test_suite:
+  # Tests to run in comprehensive suite
+  tests:
+    - name: "linearizability"
+      description: "Basic linearizability validation"
+      duration: 180
+      clients: 8
+      rate: 100
+      partition_prob: 0.1
+      
+    - name: "bank_transfer"
+      description: "Bank account transfer consistency"
+      duration: 300
+      clients: 6
+      rate: 50
+      partition_prob: 0.15
+      accounts: 10
+      initial_balance: 1000
+      
+    - name: "register"
+      description: "Register read/write consistency"
+      duration: 240
+      clients: 10
+      rate: 75
+      partition_prob: 0.2
+      registers: 20
+      
+    - name: "partition_tolerance"
+      description: "High partition probability test"
+      duration: 360
+      clients: 6
+      rate: 40
+      partition_prob: 0.3
+      
+    - name: "crash_recovery"
+      description: "Node crash and recovery test"
+      duration: 420
+      clients: 8
+      rate: 60
+      partition_prob: 0.1
+      crash_probability: 0.05
+      
+    - name: "split_brain"
+      description: "Split brain scenario test"
+      duration: 300
+      clients: 4
+      rate: 30
+      partition_prob: 0.4
+      
+    - name: "clock_skew"
+      description: "Clock skew tolerance test"
+      duration: 240
+      clients: 6
+      rate: 50
+      partition_prob: 0.1
+      max_clock_skew_ms: 5000
+
+# Workload patterns
+workloads:
+  # Read-heavy workload
+  read_heavy:
+    read_percentage: 80
+    write_percentage: 15
+    delete_percentage: 5
+    
+  # Write-heavy workload
+  write_heavy:
+    read_percentage: 30
+    write_percentage: 60
+    delete_percentage: 10
+    
+  # Balanced workload
+  balanced:
+    read_percentage: 50
+    write_percentage: 40
+    delete_percentage: 10
+    
+  # Search-heavy workload
+  search_heavy:
+    read_percentage: 20
+    write_percentage: 20
+    search_percentage: 50
+    delete_percentage: 10
+
+# Data generation
+data:
+  # Vector dimensions for test data
+  vector_dimensions: [128, 384, 768, 1536]
+  
+  # Default dimension
+  default_dimension: 384
+  
+  # Number of unique vectors to generate
+  vector_pool_size: 10000
+  
+  # Value ranges for vector components
+  vector_value_range: [-1.0, 1.0]
+  
+  # Collection names for testing
+  test_collections:
+    - "jepsen_test_vectors"
+    - "jepsen_bank_accounts"
+    - "jepsen_registers"
+    - "jepsen_consistency_test"
+
+# Failure injection
+failures:
+  # Node crash simulation
+  node_crashes:
+    enabled: true
+    probability: 0.02
+    min_downtime_sec: 10
+    max_downtime_sec: 60
+    
+  # Network delays
+  network_delays:
+    enabled: true
+    probability: 0.05
+    min_delay_ms: 100
+    max_delay_ms: 2000
+    
+  # Packet loss
+  packet_loss:
+    enabled: true
+    probability: 0.03
+    loss_rate: 0.1
+    
+  # Clock skew
+  clock_skew:
+    enabled: true
+    probability: 0.02
+    max_skew_ms: 5000
+
+# Analysis configuration
+analysis:
+  # SIMDX optimization settings
+  simdx:
+    enabled: true
+    batch_size: 64
+    parallel_threads: 0  # 0 = auto-detect
+    
+  # History analysis
+  history:
+    max_operations: 1000000
+    checkpoint_interval: 10000
+    enable_compression: true
+    
+  # Violation detection
+  violations:
+    # Timeout for detecting stale reads (ms)
+    stale_read_timeout: 1000
+    
+    # Maximum acceptable operation latency (ms)
+    max_operation_latency: 10000
+    
+    # Enable advanced violation patterns
+    detect_lost_updates: true
+    detect_dirty_reads: true
+    detect_phantom_reads: true
+
+# Reporting
+reporting:
+  # Output formats
+  formats: ["console", "json", "html"]
+  
+  # Output directory
+  output_dir: "./jepsen-results"
+  
+  # Include detailed operation history
+  include_history: true
+  
+  # Generate performance graphs
+  generate_graphs: true
+  
+  # Real-time progress reporting
+  real_time_updates: true
+  
+  # Update interval for progress (seconds)
+  progress_interval: 5
+
+# Integration settings
+integration:
+  # RTDB API endpoints
+  api:
+    rest_port: 6333
+    grpc_port: 6334
+    health_port: 8080
+    metrics_port: 9090
+    
+  # Authentication
+  auth:
+    enabled: false
+    api_key: ""
+    
+  # Timeouts
+  timeouts:
+    connection_timeout_ms: 5000
+    request_timeout_ms: 10000
+    
+  # Retry configuration
+  retry:
+    max_attempts: 3
+    initial_delay_ms: 100
+    max_delay_ms: 5000
+    backoff_multiplier: 2.0
+
+# Performance targets
+targets:
+  # Minimum acceptable throughput (ops/sec)
+  min_throughput: 1000
+  
+  # Maximum acceptable P99 latency (ms)
+  max_p99_latency: 100
+  
+  # Maximum acceptable error rate
+  max_error_rate: 0.01
+  
+  # Consistency requirements
+  consistency:
+    # Must pass linearizability
+    require_linearizable: true
+    
+    # Maximum acceptable violations
+    max_violations: 0
+    
+    # Violation severity levels
+    violation_levels:
+      critical: ["ReadAfterWrite", "LostUpdate"]
+      warning: ["StaleRead"]
+      info: ["ConcurrentWrites"]
