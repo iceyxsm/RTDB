@@ -16,6 +16,8 @@ grpc = ["tonic", "prost", "dep:warp"]
 hdf5 = ["dep:hdf5", "dep:ndarray"]
 # Regenerate protobuf code from .proto files (requires protoc)
 regenerate-proto = []
+tonic = ["dep:tonic"]
+prost = ["dep:prost"]
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(grpc_enabled)'] }
