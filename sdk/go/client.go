@@ -10,8 +10,6 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/google/uuid"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sony/gobreaker"
 	"go.uber.org/zap"
 	"golang.org/x/time/rate"
@@ -159,7 +157,7 @@ func NewClient(config *Config) (*Client, error) {
 func (c *Client) HealthCheck(ctx context.Context) error {
 	start := time.Now()
 	
-	result, err := c.circuitBreaker.Execute(func() (interface{}, error) {
+	_, err := c.circuitBreaker.Execute(func() (interface{}, error) {
 		resp, err := c.httpClient.R().
 			SetContext(ctx).
 			Get(c.config.Endpoint + "/health")
@@ -243,4 +241,176 @@ func (c *Client) CreateCollection(ctx context.Context, name string, dimension in
 		zap.Duration("latency", latency))
 	
 	return collection, nil
+}
+// Vector represents a vector with metadata
+type Vector struct {
+	ID       string                 `json:"id"`
+	Vector   []float32              `json:"vector"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// Collection represents a collection
+type Collection struct {
+	Name         string `json:"name"`
+	Status       string `json:"status"`
+	VectorsCount *int64 `json:"vectors_count,omitempty"`
+}
+
+// SearchRequest represents a search request
+type SearchRequest struct {
+	CollectionName string                 `json:"collection_name"`
+	Vector         []float32              `json:"vector"`
+	Limit          int                    `json:"limit"`
+	WithPayload    bool                   `json:"with_payload"`
+	WithVector     bool                   `json:"with_vector"`
+	UseSIMDX       bool                   `json:"use_simdx"`
+	BatchOptimize  bool                   `json:"batch_optimize"`
+	Filter         map[string]interface{} `json:"filter,omitempty"`
+}
+
+// SearchResponse represents a search response
+type SearchResponse struct {
+	Results []SearchResult  `json:"results"`
+	Metrics *SearchMetrics  `json:"metrics,omitempty"`
+}
+
+// SearchResult represents a single search result
+type SearchResult struct {
+	ID       string                 `json:"id"`
+	Score    float32                `json:"score"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	Vector   []float32              `json:"vector,omitempty"`
+}
+
+// SearchMetrics represents search performance metrics
+type SearchMetrics struct {
+	QueryTime        time.Duration `json:"query_time"`
+	SIMDXAccelerated bool          `json:"simdx_accelerated"`
+	VectorsScanned   int64         `json:"vectors_scanned"`
+	CacheHits        int64         `json:"cache_hits"`
+}
+
+// ListCollections lists all collections
+func (c *Client) ListCollections(ctx context.Context) ([]Collection, error) {
+	result, err := c.circuitBreaker.Execute(func() (interface{}, error) {
+		resp, err := c.httpClient.R().
+			SetContext(ctx).
+			Get(c.config.Endpoint + "/collections")
+		
+		if err != nil {
+			return nil, err
+		}
+		
+		if resp.StatusCode() != http.StatusOK {
+			return nil, fmt.Errorf("list collections failed with status: %d", resp.StatusCode())
+		}
+		
+		var collections []Collection
+		if err := json.Unmarshal(resp.Body(), &collections); err != nil {
+			return nil, fmt.Errorf("failed to parse response: %w", err)
+		}
+		
+		return collections, nil
+	})
+	
+	if err != nil {
+		c.logger.Error("Failed to list collections", zap.Error(err))
+		return nil, err
+	}
+	
+	collections := result.([]Collection)
+	c.logger.Info("Listed collections successfully", zap.Int("count", len(collections)))
+	
+	return collections, nil
+}
+
+// Insert inserts vectors into a collection
+func (c *Client) Insert(ctx context.Context, collection string, vectors []Vector) error {
+	request := map[string]interface{}{
+		"points": vectors,
+	}
+	
+	_, err := c.circuitBreaker.Execute(func() (interface{}, error) {
+		resp, err := c.httpClient.R().
+			SetContext(ctx).
+			SetBody(request).
+			Put(c.config.Endpoint + "/collections/" + collection + "/points")
+		
+		if err != nil {
+			return nil, err
+		}
+		
+		if resp.StatusCode() >= 400 {
+			return nil, fmt.Errorf("insert failed: %s", resp.String())
+		}
+		
+		return resp, nil
+	})
+	
+	if err != nil {
+		c.logger.Error("Failed to insert vectors",
+			zap.String("collection", collection),
+			zap.Int("count", len(vectors)),
+			zap.Error(err))
+		return err
+	}
+	
+	c.logger.Info("Vectors inserted successfully",
+		zap.String("collection", collection),
+		zap.Int("count", len(vectors)))
+	
+	return nil
+}
+
+// Search performs vector search
+func (c *Client) Search(ctx context.Context, req *SearchRequest) (*SearchResponse, error) {
+	request := map[string]interface{}{
+		"vector":       req.Vector,
+		"limit":        req.Limit,
+		"with_payload": req.WithPayload,
+		"with_vector":  req.WithVector,
+		"filter":       req.Filter,
+	}
+	
+	result, err := c.circuitBreaker.Execute(func() (interface{}, error) {
+		resp, err := c.httpClient.R().
+			SetContext(ctx).
+			SetBody(request).
+			Post(c.config.Endpoint + "/collections/" + req.CollectionName + "/points/search")
+		
+		if err != nil {
+			return nil, err
+		}
+		
+		if resp.StatusCode() != http.StatusOK {
+			return nil, fmt.Errorf("search failed with status: %d", resp.StatusCode())
+		}
+		
+		var searchResponse SearchResponse
+		if err := json.Unmarshal(resp.Body(), &searchResponse); err != nil {
+			return nil, fmt.Errorf("failed to parse response: %w", err)
+		}
+		
+		return &searchResponse, nil
+	})
+	
+	if err != nil {
+		c.logger.Error("Failed to search",
+			zap.String("collection", req.CollectionName),
+			zap.Error(err))
+		return nil, err
+	}
+	
+	searchResponse := result.(*SearchResponse)
+	c.logger.Debug("Search completed successfully",
+		zap.String("collection", req.CollectionName),
+		zap.Int("results", len(searchResponse.Results)))
+	
+	return searchResponse, nil
+}
+
+// Close closes the client and cleans up resources
+func (c *Client) Close() error {
+	c.logger.Info("Closing RTDB client")
+	return nil
 }

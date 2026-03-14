@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	rtdb "github.com/iceyxsm/rtdb-go"
+	rtdb "github.com/iceyxsm/RTDB/sdk/go"
 )
 
 func main() {

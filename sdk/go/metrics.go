@@ -1,154 +1,130 @@
 package rtdb
 
 import (
-	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
-// ClientMetrics tracks client performance metrics
-type ClientMetrics struct {
-	mu                    sync.RWMutex
-	totalRequests         int64
-	successfulRequests    int64
-	failedRequests        int64
-	circuitBreakerOpens   int64
-	totalLatency          int64
-	minLatency            int64
-	maxLatency            int64
-	latencyBuckets        []int64 // Histogram buckets
-	bucketBoundaries      []time.Duration
-}
-
-// NewClientMetrics creates a new metrics collector
-func NewClientMetrics() *ClientMetrics {
-	return &ClientMetrics{
-		minLatency: int64(^uint64(0) >> 1), // Max int64
-		bucketBoundaries: []time.Duration{
-			time.Millisecond,
-			5 * time.Millisecond,
-			10 * time.Millisecond,
-			25 * time.Millisecond,
-			50 * time.Millisecond,
-			100 * time.Millisecond,
-			250 * time.Millisecond,
-			500 * time.Millisecond,
-			time.Second,
-			5 * time.Second,
-		},
-		latencyBuckets: make([]int64, 11), // 10 buckets + overflow
-	}
-}
-
-// RecordRequest records a request with its latency and success status
-func (m *ClientMetrics) RecordRequest(latency time.Duration, success bool) {
-	atomic.AddInt64(&m.totalRequests, 1)
+// Metrics holds client performance metrics
+type Metrics struct {
+	requestsTotal   *prometheus.CounterVec
+	requestDuration *prometheus.HistogramVec
+	errorsTotal     *prometheus.CounterVec
 	
-	if success {
-		atomic.AddInt64(&m.successfulRequests, 1)
-	} else {
-		atomic.AddInt64(&m.failedRequests, 1)
-	}
-
-	latencyNs := latency.Nanoseconds()
-	atomic.AddInt64(&m.totalLatency, latencyNs)
-
-	// Update min latency
-	for {
-		current := atomic.LoadInt64(&m.minLatency)
-		if latencyNs >= current || atomic.CompareAndSwapInt64(&m.minLatency, current, latencyNs) {
-			break
-		}
-	}
-
-	// Update max latency
-	for {
-		current := atomic.LoadInt64(&m.maxLatency)
-		if latencyNs <= current || atomic.CompareAndSwapInt64(&m.maxLatency, current, latencyNs) {
-			break
-		}
-	}
-
-	// Update histogram
-	bucketIndex := len(m.bucketBoundaries) // Default to overflow bucket
-	for i, boundary := range m.bucketBoundaries {
-		if latency <= boundary {
-			bucketIndex = i
-			break
-		}
-	}
-	atomic.AddInt64(&m.latencyBuckets[bucketIndex], 1)
+	// Internal counters
+	totalRequests int64
+	totalErrors   int64
+	minLatency    time.Duration
+	maxLatency    time.Duration
+	totalLatency  time.Duration
 }
 
-// IncrementCircuitBreakerOpen increments the circuit breaker open counter
-func (m *ClientMetrics) IncrementCircuitBreakerOpen() {
-	atomic.AddInt64(&m.circuitBreakerOpens, 1)
+// NewMetrics creates a new metrics instance
+func NewMetrics() *Metrics {
+	return &Metrics{
+		requestsTotal: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "rtdb_client_requests_total",
+				Help: "Total number of requests made to RTDB",
+			},
+			[]string{"method", "status"},
+		),
+		requestDuration: prometheus.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name:    "rtdb_client_request_duration_seconds",
+				Help:    "Request duration in seconds",
+				Buckets: prometheus.DefBuckets,
+			},
+			[]string{"method"},
+		),
+		errorsTotal: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "rtdb_client_errors_total",
+				Help: "Total number of errors",
+			},
+			[]string{"method", "error_type"},
+		),
+		minLatency: time.Duration(0),
+		maxLatency: time.Duration(0),
+	}
+}
+
+// RecordRequest records a successful request
+func (m *Metrics) RecordRequest(method string, statusCode int, duration time.Duration) {
+	atomic.AddInt64(&m.totalRequests, 1)
+	atomic.AddInt64((*int64)(&m.totalLatency), int64(duration))
+	
+	// Update min/max latency
+	if m.minLatency == 0 || duration < m.minLatency {
+		m.minLatency = duration
+	}
+	if duration > m.maxLatency {
+		m.maxLatency = duration
+	}
+	
+	m.requestsTotal.WithLabelValues(method, "success").Inc()
+	m.requestDuration.WithLabelValues(method).Observe(duration.Seconds())
+}
+
+// RecordError records an error
+func (m *Metrics) RecordError(method string, errorType string) {
+	atomic.AddInt64(&m.totalErrors, 1)
+	m.errorsTotal.WithLabelValues(method, errorType).Inc()
+}
+
+// MetricsSnapshot represents a snapshot of metrics
+type MetricsSnapshot struct {
+	TotalRequests int64
+	TotalErrors   int64
+	MinLatency    time.Duration
+	MaxLatency    time.Duration
+	TotalLatency  time.Duration
 }
 
 // GetMetrics returns a snapshot of current metrics
-func (m *ClientMetrics) GetMetrics() MetricsSnapshot {
+func (m *Metrics) GetMetrics() MetricsSnapshot {
 	return MetricsSnapshot{
-		TotalRequests:       atomic.LoadInt64(&m.totalRequests),
-		SuccessfulRequests:  atomic.LoadInt64(&m.successfulRequests),
-		FailedRequests:      atomic.LoadInt64(&m.failedRequests),
-		CircuitBreakerOpens: atomic.LoadInt64(&m.circuitBreakerOpens),
-		TotalLatency:        time.Duration(atomic.LoadInt64(&m.totalLatency)),
-		MinLatency:          time.Duration(atomic.LoadInt64(&m.minLatency)),
-		MaxLatency:          time.Duration(atomic.LoadInt64(&m.maxLatency)),
-		LatencyBuckets:      m.copyLatencyBuckets(),
-		BucketBoundaries:    m.bucketBoundaries,
+		TotalRequests: atomic.LoadInt64(&m.totalRequests),
+		TotalErrors:   atomic.LoadInt64(&m.totalErrors),
+		MinLatency:    m.minLatency,
+		MaxLatency:    m.maxLatency,
+		TotalLatency:  time.Duration(atomic.LoadInt64((*int64)(&m.totalLatency))),
 	}
 }
 
-// copyLatencyBuckets creates a copy of the latency buckets
-func (m *ClientMetrics) copyLatencyBuckets() []int64 {
-	buckets := make([]int64, len(m.latencyBuckets))
-	for i := range m.latencyBuckets {
-		buckets[i] = atomic.LoadInt64(&m.latencyBuckets[i])
+// SuccessRate calculates the success rate
+func (ms MetricsSnapshot) SuccessRate() float64 {
+	if ms.TotalRequests == 0 {
+		return 100.0
 	}
-	return buckets
+	successRequests := ms.TotalRequests - ms.TotalErrors
+	return float64(successRequests) / float64(ms.TotalRequests) * 100.0
 }
 
-// MetricsSnapshot represents a point-in-time snapshot of metrics
-type MetricsSnapshot struct {
-	TotalRequests       int64
-	SuccessfulRequests  int64
-	FailedRequests      int64
-	CircuitBreakerOpens int64
-	TotalLatency        time.Duration
-	MinLatency          time.Duration
-	MaxLatency          time.Duration
-	LatencyBuckets      []int64
-	BucketBoundaries    []time.Duration
-}
-
-// SuccessRate returns the success rate as a percentage
-func (s MetricsSnapshot) SuccessRate() float64 {
-	if s.TotalRequests == 0 {
+// AverageLatency calculates the average latency
+func (ms MetricsSnapshot) AverageLatency() time.Duration {
+	if ms.TotalRequests == 0 {
 		return 0
 	}
-	return float64(s.SuccessfulRequests) / float64(s.TotalRequests) * 100
+	return time.Duration(int64(ms.TotalLatency) / ms.TotalRequests)
 }
-
-// AverageLatency returns the average latency
-func (s MetricsSnapshot) AverageLatency() time.Duration {
-	if s.TotalRequests == 0 {
-		return 0
+// RecordHealthCheck records a health check result
+func (m *Metrics) RecordHealthCheck(duration time.Duration, success bool) {
+	method := "health_check"
+	if success {
+		m.RecordRequest(method, 200, duration)
+	} else {
+		m.RecordError(method, "health_check_failed")
 	}
-	return time.Duration(int64(s.TotalLatency) / s.TotalRequests)
 }
 
-// Reset resets all metrics to zero
-func (m *ClientMetrics) Reset() {
-	atomic.StoreInt64(&m.totalRequests, 0)
-	atomic.StoreInt64(&m.successfulRequests, 0)
-	atomic.StoreInt64(&m.failedRequests, 0)
-	atomic.StoreInt64(&m.circuitBreakerOpens, 0)
-	atomic.StoreInt64(&m.totalLatency, 0)
-	atomic.StoreInt64(&m.minLatency, int64(^uint64(0)>>1))
-	atomic.StoreInt64(&m.maxLatency, 0)
-	
-	for i := range m.latencyBuckets {
-		atomic.StoreInt64(&m.latencyBuckets[i], 0)
+// RecordOperation records a general operation
+func (m *Metrics) RecordOperation(operation string, duration time.Duration, success bool) {
+	if success {
+		m.RecordRequest(operation, 200, duration)
+	} else {
+		m.RecordError(operation, "operation_failed")
 	}
 }

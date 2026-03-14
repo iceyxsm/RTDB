@@ -46,6 +46,10 @@
   },
   "homepage": "https://github.com/iceyxsm/RTDB#readme",
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.0",
+    "@rollup/plugin-node-resolve": "^15.0.0",
+    "@rollup/plugin-terser": "^0.4.0",
+    "@rollup/plugin-typescript": "^11.0.0",
     "@types/jest": "^29.5.0",
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
@@ -53,17 +57,14 @@
     "eslint": "^8.0.0",
     "jest": "^29.5.0",
     "rollup": "^4.0.0",
-    "@rollup/plugin-typescript": "^11.0.0",
-    "@rollup/plugin-node-resolve": "^15.0.0",
-    "@rollup/plugin-commonjs": "^25.0.0",
-    "rollup-plugin-terser": "^7.0.0",
     "ts-jest": "^29.1.0",
-    "typescript": "^5.0.0",
-    "typedoc": "^0.25.0"
+    "tslib": "^2.8.1",
+    "typedoc": "^0.25.0",
+    "typescript": "^5.0.0"
   },
   "dependencies": {
-    "node-fetch": "^3.3.0",
-    "abort-controller": "^3.0.0"
+    "abort-controller": "^3.0.0",
+    "node-fetch": "^3.0.0"
   },
   "peerDependencies": {
     "node-fetch": "^3.0.0"

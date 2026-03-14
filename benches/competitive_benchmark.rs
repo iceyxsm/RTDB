@@ -74,7 +74,7 @@ impl BenchmarkDatasets {
                 (0..count)
                     .map(|_| {
                         (0..dim)
-                            .map(|_| rng.sample(StandardNormal) as f32)
+                            .map(|_| rng.sample::<f64, _>(StandardNormal) as f32)
                             .collect()
                     })
                     .collect()
@@ -95,14 +95,14 @@ impl BenchmarkDatasets {
                 
                 for cluster_id in 0..num_clusters {
                     let cluster_center: Vec<f32> = (0..dim)
-                        .map(|_| rng.sample(StandardNormal) as f32)
+                        .map(|_| rng.sample::<f64, _>(StandardNormal) as f32)
                         .collect();
                     
                     let vectors_per_cluster = count / num_clusters;
                     for _ in 0..vectors_per_cluster {
                         let vector: Vec<f32> = cluster_center
                             .iter()
-                            .map(|&center| center + rng.sample(StandardNormal) as f32 * 0.1)
+                            .map(|&center| center + rng.sample::<f64, _>(StandardNormal) as f32 * 0.1)
                             .collect();
                         vectors.push(vector);
                     }
@@ -111,7 +111,7 @@ impl BenchmarkDatasets {
                 // Fill remaining vectors
                 while vectors.len() < count {
                     let vector: Vec<f32> = (0..dim)
-                        .map(|_| rng.sample(StandardNormal) as f32)
+                        .map(|_| rng.sample::<f64, _>(StandardNormal) as f32)
                         .collect();
                     vectors.push(vector);
                 }
@@ -122,7 +122,7 @@ impl BenchmarkDatasets {
         
         BenchmarkDataset {
             name: name.to_string(),
-            vectors,
+            vectors: vectors.clone(),
             queries: Self::generate_queries(&vectors, 1000, &mut rng),
             ground_truth: HashMap::new(), // Would be computed for real benchmarks
         }
@@ -136,7 +136,7 @@ impl BenchmarkDatasets {
                 
                 // Add small noise to make it a realistic query
                 for x in &mut query {
-                    *x += rng.sample(StandardNormal) as f32 * 0.01;
+                    *x += rng.sample::<f64, _>(StandardNormal) as f32 * 0.01;
                 }
                 
                 query
@@ -300,7 +300,7 @@ impl RTDBEvaluator {
             memory_gb: 16, // Would detect system memory
             simd_capabilities: simd_caps,
             os: std::env::consts::OS.to_string(),
-            rust_version: env!("RUSTC_VERSION").to_string(),
+            rust_version: std::env::var("RUSTC_VERSION").unwrap_or_else(|_| "unknown".to_string()),
         }
     }
 }

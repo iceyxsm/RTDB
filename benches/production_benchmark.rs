@@ -6,7 +6,6 @@ use rand::prelude::*;
 use rand_distr::StandardNormal;
 use std::time::{Duration, Instant};
 use std::sync::Arc;
-use tokio::runtime::Runtime;
 use rtdb::simdx::{SIMDXEngine, SIMDXConfig};
 use rtdb::simdx::advanced_optimizations::{AdvancedSIMDXOptimizer, DistanceType};
 
@@ -39,10 +38,10 @@ impl Default for ProductionBenchmarkConfig {
 fn generate_benchmark_vectors(count: usize, dim: usize) -> Vec<Vec<f32>> {
     let mut rng = StdRng::seed_from_u64(42); // Deterministic for reproducibility
     
-    (0..count)
+        (0..count)
         .map(|_| {
             (0..dim)
-                .map(|_| rng.sample(StandardNormal) as f32)
+                .map(|_| rng.sample::<f32, _>(StandardNormal))
                 .collect()
         })
         .collect()
@@ -293,7 +292,7 @@ fn bench_dimension_scalability(c: &mut Criterion) {
 
 /// Performance regression test to ensure we meet production targets
 fn bench_performance_targets(c: &mut Criterion) {
-    let config = ProductionBenchmarkConfig::default();
+    let _config = ProductionBenchmarkConfig::default();
     let engine = Arc::new(SIMDXEngine::new(Some(SIMDXConfig::default())));
     let optimizer = AdvancedSIMDXOptimizer::new(engine);
     

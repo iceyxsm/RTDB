@@ -112,8 +112,9 @@ impl RTDBClient {
             info!("Created collection '{}' with dimension {}", name, dimension);
             Ok(collection)
         } else {
+            let status_code = response.status().as_u16();
             let error_text = response.text().await.unwrap_or_default();
-            let error = RTDBError::ServerError(response.status().as_u16(), error_text);
+            let error = RTDBError::ServerError(status_code, error_text);
             self.metrics.record_error("create_collection");
             Err(error)
         }
@@ -141,8 +142,9 @@ impl RTDBClient {
             debug!("Listed {} collections", collections.len());
             Ok(collections)
         } else {
+            let status_code = response.status().as_u16();
             let error_text = response.text().await.unwrap_or_default();
-            let error = RTDBError::ServerError(response.status().as_u16(), error_text);
+            let error = RTDBError::ServerError(status_code, error_text);
             self.metrics.record_error("list_collections");
             Err(error)
         }
@@ -177,8 +179,9 @@ impl RTDBClient {
             info!("Inserted {} vectors into collection '{}'", vector_count, collection);
             Ok(())
         } else {
+            let status_code = response.status().as_u16();
             let error_text = response.text().await.unwrap_or_default();
-            let error = RTDBError::ServerError(response.status().as_u16(), error_text);
+            let error = RTDBError::ServerError(status_code, error_text);
             self.metrics.record_error("insert_vectors");
             Err(error)
         }
@@ -240,8 +243,9 @@ impl RTDBClient {
             
             Ok(search_response)
         } else {
+            let status_code = response.status().as_u16();
             let error_text = response.text().await.unwrap_or_default();
-            let error = RTDBError::ServerError(response.status().as_u16(), error_text);
+            let error = RTDBError::ServerError(status_code, error_text);
             self.metrics.record_error("search");
             Err(error)
         }
@@ -304,8 +308,9 @@ impl RTDBClient {
             info!("Deleted {} vectors from collection '{}'", id_count, collection);
             Ok(())
         } else {
+            let status_code = response.status().as_u16();
             let error_text = response.text().await.unwrap_or_default();
-            let error = RTDBError::ServerError(response.status().as_u16(), error_text);
+            let error = RTDBError::ServerError(status_code, error_text);
             self.metrics.record_error("delete_vectors");
             Err(error)
         }
@@ -330,8 +335,9 @@ impl RTDBClient {
             info!("Deleted collection '{}'", name);
             Ok(())
         } else {
+            let status_code = response.status().as_u16();
             let error_text = response.text().await.unwrap_or_default();
-            let error = RTDBError::ServerError(response.status().as_u16(), error_text);
+            let error = RTDBError::ServerError(status_code, error_text);
             self.metrics.record_error("delete_collection");
             Err(error)
         }
