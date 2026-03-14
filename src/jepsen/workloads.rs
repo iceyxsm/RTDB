@@ -10,27 +10,38 @@ use super::{OperationType, TransactionOp, WorkloadType};
 use rand::Rng;
 use serde_json::Value;
 
-/// Workload generator trait
+/// Trait for defining test workloads in Jepsen testing scenarios.
+/// 
+/// Workloads define the pattern of operations to be executed during testing,
+/// including operation generation, naming, and expected consistency models.
 pub trait Workload: Send + Sync {
-    /// Generate a random operation
+    /// Generate a random operation based on workload characteristics
     fn generate_operation(&self, rng: &mut dyn rand::RngCore) -> OperationType;
     
-    /// Get workload name
+    /// Get the human-readable name of this workload
     fn name(&self) -> &str;
     
-    /// Get expected consistency model
+    /// Get the expected consistency model for this workload
     fn consistency_model(&self) -> super::ConsistencyModel;
 }
 
-/// Register workload for linearizability testing
+/// Register workload for linearizability testing of single-register operations.
+/// 
+/// Implements a classic Jepsen workload that performs read and write operations
+/// on a set of registers (keys) with configurable read/write ratios.
 pub struct RegisterWorkload {
-    /// Keys to operate on
+    /// Keys to operate on during testing
     keys: Vec<String>,
     /// Read/write ratio (0.0 = all writes, 1.0 = all reads)
     read_ratio: f64,
 }
 
 impl RegisterWorkload {
+    /// Create a new register workload with specified parameters.
+    /// 
+    /// # Arguments
+    /// * `num_keys` - Number of keys to operate on during testing
+    /// * `read_ratio` - Ratio of read to write operations (0.0 = all writes, 1.0 = all reads)
     pub fn new(num_keys: usize, read_ratio: f64) -> Self {
         let keys = (0..num_keys).map(|i| format!("key-{}", i)).collect();
         Self { keys, read_ratio }
@@ -67,6 +78,11 @@ pub struct SetWorkload {
 }
 
 impl SetWorkload {
+    /// Create a new set workload for serializability testing.
+    /// 
+    /// # Arguments
+    /// * `num_keys` - Number of set keys to operate on
+    /// * `num_elements` - Number of elements available for set operations
     pub fn new(num_keys: usize, num_elements: usize) -> Self {
         let keys = (0..num_keys).map(|i| format!("set-{}", i)).collect();
         let elements = (0..num_elements).map(|i| Value::Number(i.into())).collect();
@@ -100,6 +116,11 @@ pub struct AppendWorkload {
 }
 
 impl AppendWorkload {
+    /// Create a new append workload for strict serializability testing.
+    /// 
+    /// # Arguments
+    /// * `num_keys` - Number of list keys to operate on
+    /// * `read_ratio` - Ratio of read to append operations (0.0 = all appends, 1.0 = all reads)
     pub fn new(num_keys: usize, read_ratio: f64) -> Self {
         let keys = (0..num_keys).map(|i| format!("list-{}", i)).collect();
         Self { keys, read_ratio }
@@ -136,6 +157,11 @@ pub struct BankWorkload {
 }
 
 impl BankWorkload {
+    /// Create a new bank workload for transaction testing.
+    /// 
+    /// # Arguments
+    /// * `num_accounts` - Number of bank accounts to create for testing
+    /// * `max_transfer` - Maximum amount that can be transferred in a single transaction
     pub fn new(num_accounts: usize, max_transfer: u64) -> Self {
         let accounts = (0..num_accounts).map(|i| format!("account-{}", i)).collect();
         Self { accounts, max_transfer }
@@ -195,6 +221,11 @@ pub struct CounterWorkload {
 }
 
 impl CounterWorkload {
+    /// Create a new counter workload for increment operations testing.
+    /// 
+    /// # Arguments
+    /// * `num_counters` - Number of counters to create for testing
+    /// * `max_increment` - Maximum value that can be added to a counter in one operation
     pub fn new(num_counters: usize, max_increment: i64) -> Self {
         let counters = (0..num_counters).map(|i| format!("counter-{}", i)).collect();
         Self { counters, max_increment }
@@ -235,6 +266,12 @@ pub struct ReadWriteWorkload {
 }
 
 impl ReadWriteWorkload {
+    /// Create a new read-write workload for multi-key transaction testing.
+    /// 
+    /// # Arguments
+    /// * `num_keys` - Number of keys available for transaction operations
+    /// * `max_txn_size` - Maximum number of operations per transaction
+    /// * `read_ratio` - Ratio of read to write operations within transactions
     pub fn new(num_keys: usize, max_txn_size: usize, read_ratio: f64) -> Self {
         let keys = (0..num_keys).map(|i| format!("rw-key-{}", i)).collect();
         Self { keys, max_txn_size, read_ratio }
@@ -269,7 +306,13 @@ impl Workload for ReadWriteWorkload {
     }
 }
 
-/// Create a workload generator for the specified workload type
+/// Create a workload generator for the specified workload type with default parameters.
+/// 
+/// # Arguments
+/// * `workload_type` - The type of workload to create
+/// 
+/// # Returns
+/// A boxed workload generator implementing the Workload trait
 pub fn create_workload(workload_type: WorkloadType) -> Box<dyn Workload> {
     match workload_type {
         WorkloadType::Register => Box::new(RegisterWorkload::new(5, 0.5)),
@@ -282,7 +325,14 @@ pub fn create_workload(workload_type: WorkloadType) -> Box<dyn Workload> {
     }
 }
 
-/// Create a workload with custom parameters
+/// Create a workload with custom parameters from a configuration map.
+/// 
+/// # Arguments
+/// * `workload_type` - The type of workload to create
+/// * `params` - HashMap containing custom parameters for the workload
+/// 
+/// # Returns
+/// A boxed workload generator configured with the specified parameters
 pub fn create_custom_workload(
     workload_type: WorkloadType,
     params: &std::collections::HashMap<String, serde_json::Value>,

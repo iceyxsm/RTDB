@@ -15,7 +15,10 @@ use std::time::SystemTime;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-/// Network partition nemesis using iptables/netsh
+/// Network partition nemesis for simulating network failures using iptables/netsh.
+/// 
+/// Implements fault injection by creating network partitions between cluster nodes,
+/// allowing testing of distributed system behavior under network failure conditions.
 pub struct NetworkPartitionNemesis {
     /// Node addresses for partition simulation
     node_addresses: Vec<String>,
@@ -23,14 +26,26 @@ pub struct NetworkPartitionNemesis {
     active_partitions: Arc<RwLock<HashMap<Uuid, PartitionState>>>,
 }
 
+/// State information for an active network partition.
+/// 
+/// Tracks the type of partition, affected nodes, and timing information
+/// for managing and monitoring network fault injection.
 #[derive(Debug, Clone)]
 struct PartitionState {
+    /// Type of network partition being simulated
     partition_type: PartitionType,
+    /// Indices of nodes affected by this partition
     affected_nodes: Vec<usize>,
+    /// When this partition was started
+    #[allow(dead_code)]
     start_time: SystemTime,
 }
 
 impl NetworkPartitionNemesis {
+    /// Create a new network partition nemesis for fault injection.
+    /// 
+    /// # Arguments
+    /// * `node_addresses` - Vector of node addresses that can be partitioned
     pub fn new(node_addresses: Vec<String>) -> Self {
         Self {
             node_addresses,
@@ -239,6 +254,7 @@ pub struct ProcessNemesis {
 struct ProcessFaultState {
     fault_type: ProcessFaultType,
     affected_nodes: Vec<usize>,
+    #[allow(dead_code)]
     start_time: SystemTime,
 }
 
@@ -249,6 +265,10 @@ enum ProcessFaultType {
 }
 
 impl ProcessNemesis {
+    /// Create a new process nemesis for fault injection.
+    /// 
+    /// Manages process-level faults like killing or pausing processes
+    /// to test system resilience under node failures.
     pub fn new() -> Self {
         Self {
             node_pids: Arc::new(RwLock::new(HashMap::new())),
@@ -256,6 +276,7 @@ impl ProcessNemesis {
         }
     }
 
+    /// Register a node with its process ID for fault injection
     pub async fn register_node(&self, node_id: usize, pid: u32) {
         self.node_pids.write().await.insert(node_id, pid);
     }
@@ -421,6 +442,7 @@ impl ProcessNemesis {
 /// Clock skew nemesis
 pub struct ClockSkewNemesis {
     /// Maximum skew in milliseconds
+    #[allow(dead_code)]
     max_skew_ms: i64,
     /// Active clock skews
     active_skews: Arc<RwLock<HashMap<Uuid, ClockSkewState>>>,
@@ -429,11 +451,17 @@ pub struct ClockSkewNemesis {
 #[derive(Debug, Clone)]
 struct ClockSkewState {
     affected_nodes: Vec<usize>,
+    #[allow(dead_code)]
     skew_amounts: HashMap<usize, i64>,
+    #[allow(dead_code)]
     start_time: SystemTime,
 }
 
 impl ClockSkewNemesis {
+    /// Create a new clock skew nemesis for time-based fault injection.
+    /// 
+    /// # Arguments
+    /// * `max_skew_ms` - Maximum clock skew in milliseconds to introduce
     pub fn new(max_skew_ms: i64) -> Self {
         Self {
             max_skew_ms,
@@ -525,6 +553,11 @@ pub struct CombinedNemesis {
 }
 
 impl CombinedNemesis {
+    /// Create a new combined nemesis that can inject multiple fault types.
+    /// 
+    /// # Arguments
+    /// * `node_addresses` - Vector of node addresses for network partitioning
+    /// * `max_clock_skew_ms` - Maximum clock skew in milliseconds
     pub fn new(node_addresses: Vec<String>, max_clock_skew_ms: i64) -> Self {
         Self {
             network_nemesis: NetworkPartitionNemesis::new(node_addresses),
@@ -533,6 +566,7 @@ impl CombinedNemesis {
         }
     }
 
+    /// Register a node with its process ID for fault injection
     pub async fn register_node(&self, node_id: usize, pid: u32) {
         self.process_nemesis.register_node(node_id, pid).await;
     }

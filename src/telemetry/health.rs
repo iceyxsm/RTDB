@@ -3,19 +3,29 @@
 use serde::Serialize;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-/// Health status
+/// Health status information for system monitoring and diagnostics.
+/// 
+/// Provides comprehensive health information including operational status,
+/// version details, uptime, and system component health indicators.
 #[derive(Debug, Clone, Serialize)]
 pub struct HealthStatus {
+    /// Current system status (healthy, degraded, unhealthy)
     status: String,
+    /// Application version information
     version: String,
     uptime_seconds: u64,
     collections_count: usize,
     vectors_count: u64,
 }
 
-/// Health checker
+/// Health checker for monitoring system health and availability.
+/// 
+/// Tracks system health status, uptime, and provides health check endpoints
+/// for load balancers and monitoring systems.
 pub struct HealthChecker {
+    /// Current health status flag
     healthy: AtomicBool,
+    /// System start time for uptime calculation
     start_time: std::time::Instant,
 }
 

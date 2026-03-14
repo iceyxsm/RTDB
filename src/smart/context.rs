@@ -4,9 +4,12 @@
 
 use crate::{Result, VectorId};
 
-/// Hierarchical index for multi-granularity storage
+/// Hierarchical index for multi-granularity storage and retrieval.
+/// 
+/// Provides multiple levels of granularity for storing and retrieving
+/// information at different scales (documents, paragraphs, sentences).
 pub struct HierarchicalIndex {
-    /// Level configurations
+    /// Level configurations for different granularities
     #[allow(dead_code)]
     levels: Vec<Level>,
 }
@@ -65,10 +68,13 @@ impl Default for HierarchicalIndex {
     }
 }
 
-/// Chunk with contextual information
+/// Chunk with contextual information for enhanced retrieval.
+/// 
+/// Represents a text chunk with surrounding context, metadata,
+/// and relationships to other chunks for improved search relevance.
 #[derive(Debug, Clone)]
 pub struct ContextualChunk {
-    /// Chunk ID
+    /// Unique chunk identifier
     pub id: VectorId,
     /// Preceding context
     pub before: Vec<ContextSegment>,
@@ -78,10 +84,13 @@ pub struct ContextualChunk {
     pub siblings: Vec<VectorId>,
 }
 
-/// Context segment
+/// Context segment for organizing related chunks and maintaining relationships.
+/// 
+/// Groups related chunks together with shared context and metadata
+/// for improved retrieval and semantic understanding.
 #[derive(Debug, Clone)]
 pub struct ContextSegment {
-    /// Segment ID
+    /// Unique segment identifier
     pub id: VectorId,
     /// Segment text/preview
     pub preview: String,

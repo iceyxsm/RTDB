@@ -602,21 +602,21 @@ pub trait ReplicationClient: Send + Sync + std::fmt::Debug {
 #[cfg(not(feature = "grpc"))]
 pub trait ReplicationClient: Send + Sync + std::fmt::Debug {
     /// Write to leader
-    async fn write_to_leader(
+    fn write_to_leader(
         &self,
         node_id: &NodeId,
         shard_id: ShardId,
         data: Vec<u8>,
-    ) -> Result<u64, crate::RTDBError>;
+    ) -> impl std::future::Future<Output = Result<u64, crate::RTDBError>> + Send;
 
     /// Replicate to follower
-    async fn replicate_to_follower(
+    fn replicate_to_follower(
         &self,
         node_id: &NodeId,
         shard_id: ShardId,
         sequence: u64,
         data: Vec<u8>,
-    ) -> Result<(), crate::RTDBError>;
+    ) -> impl std::future::Future<Output = Result<(), crate::RTDBError>> + Send;
 }
 
 /// Read consistency level for follower reads

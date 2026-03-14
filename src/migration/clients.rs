@@ -1,4 +1,4 @@
-//! Client implementations for different vector databases
+﻿//! Client implementations for different vector databases
 //!
 //! Provides unified interfaces for reading from source databases and writing to RTDB.
 //! Supports Qdrant, Milvus, Weaviate, Pinecone, LanceDB, and file formats.
@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, BufReader};
-use base64;
+use base64::{Engine as _, engine::general_purpose};
 
 /// Trait for source database clients
 #[async_trait]
@@ -32,23 +32,34 @@ pub trait SourceClient: Send + Sync {
 pub trait TargetClient: Send + Sync {
     /// Insert a batch of records
     async fn insert_batch(&self, records: &[VectorRecord]) -> Result<()>;
-    
+
     /// Create collection if it doesn't exist
     async fn ensure_collection(&self, collection_name: &str, dimension: usize) -> Result<()>;
-    
+
     /// Get collection info
     async fn get_collection_info(&self, collection_name: &str) -> Result<Option<CollectionInfo>>;
-    
+
+    /// Get total count of records (for consistency verification)
+    async fn get_total_count(&self) -> Result<Option<u64>>;
+
+    /// Fetch a batch of records (for consistency verification)
+    async fn fetch_batch(&self, offset: u64, limit: usize) -> Result<Vec<VectorRecord>>;
+
     /// Clone the client for use in different tasks
     fn clone_box(&self) -> Box<dyn TargetClient>;
 }
 
-/// Collection information
+
+/// Collection information for migration operations
 #[derive(Debug, Clone)]
 pub struct CollectionInfo {
+    /// Collection name
     pub name: String,
+    /// Vector dimension
     pub dimension: usize,
+    /// Total number of vectors in collection
     pub vector_count: u64,
+    /// Distance metric used (Cosine, L2, etc.)
     pub distance_metric: String,
 }
 
@@ -151,7 +162,7 @@ impl QdrantSourceClient {
                         .map_err(|_| RTDBError::Config("Invalid token format".to_string()))?);
                 }
                 AuthConfig::Basic { username, password } => {
-                    let credentials = base64::encode(format!("{}:{}", username, password));
+                    let credentials = general_purpose::STANDARD.encode(format!("{}:{}", username, password));
                     headers.insert("Authorization", format!("Basic {}", credentials).parse()
                         .map_err(|_| RTDBError::Config("Invalid credentials format".to_string()))?);
                 }
@@ -295,7 +306,7 @@ impl MilvusSourceClient {
                         .map_err(|_| RTDBError::Config("Invalid API key format".to_string()))?);
                 }
                 AuthConfig::Basic { username, password } => {
-                    let credentials = base64::encode(format!("{}:{}", username, password));
+                    let credentials = general_purpose::STANDARD.encode(format!("{}:{}", username, password));
                     headers.insert("Authorization", format!("Basic {}", credentials).parse()
                         .map_err(|_| RTDBError::Config("Invalid credentials format".to_string()))?);
                 }
@@ -441,7 +452,7 @@ impl WeaviateSourceClient {
                         .map_err(|_| RTDBError::Config("Invalid token format".to_string()))?);
                 }
                 AuthConfig::Basic { username, password } => {
-                    let credentials = base64::encode(format!("{}:{}", username, password));
+                    let credentials = general_purpose::STANDARD.encode(format!("{}:{}", username, password));
                     headers.insert("Authorization", format!("Basic {}", credentials).parse()
                         .map_err(|_| RTDBError::Config("Invalid credentials format".to_string()))?);
                 }
@@ -597,7 +608,7 @@ impl PineconeSourceClient {
                         .map_err(|_| RTDBError::Config("Invalid token format".to_string()))?);
                 }
                 AuthConfig::Basic { username, password } => {
-                    let credentials = base64::encode(format!("{}:{}", username, password));
+                    let credentials = general_purpose::STANDARD.encode(format!("{}:{}", username, password));
                     headers.insert("Authorization", format!("Basic {}", credentials).parse()
                         .map_err(|_| RTDBError::Config("Invalid credentials format".to_string()))?);
                 }
@@ -962,10 +973,18 @@ impl SourceClient for JsonlSourceClient {
 pub struct ParquetSourceClient {
     path: String,
     total_rows: Option<u64>,
+    #[allow(dead_code)]
     current_offset: u64,
 }
 
 impl ParquetSourceClient {
+    /// Create a new Parquet source client for reading from a Parquet file.
+    /// 
+    /// # Arguments
+    /// * `path` - Path to the Parquet file to read from
+    /// 
+    /// # Returns
+    /// A new ParquetSourceClient instance
     pub async fn new(path: &str) -> Result<Self> {
         // Get file metadata without creating the stream (which isn't Send/Sync)
         let file = tokio::fs::File::open(path).await
@@ -1165,10 +1184,18 @@ impl SourceClient for Hdf5SourceClient {
 pub struct ParquetTargetClient {
     path: String,
     writer: Option<crate::migration::parquet_streaming::ParquetStreamWriter>,
+    #[allow(dead_code)]
     collection_name: String,
 }
 
 impl ParquetTargetClient {
+    /// Create a new Parquet target client for writing to a Parquet file.
+    /// 
+    /// # Arguments
+    /// * `path` - Path where the Parquet file will be written
+    /// 
+    /// # Returns
+    /// A new ParquetTargetClient instance
     pub async fn new(path: &str) -> Result<Self> {
         tracing::info!("Initialized Parquet target: {}", path);
         
@@ -1179,6 +1206,10 @@ impl ParquetTargetClient {
         })
     }
     
+    /// Ensure the Parquet writer is initialized and return a mutable reference to it.
+    /// 
+    /// # Returns
+    /// A mutable reference to the ParquetStreamWriter
     pub async fn ensure_writer(&mut self) -> Result<&mut crate::migration::parquet_streaming::ParquetStreamWriter> {
         if self.writer.is_none() {
             use crate::migration::parquet_streaming::{ParquetStreamConfig, ParquetStreamWriter};
@@ -1204,11 +1235,22 @@ impl ParquetTargetClient {
         Ok(self.writer.as_mut().unwrap())
     }
     
+    /// Write vector records to the Parquet file.
+    /// 
+    /// # Arguments
+    /// * `records` - Slice of vector records to write
+    /// 
+    /// # Returns
+    /// Result indicating success or failure
     pub async fn write_records(&mut self, records: &[VectorRecord]) -> Result<()> {
         let writer = self.ensure_writer().await?;
         writer.write_records(records).await
     }
     
+    /// Finalize the Parquet file and flush all remaining data.
+    /// 
+    /// # Returns
+    /// Result indicating success or failure
     pub async fn finalize(mut self) -> Result<()> {
         if let Some(writer) = self.writer.take() {
             writer.finalize().await?;
@@ -1241,7 +1283,7 @@ impl RTDBTargetClient {
                         .map_err(|_| RTDBError::Config("Invalid bearer token format".to_string()))?);
                 }
                 AuthConfig::Basic { username, password } => {
-                    let credentials = base64::encode(format!("{}:{}", username, password));
+                    let credentials = general_purpose::STANDARD.encode(format!("{}:{}", username, password));
                     headers.insert("authorization", format!("Basic {}", credentials).parse()
                         .map_err(|_| RTDBError::Config("Invalid basic auth format".to_string()))?);
                 }
@@ -1362,6 +1404,23 @@ impl TargetClient for RTDBTargetClient {
         }))
     }
     
+    /// Get the total count of vectors in the collection.
+    /// 
+    /// # Returns
+    /// Optional total count (None if not available)
+    async fn get_total_count(&self) -> Result<Option<u64>> {
+        // This would typically query the collection info to get the total count
+        // For now, return None to indicate count is not available
+        Ok(None)
+    }
+    
+    async fn fetch_batch(&self, offset: u64, limit: usize) -> Result<Vec<VectorRecord>> {
+        // This would typically implement pagination to fetch records
+        // For now, return empty vector as this is primarily used for consistency verification
+        let _ = (offset, limit); // Suppress unused warnings
+        Ok(Vec::new())
+    }
+    
     fn clone_box(&self) -> Box<dyn TargetClient> {
         Box::new(Self {
             client: self.client.clone(),
@@ -1376,6 +1435,13 @@ pub struct CsvSourceClient {
 }
 
 impl CsvSourceClient {
+    /// Create a new CSV source client for reading from a CSV file.
+    /// 
+    /// # Arguments
+    /// * `path` - Path to the CSV file to read from
+    /// 
+    /// # Returns
+    /// A new CsvSourceClient instance
     pub async fn new(path: &str) -> Result<Self> {
         Ok(Self { path: path.to_string() })
     }
@@ -1404,6 +1470,7 @@ pub struct BinarySourceClient {
 }
 
 impl BinarySourceClient {
+    /// Create a new binary source client
     pub async fn new(path: &str) -> Result<Self> {
         Ok(Self { path: path.to_string() })
     }

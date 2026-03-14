@@ -16,14 +16,17 @@ use std::time::Instant;
 /// Linearizability checker for single-object operations
 pub struct LinearizabilityChecker {
     /// Maximum search depth for linearization
+    #[allow(dead_code)]
     max_depth: usize,
 }
 
 impl LinearizabilityChecker {
+    /// Create a new linearizability checker with default max depth
     pub fn new() -> Self {
         Self { max_depth: 1000 }
     }
 
+    /// Create a new linearizability checker with custom max depth
     pub fn with_max_depth(max_depth: usize) -> Self {
         Self { max_depth }
     }
@@ -151,10 +154,12 @@ pub struct SerializabilityChecker {
 }
 
 impl SerializabilityChecker {
+    /// Create a new serializability checker with default settings
     pub fn new() -> Self {
         Self { strict: false }
     }
 
+    /// Create a new strict serializability checker
     pub fn strict() -> Self {
         Self { strict: true }
     }
@@ -321,6 +326,7 @@ pub struct CombinedChecker {
 }
 
 impl CombinedChecker {
+    /// Create a new combined checker with default checkers
     pub fn new() -> Self {
         Self {
             checkers: vec![
@@ -330,6 +336,7 @@ impl CombinedChecker {
         }
     }
 
+    /// Create a new combined checker with custom checkers
     pub fn with_checkers(checkers: Vec<Box<dyn Checker>>) -> Self {
         Self { checkers }
     }

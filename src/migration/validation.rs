@@ -291,12 +291,16 @@ impl DuplicateChecker {
     }
 }
 
-/// Validation statistics
+/// Validation statistics for migration data quality
 #[derive(Debug, Clone)]
 pub struct ValidationStats {
+    /// Total number of records processed
     pub total_processed: u64,
+    /// Number of valid records
     pub valid_count: u64,
+    /// Number of invalid records
     pub invalid_count: u64,
+    /// Number of duplicate records found
     pub duplicate_count: u64,
 }
 
@@ -340,16 +344,22 @@ impl ValidationStats {
 
 /// Result of batch validation
 pub struct ValidationResult {
+    /// Records that passed validation
     pub valid_records: Vec<VectorRecord>,
+    /// Records that failed validation with error details
     pub invalid_records: Vec<InvalidRecord>,
+    /// Records identified as duplicates
     pub duplicate_records: Vec<VectorRecord>,
+    /// Validation statistics summary
     pub stats: ValidationStats,
 }
 
 /// Invalid record with error information
 #[derive(Debug, Clone)]
 pub struct InvalidRecord {
+    /// The invalid record
     pub record: VectorRecord,
+    /// Error description
     pub error: String,
 }
 
@@ -360,12 +370,18 @@ pub struct SchemaValidator {
     strict_mode: bool,
 }
 
+/// Data types for schema validation
 #[derive(Debug, Clone, PartialEq)]
 pub enum FieldType {
+    /// String/text field
     String,
+    /// Numeric field (integer or float)
     Number,
+    /// Boolean field
     Boolean,
+    /// Array field
     Array,
+    /// Object/nested field
     Object,
 }
 

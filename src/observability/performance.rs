@@ -33,6 +33,10 @@ pub struct CardinalityLimiter {
 }
 
 impl CardinalityLimiter {
+    /// Create a new cardinality limiter with the specified maximum cardinality.
+    /// 
+    /// # Arguments
+    /// * `max_cardinality` - Maximum number of unique label combinations allowed
     pub fn new(max_cardinality: usize) -> Self {
         Self {
             max_cardinality,
@@ -221,8 +225,10 @@ pub struct MetricsPerformance {
     /// Metrics cardinality limiter
     cardinality_limiter: Arc<CardinalityLimiter>,
     /// Metrics export batch size
+    #[allow(dead_code)]
     export_batch_size: usize,
     /// Metrics scrape timeout
+    #[allow(dead_code)]
     scrape_timeout_ms: u64,
 }
 

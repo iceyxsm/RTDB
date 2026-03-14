@@ -36,6 +36,7 @@ use tracing::{info, error, debug, warn};
 #[derive(Clone)]
 pub struct WeaviateState {
     collections: Arc<CollectionManager>,
+    #[allow(dead_code)]
     snapshots: Arc<SnapshotManager>,
     /// Schema registry for Weaviate classes
     schema_registry: Arc<parking_lot::RwLock<HashMap<String, WeaviateClass>>>,

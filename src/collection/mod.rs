@@ -14,11 +14,14 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
-/// Collection manager
+/// Manager for vector database collections and their lifecycle operations.
+/// 
+/// Handles creation, loading, and management of vector collections with
+/// persistent storage and thread-safe access patterns.
 pub struct CollectionManager {
-    /// Collections by name
+    /// Collections indexed by name for fast lookup
     collections: RwLock<HashMap<String, Arc<Collection>>>,
-    /// Base storage path
+    /// Base filesystem path for collection storage
     base_path: String,
 }
 

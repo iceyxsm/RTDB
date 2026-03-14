@@ -13,10 +13,13 @@ pub mod knowledge_graph;
 
 use crate::SearchRequest;
 
-/// Smart search request with intelligence
+/// Smart search request with intelligence and optimization features.
+/// 
+/// Extends basic search requests with intelligent query processing,
+/// intent detection, and optimization hints for enhanced search results.
 #[derive(Debug, Clone)]
 pub struct SmartSearchRequest {
-    /// Original search request
+    /// Original search request parameters
     pub base: SearchRequest,
     /// Detected intent
     pub intent: QueryIntent,
@@ -47,17 +50,23 @@ pub enum QueryIntent {
     Unknown,
 }
 
-/// Query plan for multi-hop queries
+/// Query plan for multi-hop queries and complex search operations.
+/// 
+/// Defines a sequence of query steps for complex searches that require
+/// multiple database operations or iterative refinement.
 #[derive(Debug, Clone)]
 pub struct QueryPlan {
-    /// Plan steps
+    /// Ordered sequence of query execution steps
     pub steps: Vec<QueryStep>,
 }
 
-/// Single query step
+/// Single query step in a multi-step query execution plan.
+/// 
+/// Represents one operation in a complex query plan with specific
+/// query parameters and execution context.
 #[derive(Debug, Clone)]
 pub struct QueryStep {
-    /// Step query
+    /// Query string or operation for this step
     pub query: String,
     /// Dependencies on previous steps
     pub dependencies: Vec<usize>,
@@ -78,10 +87,13 @@ pub enum StepType {
     Join,
 }
 
-/// Smart search result
+/// Smart search result with enhanced metadata and analysis.
+/// 
+/// Contains search results with additional intelligence including
+/// relevance analysis, contradiction detection, and result explanations.
 #[derive(Debug, Clone)]
 pub struct SmartSearchResult {
-    /// Scored results
+    /// Scored vector results from the search
     pub results: Vec<crate::ScoredVector>,
     /// Contradictions found
     pub contradictions: Vec<Contradiction>,
@@ -91,10 +103,13 @@ pub struct SmartSearchResult {
     pub confidence: Vec<f32>,
 }
 
-/// Detected contradiction
+/// Detected contradiction in search results for quality analysis.
+/// 
+/// Identifies conflicting or contradictory results in search responses
+/// to help improve result quality and user experience.
 #[derive(Debug, Clone)]
 pub struct Contradiction {
-    /// Result indices that contradict
+    /// Indices of results that contradict each other
     pub indices: Vec<usize>,
     /// Contradiction type
     pub type_: ContradictionType,
@@ -111,9 +126,12 @@ pub enum ContradictionType {
     Temporal,
 }
 
-/// Smart retrieval engine that orchestrates all smart features
+/// Smart retrieval engine orchestrating all intelligent search features.
+/// 
+/// Coordinates query intelligence, knowledge graphs, context analysis,
+/// and other smart features to provide enhanced search capabilities.
 pub struct SmartRetrieval {
-    /// Query intelligence
+    /// Query intelligence for intent detection and optimization
     query_intel: query_intel::QueryIntelligence,
     /// Query expander
     expander: query_intel::QueryExpander,

@@ -251,19 +251,30 @@ impl ThroughputWindow {
     }
 }
 
-/// Detailed progress statistics
+/// Detailed progress statistics for migration operations
 #[derive(Debug, Clone)]
 pub struct ProgressStats {
+    /// Migration unique identifier
     pub migration_id: Uuid,
+    /// Current migration status
     pub status: MigrationStatus,
+    /// Total number of records to process (if known)
     pub total_records: Option<u64>,
+    /// Number of records processed successfully
     pub processed_records: u64,
+    /// Number of records that failed processing
     pub failed_records: u64,
+    /// Completion percentage (0-100)
     pub completion_percentage: f64,
+    /// Time elapsed since migration started
     pub elapsed_time: Duration,
+    /// Current processing speed (records/second)
     pub current_throughput: f64,
+    /// Average processing speed since start
     pub average_throughput: f64,
+    /// Estimated time remaining (if calculable)
     pub estimated_time_remaining: Option<Duration>,
+    /// Error rate as percentage (0-100)
     pub error_rate: f64,
 }
 
@@ -294,6 +305,7 @@ pub struct ProgressReporter {
 }
 
 impl ProgressReporter {
+    /// Create a new progress reporter
     pub fn new(tracker: ProgressTracker) -> Self {
         Self { tracker }
     }

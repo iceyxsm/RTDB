@@ -15,10 +15,13 @@ use std::fs::OpenOptions;
 use std::path::Path;
 use std::sync::Arc;
 
-/// Memory-mapped vector storage configuration
+/// Memory-mapped vector storage configuration for large-scale vector storage.
+/// 
+/// Configures memory-mapped file storage for efficient access to large vector
+/// datasets that exceed available RAM, with disk-based storage and caching.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MmapStorageConfig {
-    /// Path to storage directory
+    /// Filesystem path to storage directory
     pub path: String,
     /// Vector dimension
     pub dimension: usize,
@@ -39,9 +42,12 @@ impl Default for MmapStorageConfig {
     }
 }
 
-/// Memory-mapped vector storage
-/// Stores full-precision vectors on disk with memory-mapped access
+/// Memory-mapped vector storage for efficient large-scale vector access.
+/// 
+/// Stores full-precision vectors on disk with memory-mapped access patterns,
+/// enabling efficient random access to large vector datasets exceeding RAM.
 pub struct MmapVectorStorage {
+    /// Storage configuration parameters
     config: MmapStorageConfig,
     /// Memory-mapped file for vector data (mutable for writes)
     mmap: MmapMut,
@@ -51,21 +57,32 @@ pub struct MmapVectorStorage {
     vector_size: usize,
 }
 
-/// Reference to a vector in mmap storage
+/// Reference to a vector in memory-mapped storage for zero-copy access.
+/// 
+/// Provides efficient access to vectors stored in memory-mapped files
+/// without copying data, enabling high-performance vector operations.
+/// Memory-mapped vector reference (for future use)
 pub struct MmapVectorRef<'a> {
+    /// Reference to the parent storage instance
+    #[allow(dead_code)]
     storage: &'a MmapVectorStorage,
+    /// Byte offset of the vector in the memory-mapped file
+    #[allow(dead_code)]
     offset: usize,
 }
 
-/// DiskANN-style search configuration
+/// DiskANN-style search configuration for billion-scale vector search.
+/// 
+/// Configures search parameters for DiskANN algorithm including beam width,
+/// parallel I/O settings, and memory usage for large-scale vector search.
 #[derive(Debug, Clone, Copy)]
 pub struct DiskSearchConfig {
     /// Beam width for search (W in DiskANN paper)
     /// Controls how many vectors are fetched from disk in parallel
     pub beam_width: usize,
-    /// Search list size (L in DiskANN paper)
+    /// Search list size (L in DiskANN paper) - size of candidate list during search
     pub search_list_size: usize,
-    /// Number of neighbors to return
+    /// Number of neighbors to return in search results
     pub k: usize,
 }
 
@@ -79,9 +96,12 @@ impl Default for DiskSearchConfig {
     }
 }
 
-/// DiskANN-style index for billion-scale search
-/// Keeps PQ vectors in RAM, full vectors on disk
+/// DiskANN-style index for billion-scale vector search with disk storage.
+/// 
+/// Implements DiskANN algorithm keeping PQ-compressed vectors in RAM for fast
+/// approximate search while storing full vectors on disk for accuracy.
 pub struct DiskANNIndex {
+    /// Search configuration parameters
     config: DiskSearchConfig,
     /// PQ-compressed vectors in RAM (fast approximate search)
     pq_vectors: Vec<Vec<u8>>,
@@ -370,16 +390,19 @@ impl DiskANNIndex {
     }
 }
 
-/// Statistics for DiskANN index
+/// Statistics for DiskANN index performance monitoring and optimization.
+/// 
+/// Tracks index size, search performance, cache hit rates, and other metrics
+/// for monitoring and tuning DiskANN index performance.
 #[derive(Debug, Clone)]
 pub struct DiskANNStats {
-    /// Number of vectors in the index
+    /// Number of vectors indexed in the system
     pub num_vectors: usize,
-    /// Memory used by product quantization
+    /// Memory used by product quantization data structures
     pub pq_memory_bytes: usize,
-    /// Memory used by graph structure
+    /// Memory used by graph structure (adjacency lists)
     pub graph_memory_bytes: usize,
-    /// Disk space used
+    /// Disk space used for full-precision vector storage
     pub disk_bytes: usize,
 }
 

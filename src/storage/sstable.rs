@@ -24,10 +24,13 @@ const DEFAULT_BLOCK_SIZE: usize = 4 * 1024;
 #[allow(dead_code)]
 const INDEX_INTERVAL: usize = 16;
 
-/// SSTable metadata
+/// SSTable metadata containing format version and structural information.
+/// 
+/// Stores metadata about SSTable format, compression, indexing, and other
+/// structural information needed for reading and compatibility checking.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SSTableMeta {
-    /// Format version
+    /// SSTable format version for compatibility
     pub version: u32,
     /// Vector dimension
     pub dimension: usize,
@@ -71,9 +74,12 @@ pub enum CompressionType {
     Snappy,
 }
 
-/// SSTable builder for creating new tables
+/// SSTable builder for creating new sorted string tables from data.
+/// 
+/// Provides efficient construction of SSTable files with proper sorting,
+/// compression, and indexing for optimal read performance.
 pub struct SSTableBuilder {
-    /// Output file
+    /// Output file handle for writing SSTable data
     file: File,
     /// Current block buffer
     block: Block,
@@ -360,9 +366,12 @@ impl Footer {
     }
 }
 
-/// SSTable reader for querying
+/// SSTable reader for querying sorted string table data efficiently.
+/// 
+/// Provides read access to SSTable files with support for range queries,
+/// point lookups, and efficient iteration over sorted data.
 pub struct SSTable {
-    /// File handle
+    /// File handle for reading SSTable data
     #[allow(dead_code)]
     file: File,
     /// Table metadata

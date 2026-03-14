@@ -2,13 +2,16 @@
 
 use crate::{Result, RTDBError, Vector};
 
-/// Product Quantization
+/// Product Quantization (PQ) for vector compression and approximate search.
+/// 
+/// Implements product quantization to compress high-dimensional vectors into
+/// compact codes while preserving approximate distance relationships.
 pub struct ProductQuantization {
-    /// Number of subspaces
+    /// Number of subspaces for vector decomposition
     num_subspaces: usize,
-    /// Subvector dimension
+    /// Dimension of each subvector after decomposition
     subvector_dim: usize,
-    /// Codebooks (centroids) for each subspace
+    /// Codebooks (centroids) for each subspace quantization
     codebooks: Vec<Vec<Vec<f32>>>,
 }
 

@@ -7,6 +7,10 @@ pub mod health;
 use crate::Result;
 
 /// Initialize all telemetry systems
+/// Initialize all telemetry systems including tracing and metrics.
+/// 
+/// # Arguments
+/// * `json_format` - Whether to use JSON format for structured logging (true) or human-readable format (false)
 pub fn init_telemetry(json_format: bool) -> Result<()> {
     if json_format {
         tracing::init_json_tracing();

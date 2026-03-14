@@ -5,9 +5,14 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tokio::sync::Mutex;
 
-/// Mock RTDB client for testing
+/// Mock RTDB client implementation for Jepsen testing.
+/// 
+/// Provides a simplified in-memory implementation of the RTDB client interface
+/// for testing consistency properties without requiring a full cluster setup.
 struct MockRtdbClient {
+    /// Unique identifier for this client instance
     id: usize,
+    /// Shared state storage for simulating database operations
     state: Arc<Mutex<std::collections::HashMap<String, serde_json::Value>>>,
 }
 

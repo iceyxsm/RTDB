@@ -27,7 +27,10 @@ use tracing::{info, warn};
 // Configuration
 // ============================================================================
 
-/// Configuration for health monitoring and failover
+/// Configuration for health monitoring and failover detection in the cluster.
+/// 
+/// Uses Phi Accrual failure detection algorithm to adaptively detect node failures
+/// based on heartbeat patterns, providing tunable sensitivity and warmup periods.
 #[derive(Debug, Clone)]
 pub struct FailoverConfig {
     /// Heartbeat interval (how often nodes send health signals)
@@ -70,16 +73,19 @@ impl Default for FailoverConfig {
 // Health Status Types
 // ============================================================================
 
-/// Health status of a node
+/// Health status of a cluster node based on failure detection algorithms.
+/// 
+/// Represents the current health assessment using Phi Accrual failure detection,
+/// providing graduated failure states from healthy to confirmed failure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NodeHealth {
-    /// Node is healthy and responsive
+    /// Node is healthy and responsive to heartbeats
     Healthy,
-    /// Node is suspected of failure (transient issues)
+    /// Node is suspected of failure due to irregular heartbeats
     Suspicious,
-    /// Node is confirmed failed
+    /// Node is confirmed failed (high phi value)
     Failed,
-    /// Node status is unknown (no recent heartbeats)
+    /// Node status is unknown (insufficient heartbeat data)
     Unknown,
 }
 
@@ -638,6 +644,7 @@ pub struct FailoverManager {
     /// Max event log size
     max_log_size: usize,
     /// Shutdown signal
+    #[allow(dead_code)]
     shutdown_tx: mpsc::Sender<()>,
 }
 
@@ -847,6 +854,7 @@ pub struct ClusterMember {
 /// Cluster membership manager
 pub struct MembershipManager {
     /// Local node ID
+    #[allow(dead_code)]
     local_node_id: NodeId,
     /// All known members
     members: DashMap<NodeId, ClusterMember>,
@@ -981,6 +989,7 @@ pub struct FailoverSystem {
     /// Membership manager
     pub membership: Arc<MembershipManager>,
     /// Configuration
+    #[allow(dead_code)]
     config: FailoverConfig,
 }
 

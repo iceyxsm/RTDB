@@ -6,18 +6,31 @@ use crate::{Distance, HnswConfig, Result, ScoredVector, SearchRequest, Vector, V
 use ordered_float::OrderedFloat;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 
-/// HNSW index
+/// Hierarchical Navigable Small World (HNSW) index for approximate nearest neighbor search.
+/// 
+/// Implements the HNSW algorithm providing logarithmic search complexity with high recall.
+/// Uses multiple layers with decreasing connectivity for efficient navigation.
 pub struct HNSWIndex {
+    /// Configuration parameters for the HNSW algorithm
     config: HnswConfig,
+    /// Distance function for vector comparison
     distance: Distance,
+    /// Hierarchical layers of the graph structure
     layers: Vec<Layer>,
+    /// Maximum layer index in the hierarchy
     max_layer: usize,
+    /// Entry point for search operations
     entry_point: Option<VectorId>,
+    /// Storage for vector data
     vectors: HashMap<VectorId, Vector>,
 }
 
+/// Single layer in the HNSW hierarchical structure.
+/// 
+/// Contains the graph connectivity information for vectors at this layer level,
+/// with edges representing navigable connections between vectors.
 struct Layer {
-    /// Graph edges
+    /// Graph edges mapping each vector to its connected neighbors
     edges: HashMap<VectorId, Vec<VectorId>>,
 }
 

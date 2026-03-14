@@ -15,10 +15,13 @@ use crate::{RTDBError, Result, Vector};
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 
-/// Product Quantizer configuration
+/// Product quantizer configuration for vector compression settings.
+/// 
+/// Defines parameters for product quantization including number of subspaces,
+/// codebook sizes, and training parameters for vector compression.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProductQuantizerConfig {
-    /// Number of subspaces (M)
+    /// Number of subspaces (M) for vector decomposition
     pub m: usize,
     /// Bits per code (typically 8 for 256 centroids)
     pub code_size: usize,
@@ -39,11 +42,15 @@ impl Default for ProductQuantizerConfig {
     }
 }
 
-/// Trained product quantizer
+/// Trained product quantizer for vector compression and approximate search.
+/// 
+/// Contains trained codebooks and configuration for compressing vectors
+/// into compact codes while preserving approximate distance relationships.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProductQuantizer {
+    /// Quantizer configuration parameters
     config: ProductQuantizerConfig,
-    /// Dimension of input vectors
+    /// Dimension of input vectors before compression
     dim: usize,
     /// Dimension per subspace (d / M)
     dsub: usize,
@@ -53,17 +60,22 @@ pub struct ProductQuantizer {
     is_trained: bool,
 }
 
-/// Encoded vector using product quantization
+/// Encoded vector using product quantization for compact storage.
+/// 
+/// Contains compressed vector representation as quantization codes
+/// that can be used for approximate distance calculations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PQCodes {
-    /// Codes for each subspace: M bytes per vector
+    /// Quantization codes for each subspace: M bytes per vector
     pub codes: Vec<u8>,
 }
 
-/// Distance lookup table for ADC
-/// Pre-computed distances from query to all centroids in each subspace
+/// Distance lookup table for Asymmetric Distance Computation (ADC).
+/// 
+/// Pre-computed distances from query vector to all centroids in each subspace
+/// for efficient approximate distance calculations during search.
 pub struct DistanceLookupTable {
-    /// distances[m][centroid_idx] = distance(query_subspace_m, centroid)
+    /// Pre-computed distances: tables[m][centroid_idx] = distance(query_subspace_m, centroid)
     tables: Vec<Vec<f32>>,
 }
 

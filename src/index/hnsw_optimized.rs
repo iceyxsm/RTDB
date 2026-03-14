@@ -15,31 +15,43 @@ use ordered_float::OrderedFloat;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::sync::Arc;
 
-/// Optimized HNSW index with delta encoding and prefetching
+/// Memory-optimized HNSW index with delta encoding and performance enhancements.
+/// 
+/// Implements an optimized version of HNSW with delta-encoded neighbor lists,
+/// pre-computed vector norms, and prefetching for improved cache performance.
 pub struct HnswIndexOptimized {
+    /// Configuration parameters for the HNSW algorithm
     config: HnswConfig,
+    /// Optimized distance calculation with SIMD support
     distance_calc: DistanceCalculator,
+    /// Hierarchical layers with delta-encoded edges
     layers: Vec<Layer>,
+    /// Maximum layer index in the hierarchy
     max_layer: usize,
+    /// Entry point for search operations
     entry_point: Option<VectorId>,
+    /// Storage for vector data
     vectors: HashMap<VectorId, Vector>,
     /// Pre-computed norms for cosine similarity optimization
     vector_norms: HashMap<VectorId, f32>,
 }
 
-/// Layer with delta-encoded edges for memory efficiency
+/// Memory-efficient layer with delta-encoded neighbor lists.
+/// 
+/// Uses delta encoding to compress neighbor ID lists, reducing memory usage
+/// while maintaining fast access patterns for graph traversal.
 struct Layer {
-    /// Graph edges with delta encoding
-    /// Key: node ID
-    /// Value: delta-encoded neighbor IDs
+    /// Graph edges with delta encoding for memory efficiency
+    /// Key: node ID, Value: delta-encoded neighbor IDs
     edges: HashMap<VectorId, DeltaEncodedNeighbors>,
 }
 
-/// Delta-encoded neighbor list
-/// Stores differences between consecutive neighbor IDs instead of absolute IDs
-/// This reduces memory usage by ~30% for dense graphs
+/// Delta-encoded neighbor list for memory-efficient graph storage.
+/// 
+/// Stores differences between consecutive neighbor IDs instead of absolute IDs,
+/// reducing memory usage by ~30% for dense graphs while maintaining fast access.
 struct DeltaEncodedNeighbors {
-    /// Base ID (first neighbor)
+    /// Base ID (first neighbor in the list)
     base: VectorId,
     /// Delta-encoded subsequent neighbors (stored as u16 for compactness)
     deltas: Vec<u16>,

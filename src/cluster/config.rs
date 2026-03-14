@@ -6,7 +6,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 
-/// Cluster configuration
+/// Configuration settings for RTDB cluster operation.
+/// 
+/// Defines node identity, networking, replication, and failure detection
+/// parameters for distributed cluster deployment.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClusterConfig {
     /// Unique node identifier
@@ -39,7 +42,10 @@ impl Default for ClusterConfig {
     }
 }
 
-/// Node information
+/// Information about a cluster node including identity, status, and load metrics.
+/// 
+/// Tracks node state, shard assignments, capacity, and health information
+/// for cluster management and load balancing decisions.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct NodeInfo {
     /// Unique node identifier
@@ -58,25 +64,31 @@ pub struct NodeInfo {
     pub last_heartbeat: u64,
 }
 
-/// Node status
+/// Status of a cluster node in the distributed system.
+/// 
+/// Represents the current operational state of a node for cluster
+/// management, failure detection, and load balancing decisions.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum NodeStatus {
-    /// Node is joining cluster
+    /// Node is in the process of joining the cluster
     Joining,
-    /// Node is active
+    /// Node is active and serving requests
     Active,
-    /// Node is suspected failed
+    /// Node is suspected to have failed (missed heartbeats)
     Suspect,
-    /// Node is offline
+    /// Node is confirmed offline and not serving requests
     Offline,
-    /// Node is gracefully leaving
+    /// Node is gracefully leaving the cluster
     Leaving,
 }
 
 /// Shard identifier (virtual bucket)
 pub type ShardId = u32;
 
-/// Cluster topology - maps shards to nodes
+/// Cluster topology mapping shards to nodes for distributed data placement.
+/// 
+/// Maintains the current assignment of virtual shards to cluster nodes,
+/// including primary and replica assignments with versioning for consistency.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ClusterTopology {
     /// Version number for topology changes

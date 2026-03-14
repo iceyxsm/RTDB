@@ -68,6 +68,8 @@ impl MetricLabels {
         self
     }
     
+    /// Convert labels to values for metrics (internal use)
+    #[allow(dead_code)]
     fn to_label_values(&self) -> Vec<&str> {
         let mut values = Vec::new();
         if let Some(ref op) = self.operation {

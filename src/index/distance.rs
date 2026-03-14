@@ -2,14 +2,17 @@
 
 use crate::Result;
 
-/// Similarity metric for vector comparison
+/// Similarity metrics supported for vector comparison and search operations.
+/// 
+/// Defines the mathematical distance functions used for nearest neighbor search,
+/// each optimized for different use cases and data characteristics.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SimilarityMetric {
-    /// Cosine similarity (normalized dot product)
+    /// Cosine similarity - measures angle between vectors (normalized dot product)
     Cosine,
-    /// Euclidean distance (L2)
+    /// Euclidean distance (L2) - measures straight-line distance in vector space
     Euclidean,
-    /// Dot product
+    /// Dot product - measures vector alignment without normalization
     DotProduct,
 }
 

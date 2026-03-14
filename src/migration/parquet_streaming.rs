@@ -145,10 +145,12 @@ impl Default for ParquetStreamConfig {
 pub struct ParquetStreamReader {
     config: ParquetStreamConfig,
     path: std::path::PathBuf,
+    #[allow(dead_code)]
     stream: Option<ParquetRecordBatchStream<tokio::fs::File>>,
     total_rows: Option<u64>,
     rows_read: u64,
     start_time: Instant,
+    #[allow(dead_code)]
     last_progress_report: Instant,
 }
 
@@ -181,6 +183,8 @@ impl ParquetStreamReader {
     }
     
     /// Create the actual stream with optimized settings
+    /// Ensure stream is initialized (internal method)
+    #[allow(dead_code)]
     async fn ensure_stream(&mut self) -> Result<&mut ParquetRecordBatchStream<tokio::fs::File>> {
         if self.stream.is_none() {
             let file = tokio::fs::File::open(&self.path).await
@@ -327,11 +331,13 @@ impl ParquetStreamReader {
 
     
     /// Convert Arrow RecordBatch to VectorRecord with optimized processing
+    #[allow(dead_code)]
     fn convert_batch_to_records(&self, batch: &RecordBatch) -> Result<Vec<VectorRecord>> {
         convert_batch_to_records(batch)
     }
     
     /// Report progress periodically
+    #[allow(dead_code)]
     fn report_progress_if_needed(&mut self) {
         let now = Instant::now();
         if now.duration_since(self.last_progress_report) >= Duration::from_secs(10) {
@@ -593,10 +599,15 @@ impl ParquetStreamWriter {
 /// Statistics for Parquet streaming operations
 #[derive(Debug, Clone)]
 pub struct ParquetStreamStats {
+    /// Number of rows read so far
     pub rows_read: u64,
+    /// Total number of rows in the file (if known)
     pub total_rows: Option<u64>,
+    /// Time elapsed since streaming started
     pub elapsed: Duration,
+    /// Current reading speed in rows per second
     pub rows_per_second: f64,
+    /// Progress percentage (0-100) if total rows is known
     pub progress_percentage: Option<f64>,
 }
 
@@ -651,10 +662,15 @@ pub mod utils {
 /// Information about a Parquet file
 #[derive(Debug, Clone)]
 pub struct ParquetFileInfo {
+    /// Total number of rows in the file
     pub num_rows: u64,
+    /// Number of row groups in the file
     pub num_row_groups: usize,
+    /// File size in bytes
     pub file_size: u64,
+    /// Compression algorithm used
     pub compression: String,
+    /// Number of schema fields/columns
     pub schema_fields: usize,
 }
 

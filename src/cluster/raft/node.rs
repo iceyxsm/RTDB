@@ -54,6 +54,7 @@ pub struct RaftNode {
     conf_state: ConfState,
     
     /// Whether we're in joint consensus
+    #[allow(dead_code)]
     in_joint_consensus: bool,
 }
 

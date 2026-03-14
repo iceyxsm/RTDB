@@ -62,13 +62,16 @@ pub use failover::{
 use std::sync::Arc;
 use parking_lot::RwLock;
 
-/// Cluster manager - coordinates distributed operations
+/// Cluster manager that coordinates distributed operations across RTDB nodes.
+/// 
+/// Manages cluster state, shard routing, and Raft consensus for distributed
+/// vector database operations, supporting both standalone and cluster modes.
 pub struct ClusterManager {
-    /// Cluster state (shared across threads)
+    /// Cluster state shared across threads
     state: Arc<RwLock<ClusterState>>,
     /// Shard router for distributed queries
     router: ShardRouter,
-    /// Local Raft node (if in cluster mode)
+    /// Local Raft node for consensus (cluster mode only)
     raft_node: Option<raft::node::RaftNode>,
 }
 

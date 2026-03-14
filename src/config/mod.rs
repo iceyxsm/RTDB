@@ -8,9 +8,14 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-/// Global configuration manager with hot reload support
+/// Global configuration manager with hot reload support for RTDB settings.
+/// 
+/// Manages application configuration with file-based loading, environment
+/// variable overrides, and runtime configuration reloading capabilities.
 pub struct ConfigManager {
+    /// Thread-safe configuration storage
     inner: Arc<RwLock<RTDBConfig>>,
+    /// Optional path to configuration file
     config_path: Option<PathBuf>,
 }
 

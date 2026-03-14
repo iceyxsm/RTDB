@@ -4,7 +4,10 @@
 
 #![allow(missing_docs)]
 
-/// Permissions for vector database operations
+/// Permissions for vector database operations and resource access control.
+/// 
+/// Defines granular permissions for collection management, vector operations,
+/// search functionality, and administrative tasks in the RTDB system.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Permission {
     // Collection management
@@ -50,14 +53,17 @@ pub enum Permission {
     ViewLogs,
 }
 
-/// Predefined roles with associated permissions
+/// Predefined roles with associated permissions for role-based access control.
+/// 
+/// Defines hierarchical roles (Admin, Writer, Reader) with different levels
+/// of access to vector database operations and administrative functions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Role {
-    /// Full access to all operations
+    /// Full access to all operations including system administration
     Admin,
-    /// Can create collections, insert/search vectors
+    /// Can create collections, insert/update/delete vectors, and search
     Writer,
-    /// Read-only access (search, retrieve)
+    /// Read-only access limited to search and retrieval operations
     Reader,
 }
 

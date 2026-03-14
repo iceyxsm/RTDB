@@ -35,6 +35,7 @@ use tracing::{info, error, debug};
 #[derive(Clone)]
 pub struct MilvusState {
     collections: Arc<CollectionManager>,
+    #[allow(dead_code)]
     snapshots: Arc<SnapshotManager>,
 }
 
@@ -282,8 +283,10 @@ pub struct CollectionDescData {
     pub fields: Vec<FieldSchema>,
     pub indexes: Vec<IndexInfo>,
     pub load: String,
-    pub shardsNum: u32,
-    pub enableDynamicField: bool,
+    #[serde(rename = "shardsNum")]
+    pub shards_num: u32,
+    #[serde(rename = "enableDynamicField")]
+    pub enable_dynamic_field: bool,
 }
 
 /// Index information
@@ -495,8 +498,8 @@ async fn describe_collection_v2(
                 fields,
                 indexes,
                 load: "Loaded".to_string(),
-                shardsNum: 1,
-                enableDynamicField: true,
+                shards_num: 1,
+                enable_dynamic_field: true,
             };
             
             Json(MilvusResponse::success(data))
@@ -989,6 +992,8 @@ async fn search_entities_v1(
 // ============================================================================
 
 /// Convert RTDB error to Milvus error code
+/// Convert RTDB error to Milvus error code (for future compatibility)
+#[allow(dead_code)]
 fn rtdb_error_to_milvus_code(error: &RTDBError) -> i32 {
     match error {
         RTDBError::CollectionNotFound(_) => 1,
@@ -1012,6 +1017,8 @@ fn rtdb_error_to_milvus_code(error: &RTDBError) -> i32 {
 
 /// Parse Milvus filter expression to RTDB filter format
 /// This is a simplified implementation - a full parser would handle complex expressions
+/// Parse Milvus filter expression (for future compatibility)
+#[allow(dead_code)]
 fn parse_milvus_filter(filter: &str) -> Result<serde_json::Value> {
     // For now, return a basic filter structure
     // In a full implementation, you'd parse expressions like:

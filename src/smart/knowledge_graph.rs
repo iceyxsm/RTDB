@@ -5,9 +5,12 @@
 use crate::VectorId;
 use std::collections::{HashMap, HashSet};
 
-/// Knowledge Graph
+/// Knowledge graph for semantic relationships and entity management.
+/// 
+/// Maintains a graph of entities and their relationships to enable
+/// semantic search, entity linking, and knowledge-based query expansion.
 pub struct KnowledgeGraph {
-    /// Entities
+    /// Entity storage indexed by entity ID
     entities: HashMap<String, Entity>,
     /// Relations (edges)
     relations: Vec<Relation>,
@@ -15,10 +18,13 @@ pub struct KnowledgeGraph {
     mentions: HashMap<VectorId, Vec<String>>,
 }
 
-/// Entity node
+/// Entity node in the knowledge graph with properties and relationships.
+/// 
+/// Represents a single entity with unique identifier, properties,
+/// and connections to other entities in the knowledge graph.
 #[derive(Debug, Clone)]
 pub struct Entity {
-    /// Entity ID
+    /// Unique entity identifier
     pub id: String,
     /// Entity type
     pub type_: EntityType,
@@ -47,10 +53,13 @@ pub enum EntityType {
     Unknown,
 }
 
-/// Relation (edge)
+/// Relation (edge) connecting entities in the knowledge graph.
+/// 
+/// Represents a directed relationship between entities with type
+/// information and optional properties for semantic modeling.
 #[derive(Debug, Clone)]
 pub struct Relation {
-    /// Subject entity ID
+    /// Subject entity ID (source of the relationship)
     pub subject: String,
     /// Predicate
     pub predicate: PredicateType,
@@ -187,9 +196,12 @@ impl Default for KnowledgeGraph {
     }
 }
 
-/// PageRank calculator for importance scoring
+/// PageRank calculator for importance scoring in knowledge graphs.
+/// 
+/// Implements PageRank algorithm to compute entity importance scores
+/// based on graph structure and relationship patterns.
 pub struct PageRank {
-    /// Damping factor
+    /// Damping factor for PageRank calculation (typically 0.85)
     damping: f64,
     /// Number of iterations
     iterations: usize,

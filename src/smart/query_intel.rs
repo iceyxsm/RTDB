@@ -6,9 +6,12 @@
 use super::{QueryIntent, QueryPlan, StepType};
 
 
-/// Query Intelligence Engine
+/// Query Intelligence Engine for understanding and optimizing search queries.
+/// 
+/// Analyzes search queries to detect intent, expand terms, and optimize
+/// search strategies for improved relevance and performance.
 pub struct QueryIntelligence {
-    /// Intent patterns
+    /// Learned intent patterns for query classification
     patterns: IntentPatterns,
 }
 
@@ -291,9 +294,12 @@ impl Default for QueryIntelligence {
     }
 }
 
-/// Query Expander using thesaurus and co-occurrence
+/// Query expander using thesaurus and co-occurrence analysis for better search.
+/// 
+/// Expands search queries with synonyms, related terms, and contextually
+/// relevant words to improve search recall and semantic understanding.
 pub struct QueryExpander {
-    /// Synonym dictionary
+    /// Synonym dictionary for term expansion
     synonyms: std::collections::HashMap<String, Vec<String>>,
 }
 

@@ -2,7 +2,10 @@
 
 use crate::{Result, ScoredVector, SearchRequest};
 
-/// Query executor
+/// Query executor for processing and executing database queries.
+/// 
+/// Handles query parsing, optimization, execution planning,
+/// and result aggregation for various query types.
 pub struct QueryExecutor;
 
 impl QueryExecutor {

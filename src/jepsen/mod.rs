@@ -61,13 +61,30 @@ pub struct JepsenConfig {
     pub seed: Option<u64>,
 }
 
-/// Network latency distribution types
+/// Network latency distribution types for fault injection
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LatencyDistribution {
+    /// Constant latency
     Constant,
-    Uniform { min: u64, max: u64 },
-    Normal { mean: f64, std_dev: f64 },
-    Exponential { lambda: f64 },
+    /// Uniform distribution between min and max
+    Uniform { 
+        /// Minimum latency in milliseconds
+        min: u64, 
+        /// Maximum latency in milliseconds
+        max: u64 
+    },
+    /// Normal (Gaussian) distribution
+    Normal { 
+        /// Mean latency in milliseconds
+        mean: f64, 
+        /// Standard deviation
+        std_dev: f64 
+    },
+    /// Exponential distribution
+    Exponential { 
+        /// Lambda parameter (rate)
+        lambda: f64 
+    },
 }
 
 /// Nemesis (fault injection) configuration
@@ -93,11 +110,20 @@ pub enum FaultType {
     /// Create network partitions
     Partition(PartitionType),
     /// Clock skew injection
-    ClockSkew { max_skew_ms: i64 },
+    ClockSkew { 
+        /// Maximum skew in milliseconds
+        max_skew_ms: i64 
+    },
     /// Slow network simulation
-    SlowNetwork { factor: f64 },
+    SlowNetwork { 
+        /// Slowdown factor (1.0 = normal, 2.0 = 2x slower)
+        factor: f64 
+    },
     /// Packet loss simulation
-    PacketLoss { rate: f64 },
+    PacketLoss { 
+        /// Loss rate (0.0 = no loss, 1.0 = 100% loss)
+        rate: f64 
+    },
 }
 
 /// Network partition types
@@ -170,51 +196,111 @@ pub struct Operation {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OperationType {
     /// Read operation
-    Read { key: String },
+    Read { 
+        /// Key to read
+        key: String 
+    },
     /// Write operation
-    Write { key: String, value: serde_json::Value },
+    Write { 
+        /// Key to write
+        key: String, 
+        /// Value to write
+        value: serde_json::Value 
+    },
     /// Compare-and-set operation
-    Cas { key: String, old: serde_json::Value, new: serde_json::Value },
+    Cas { 
+        /// Key to update
+        key: String, 
+        /// Expected old value
+        old: serde_json::Value, 
+        /// New value to set
+        new: serde_json::Value 
+    },
     /// Transaction with multiple operations
-    Transaction { ops: Vec<TransactionOp> },
+    Transaction { 
+        /// Operations to execute atomically
+        ops: Vec<TransactionOp> 
+    },
     /// Append to list
-    Append { key: String, value: serde_json::Value },
+    Append { 
+        /// Key to append to
+        key: String, 
+        /// Value to append
+        value: serde_json::Value 
+    },
     /// Set add operation
-    SetAdd { key: String, element: serde_json::Value },
+    SetAdd { 
+        /// Key of the set
+        key: String, 
+        /// Element to add
+        element: serde_json::Value 
+    },
     /// Counter increment
-    Increment { key: String, delta: i64 },
+    Increment { 
+        /// Key of the counter
+        key: String, 
+        /// Amount to increment by
+        delta: i64 
+    },
 }
 
 /// Transaction operation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TransactionOp {
-    Read { key: String },
-    Write { key: String, value: serde_json::Value },
+    /// Read operation in transaction
+    Read { 
+        /// Key to read
+        key: String 
+    },
+    /// Write operation in transaction
+    Write { 
+        /// Key to write
+        key: String, 
+        /// Value to write
+        value: serde_json::Value 
+    },
 }
 
 /// Operation result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OperationResult {
     /// Read result
-    ReadOk { value: Option<serde_json::Value> },
+    ReadOk { 
+        /// Value read (None if key doesn't exist)
+        value: Option<serde_json::Value> 
+    },
     /// Write result
     WriteOk,
     /// CAS result
-    CasOk { success: bool },
+    CasOk { 
+        /// Whether the compare-and-set succeeded
+        success: bool 
+    },
     /// Transaction result
-    TransactionOk { results: Vec<TransactionResult> },
+    TransactionOk { 
+        /// Results of individual operations in the transaction
+        results: Vec<TransactionResult> 
+    },
     /// Append result
     AppendOk,
     /// Set add result
     SetAddOk,
     /// Increment result
-    IncrementOk { new_value: i64 },
+    IncrementOk { 
+        /// New value after increment
+        new_value: i64 
+    },
 }
 
 /// Transaction operation result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TransactionResult {
-    Read { value: Option<serde_json::Value> },
+    /// Read operation result
+    Read { 
+        /// Value read (None if key doesn't exist)
+        value: Option<serde_json::Value> 
+    },
+    /// Write operation result
     Write,
 }
 
@@ -655,13 +741,21 @@ impl JepsenTestResult {
 /// Test summary statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestSummary {
+    /// Name of the test
     pub test_name: String,
+    /// Total test duration
     pub duration: Duration,
+    /// Total number of operations attempted
     pub total_operations: usize,
+    /// Number of successful operations
     pub successful_operations: usize,
+    /// Number of failed operations
     pub failed_operations: usize,
+    /// Number of faults injected during test
     pub faults_injected: usize,
+    /// Number of consistency violations detected
     pub consistency_violations: usize,
+    /// Whether the test passed (no consistency violations)
     pub is_valid: bool,
 }
 

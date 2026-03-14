@@ -4,7 +4,10 @@ use super::{OperationType, TransactionOp};
 use rand::Rng;
 use serde_json::Value;
 
-/// Generate random operations for testing
+/// Generator for random database operations used in Jepsen testing.
+/// 
+/// Creates weighted random operations (read, write, CAS, transactions, etc.)
+/// against a configurable set of keys for comprehensive system testing.
 pub struct OperationGenerator {
     /// Available keys for operations
     keys: Vec<String>,
@@ -12,14 +15,23 @@ pub struct OperationGenerator {
     weights: OperationWeights,
 }
 
-/// Weights for different operation types
+/// Weights for different operation types in test generation.
+/// 
+/// Controls the probability distribution of operation types generated
+/// during Jepsen testing, allowing customization of workload characteristics.
 #[derive(Debug, Clone)]
 pub struct OperationWeights {
+    /// Weight for read operations
     pub read: f64,
+    /// Weight for write operations
     pub write: f64,
+    /// Weight for compare-and-swap operations
     pub cas: f64,
+    /// Weight for transaction operations
     pub transaction: f64,
+    /// Weight for append operations
     pub append: f64,
+    /// Weight for increment operations
     pub increment: f64,
 }
 
@@ -37,6 +49,10 @@ impl Default for OperationWeights {
 }
 
 impl OperationGenerator {
+    /// Create a new operation generator with default weights.
+    /// 
+    /// # Arguments
+    /// * `keys` - Vector of keys that operations can target
     pub fn new(keys: Vec<String>) -> Self {
         Self {
             keys,
@@ -44,6 +60,11 @@ impl OperationGenerator {
         }
     }
 
+    /// Create a new operation generator with custom weights.
+    /// 
+    /// # Arguments
+    /// * `keys` - Vector of keys that operations can target
+    /// * `weights` - Custom weights for different operation types
     pub fn with_weights(keys: Vec<String>, weights: OperationWeights) -> Self {
         Self { keys, weights }
     }
@@ -150,7 +171,13 @@ pub mod analysis {
     use super::super::{Operation, OperationType};
     use std::collections::{HashMap, HashSet};
 
-    /// Extract all keys accessed by an operation
+    /// Extract all keys accessed by an operation for conflict analysis.
+    /// 
+    /// # Arguments
+    /// * `op` - The operation to analyze
+    /// 
+    /// # Returns
+    /// A set of all keys that the operation accesses
     pub fn extract_keys(op: &OperationType) -> HashSet<String> {
         let mut keys = HashSet::new();
         
@@ -190,7 +217,16 @@ pub mod analysis {
         keys
     }
 
-    /// Check if two operations conflict (access same keys with at least one write)
+    /// Check if two operations conflict (access same keys with at least one write).
+    /// 
+    /// Operations conflict if they access overlapping keys and at least one is a write operation.
+    /// 
+    /// # Arguments
+    /// * `op1` - First operation to check
+    /// * `op2` - Second operation to check
+    /// 
+    /// # Returns
+    /// True if the operations conflict, false otherwise
     pub fn operations_conflict(op1: &OperationType, op2: &OperationType) -> bool {
         let keys1 = extract_keys(op1);
         let keys2 = extract_keys(op2);
@@ -204,7 +240,13 @@ pub mod analysis {
         is_write_operation(op1) || is_write_operation(op2)
     }
 
-    /// Check if an operation is a write operation
+    /// Check if an operation is a write operation that modifies data.
+    /// 
+    /// # Arguments
+    /// * `op` - The operation to check
+    /// 
+    /// # Returns
+    /// True if the operation modifies data, false for read-only operations
     pub fn is_write_operation(op: &OperationType) -> bool {
         match op {
             OperationType::Read { .. } => false,
@@ -219,7 +261,16 @@ pub mod analysis {
         }
     }
 
-    /// Group operations by the keys they access
+    /// Group operations by the keys they access for analysis.
+    /// 
+    /// Creates a mapping from keys to all operations that access those keys,
+    /// useful for analyzing key-specific operation patterns and conflicts.
+    /// 
+    /// # Arguments
+    /// * `operations` - Slice of operations to group
+    /// 
+    /// # Returns
+    /// HashMap mapping each key to the operations that access it
     pub fn group_by_keys(operations: &[Operation]) -> HashMap<String, Vec<&Operation>> {
         let mut groups = HashMap::new();
         
@@ -233,7 +284,16 @@ pub mod analysis {
         groups
     }
 
-    /// Calculate operation statistics
+    /// Calculate operation statistics for test analysis and reporting.
+    /// 
+    /// Analyzes a collection of operations to compute counts by type,
+    /// success/failure rates, and other statistical metrics.
+    /// 
+    /// # Arguments
+    /// * `operations` - Slice of operations to analyze
+    /// 
+    /// # Returns
+    /// OperationStats containing detailed statistics about the operations
     pub fn calculate_stats(operations: &[Operation]) -> OperationStats {
         let mut stats = OperationStats::default();
         
@@ -259,18 +319,31 @@ pub mod analysis {
         stats
     }
 
-    /// Operation statistics
+    /// Operation statistics for analyzing test execution patterns and performance.
+    /// 
+    /// Tracks counts of different operation types and their success/failure rates
+    /// for comprehensive analysis of Jepsen test execution.
     #[derive(Debug, Default, Clone)]
     pub struct OperationStats {
+        /// Total number of operations executed
         pub total: usize,
+        /// Number of successful operations
         pub successful: usize,
+        /// Number of failed operations
         pub failed: usize,
+        /// Number of read operations
         pub reads: usize,
+        /// Number of write operations
         pub writes: usize,
+        /// Number of compare-and-swap operations
         pub cas_ops: usize,
+        /// Number of transaction operations
         pub transactions: usize,
+        /// Number of append operations
         pub appends: usize,
+        /// Number of set add operations
         pub set_adds: usize,
+        /// Number of increment operations
         pub increments: usize,
     }
 }

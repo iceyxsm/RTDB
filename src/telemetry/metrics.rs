@@ -5,7 +5,10 @@
 use metrics_exporter_prometheus::PrometheusBuilder;
 use std::net::SocketAddr;
 
-/// Metrics collector
+/// Metrics collector for gathering and reporting system performance metrics.
+/// 
+/// Provides centralized collection of performance metrics including query latencies,
+/// throughput statistics, and system resource utilization.
 pub struct MetricsCollector;
 
 impl MetricsCollector {
@@ -51,8 +54,12 @@ impl MetricsCollector {
     }
 }
 
-/// Query timer for automatic duration recording
+/// Query timer for automatic duration recording and performance monitoring.
+/// 
+/// Automatically measures query execution time and records metrics when dropped,
+/// providing seamless performance tracking for database operations.
 pub struct QueryTimer {
+    /// Query start timestamp
     start: std::time::Instant,
 }
 

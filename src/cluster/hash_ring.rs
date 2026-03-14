@@ -9,14 +9,17 @@ use std::hash::{Hash, Hasher};
 /// Number of virtual nodes per physical node
 const VIRTUAL_NODES: usize = 150;
 
-/// Consistent Hash Ring
+/// Consistent hash ring for distributed data placement and load balancing.
+/// 
+/// Implements consistent hashing with virtual nodes to ensure even data distribution
+/// and minimal data movement when nodes are added or removed from the cluster.
 #[derive(Debug, Clone)]
 pub struct HashRing {
-    /// Ring mapping hash to node ID
+    /// Ring mapping hash values to node IDs
     ring: BTreeMap<u64, String>,
     /// Physical nodes in the ring
     nodes: Vec<String>,
-    /// Virtual node count
+    /// Number of virtual nodes per physical node
     virtual_nodes: usize,
 }
 

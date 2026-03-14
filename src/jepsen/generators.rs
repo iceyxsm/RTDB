@@ -3,12 +3,17 @@
 use rand::Rng;
 use serde_json::Value;
 
-/// Generate random test data
+/// Generator for random test data used in Jepsen testing scenarios.
+/// 
+/// Provides methods to generate various types of random data including values,
+/// strings, and other test inputs with configurable seeding for reproducible tests.
 pub struct DataGenerator {
+    /// Random number generator instance
     rng: Box<dyn rand::RngCore + Send>,
 }
 
 impl DataGenerator {
+    /// Create a new data generator with random seed
     pub fn new() -> Self {
         use rand::SeedableRng;
         Self {
@@ -16,6 +21,7 @@ impl DataGenerator {
         }
     }
 
+    /// Create a new data generator with specific seed
     pub fn with_seed(seed: u64) -> Self {
         use rand::SeedableRng;
         Self {
@@ -62,7 +68,14 @@ impl DataGenerator {
     }
 }
 
-/// Generate test keys
+/// Generate test keys with a common prefix for Jepsen testing.
+/// 
+/// # Arguments
+/// * `prefix` - Prefix string for all generated keys
+/// * `count` - Number of keys to generate
+/// 
+/// # Returns
+/// Vector of formatted key strings
 pub fn generate_keys(prefix: &str, count: usize) -> Vec<String> {
     (0..count).map(|i| format!("{}-{}", prefix, i)).collect()
 }
@@ -78,12 +91,25 @@ pub fn generate_accounts(count: usize, initial_balance: u64) -> Vec<(String, u64
 pub mod workload_data {
     use super::*;
 
-    /// Generate register test data
+    /// Generate register test data for linearizability testing.
+    /// 
+    /// # Arguments
+    /// * `num_keys` - Number of register keys to generate
+    /// 
+    /// # Returns
+    /// Vector of register key strings
     pub fn register_data(num_keys: usize) -> Vec<String> {
         generate_keys("register", num_keys)
     }
 
-    /// Generate set test data
+    /// Generate set test data for serializability testing.
+    /// 
+    /// # Arguments
+    /// * `num_sets` - Number of set keys to generate
+    /// * `elements_per_set` - Number of elements available for set operations
+    /// 
+    /// # Returns
+    /// Tuple of (set keys, available elements)
     pub fn set_data(num_sets: usize, elements_per_set: usize) -> (Vec<String>, Vec<Value>) {
         let keys = generate_keys("set", num_sets);
         let elements = (0..elements_per_set)
@@ -92,7 +118,14 @@ pub mod workload_data {
         (keys, elements)
     }
 
-    /// Generate bank test data
+    /// Generate bank test data for transaction testing.
+    /// 
+    /// # Arguments
+    /// * `num_accounts` - Number of bank accounts to create
+    /// * `initial_balance` - Starting balance for each account
+    /// 
+    /// # Returns
+    /// Vector of (account_name, balance) tuples
     pub fn bank_data(num_accounts: usize, initial_balance: u64) -> Vec<(String, u64)> {
         generate_accounts(num_accounts, initial_balance)
     }
@@ -118,12 +151,14 @@ pub mod distributions {
     }
 
     impl ExponentialGenerator {
+        /// Create a new exponential generator with given rate
         pub fn new(rate: f64) -> Self {
             Self {
                 dist: Exp::new(rate).unwrap(),
             }
         }
 
+        /// Sample a value from the exponential distribution
         pub fn sample(&self, rng: &mut dyn rand::RngCore) -> f64 {
             self.dist.sample(rng)
         }
@@ -135,12 +170,14 @@ pub mod distributions {
     }
 
     impl NormalGenerator {
+        /// Create a new normal generator with given mean and standard deviation
         pub fn new(mean: f64, std_dev: f64) -> Self {
             Self {
                 dist: Normal::new(mean, std_dev).unwrap(),
             }
         }
 
+        /// Sample a value from the normal distribution (non-negative)
         pub fn sample(&self, rng: &mut dyn rand::RngCore) -> f64 {
             self.dist.sample(rng).max(0.0) // Ensure non-negative
         }
@@ -152,12 +189,14 @@ pub mod distributions {
     }
 
     impl UniformGenerator {
+        /// Create a new uniform generator with given range
         pub fn new(min: f64, max: f64) -> Self {
             Self {
                 dist: Uniform::new(min, max),
             }
         }
 
+        /// Sample a value from the uniform distribution
         pub fn sample(&self, rng: &mut dyn rand::RngCore) -> f64 {
             self.dist.sample(rng)
         }
@@ -170,14 +209,17 @@ pub mod load_patterns {
 
     /// Constant load pattern
     pub struct ConstantLoad {
+        /// Operations per second
         pub rate: f64,
     }
 
     impl ConstantLoad {
+        /// Create a new constant load pattern
         pub fn new(rate: f64) -> Self {
             Self { rate }
         }
 
+        /// Get the interval between operations
         pub fn next_interval(&self) -> Duration {
             Duration::from_secs_f64(1.0 / self.rate)
         }
@@ -185,15 +227,20 @@ pub mod load_patterns {
 
     /// Bursty load pattern
     pub struct BurstyLoad {
+        /// Base operations per second
         pub base_rate: f64,
+        /// Burst operations per second
         pub burst_rate: f64,
+        /// Duration of each burst
         pub burst_duration: Duration,
+        /// Interval between bursts
         pub burst_interval: Duration,
         current_time: Duration,
         last_burst: Duration,
     }
 
     impl BurstyLoad {
+        /// Create a new bursty load pattern
         pub fn new(
             base_rate: f64,
             burst_rate: f64,
@@ -210,6 +257,7 @@ pub mod load_patterns {
             }
         }
 
+        /// Get the next interval between operations
         pub fn next_interval(&mut self) -> Duration {
             self.current_time += Duration::from_millis(1);
 
@@ -233,13 +281,17 @@ pub mod load_patterns {
 
     /// Ramp load pattern (gradually increasing)
     pub struct RampLoad {
+        /// Starting operations per second
         pub start_rate: f64,
+        /// Ending operations per second
         pub end_rate: f64,
+        /// Duration of the ramp
         pub duration: Duration,
         start_time: std::time::Instant,
     }
 
     impl RampLoad {
+        /// Create a new ramp load pattern
         pub fn new(start_rate: f64, end_rate: f64, duration: Duration) -> Self {
             Self {
                 start_rate,
@@ -249,6 +301,7 @@ pub mod load_patterns {
             }
         }
 
+        /// Get the next interval between operations
         pub fn next_interval(&self) -> Duration {
             let elapsed = self.start_time.elapsed();
             let progress = (elapsed.as_secs_f64() / self.duration.as_secs_f64()).min(1.0);

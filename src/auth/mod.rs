@@ -27,12 +27,15 @@ pub mod rbac;
 pub use middleware::auth_middleware;
 pub use rbac::{Role, Permission, AccessControl};
 
-/// Authentication error
+/// Authentication error for API security and access control failures.
+/// 
+/// Represents authentication and authorization errors with appropriate
+/// HTTP status codes and error messages for API responses.
 #[derive(Debug, Clone)]
 pub struct AuthError {
-    /// Error message
+    /// Human-readable error message
     pub message: String,
-    /// HTTP status code
+    /// HTTP status code for the error response
     pub status: StatusCode,
 }
 
@@ -64,16 +67,19 @@ impl IntoResponse for AuthError {
     }
 }
 
-/// API Key with associated metadata
+/// API Key with associated metadata for authentication and authorization.
+/// 
+/// Represents an API key with role-based permissions, expiration,
+/// and metadata for secure API access control.
 #[derive(Debug, Clone)]
 pub struct ApiKey {
-    /// The key value (hashed in production)
+    /// The key value (hashed in production environments)
     pub key: String,
-    /// Key name/identifier
+    /// Human-readable key name/identifier
     pub name: String,
-    /// Role assigned to this key
+    /// Role assigned to this key for permission checking
     pub role: Role,
-    /// Optional expiration
+    /// Optional expiration timestamp for key rotation
     pub expires_at: Option<Instant>,
     /// Rate limit: requests per minute
     pub rate_limit: Option<u32>,

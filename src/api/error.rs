@@ -10,32 +10,55 @@ use axum::{
 use serde::Serialize;
 use thiserror::Error;
 
-/// Standard API error response format
+/// Standard API error response format for consistent error handling.
+/// 
+/// Provides a structured error response format that includes status,
+/// error details, and timing information for API clients.
 #[derive(Debug, Serialize)]
 pub struct ApiErrorResponse {
+    /// Response status (typically "error")
     pub status: String,
+    /// Detailed error information
     pub error: ErrorDetails,
+    /// Request processing time in seconds
     pub time: f64,
 }
 
+/// Detailed error information included in API error responses.
+/// 
+/// Contains error code, human-readable message, and optional additional
+/// context for debugging and error handling.
 #[derive(Debug, Serialize)]
 pub struct ErrorDetails {
+    /// Error code identifier
     pub code: String,
+    /// Human-readable error message
     pub message: String,
+    /// Optional additional error context
     #[serde(skip_serializing_if = "Option::is_none")]
     pub details: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub validation_errors: Vec<ValidationError>,
 }
 
+/// Validation error for specific field validation failures.
+/// 
+/// Represents a single field validation error with field name,
+/// error message, and error code for client-side error handling.
 #[derive(Debug, Serialize, Clone)]
 pub struct ValidationError {
+    /// Name of the field that failed validation
     pub field: String,
+    /// Human-readable validation error message
     pub message: String,
+    /// Validation error code identifier
     pub code: String,
 }
 
-/// Application error types
+/// Application error types for API operations and request handling.
+/// 
+/// Comprehensive error enumeration covering validation, authentication,
+/// rate limiting, and internal server errors with appropriate HTTP status codes.
 #[derive(Debug, Error)]
 pub enum ApiError {
     #[error("Collection not found: {name}")]

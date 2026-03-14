@@ -23,10 +23,13 @@ pub use backup::BackupManager;
 use crate::{Result, RTDBError, Vector, VectorId};
 use serde::{Deserialize, Serialize};
 
-/// Storage configuration
+/// Storage configuration defining paths, limits, and operational parameters.
+/// 
+/// Configures storage engine behavior including file paths, memory limits,
+/// compression settings, and other storage-related parameters.
 #[derive(Debug, Clone)]
 pub struct StorageConfig {
-    /// Storage directory path
+    /// Base directory path for storage files
     pub path: String,
     /// WAL segment size in bytes
     pub wal_segment_size: usize,
@@ -84,10 +87,13 @@ pub enum Record {
     },
 }
 
-/// Storage statistics
+/// Storage statistics for monitoring and performance analysis.
+/// 
+/// Tracks storage utilization, operation counts, performance metrics,
+/// and other statistics for monitoring and optimization purposes.
 #[derive(Debug, Clone, Default)]
 pub struct StorageStats {
-    /// Total vectors stored
+    /// Total number of vectors stored in the system
     pub vector_count: u64,
     /// Total bytes used
     pub storage_size: u64,

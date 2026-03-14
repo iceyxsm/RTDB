@@ -142,11 +142,15 @@ fn get_permissions_for_role(role: super::rbac::Role) -> Vec<String> {
 }
 
 /// Auth state bundle for middleware
+/// Authentication state containing configuration and key storage for API security.
+/// 
+/// Manages authentication configuration and API key storage for validating
+/// and authorizing API requests in the RTDB system.
 #[derive(Clone)]
 pub struct AuthState {
-    /// Authentication configuration
+    /// Authentication configuration parameters
     pub config: AuthConfig,
-    /// API key storage
+    /// API key storage and validation
     pub key_store: Arc<ApiKeyStore>,
 }
 

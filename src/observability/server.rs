@@ -29,7 +29,10 @@ use super::{
     metrics::MetricsCollector,
 };
 
-/// Shared state for observability handlers
+/// Shared state for observability handlers and metrics collection.
+/// 
+/// Contains shared resources and configuration for observability endpoints
+/// including metrics, health checks, and monitoring data.
 #[derive(Clone)]
 pub struct ObservabilityState {
     pub metrics: Arc<MetricsCollector>,
@@ -38,6 +41,11 @@ pub struct ObservabilityState {
 }
 
 impl ObservabilityState {
+    /// Create a new observability state with metrics and health components.
+    /// 
+    /// # Arguments
+    /// * `metrics` - Shared metrics collector instance
+    /// * `health` - Shared health checker instance
     pub fn new(
         metrics: Arc<MetricsCollector>,
         health: Arc<HealthChecker>,
@@ -50,7 +58,13 @@ impl ObservabilityState {
     }
 }
 
-/// Create the observability router
+/// Create the observability router with metrics and health endpoints.
+/// 
+/// # Arguments
+/// * `state` - Observability state containing metrics and health components
+/// 
+/// # Returns
+/// Configured router with /metrics and /health endpoints
 pub fn observability_router(state: ObservabilityState) -> Router {
     Router::new()
         .route("/metrics", get(metrics_handler))

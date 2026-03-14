@@ -28,13 +28,18 @@ use std::sync::Arc;
 // Add dependencies for future Parquet support
 // TODO: Add arrow and parquet crates to Cargo.toml for full implementation
 
-/// Supported data formats
+/// Supported data formats for migration
 #[derive(Debug, Clone, PartialEq)]
 pub enum DataFormat {
+    /// JSON Lines format (newline-delimited JSON)
     Jsonl,
+    /// Apache Parquet columnar format
     Parquet,
+    /// Hierarchical Data Format version 5
     Hdf5,
+    /// Custom binary format
     Binary,
+    /// Comma-separated values format
     Csv,
 }
 
@@ -124,6 +129,8 @@ impl JsonlReader {
         })
     }
     
+    /// Count lines in JSONL file (for progress tracking)
+    #[allow(dead_code)]
     async fn count_lines(&self, path: &Path) -> Result<u64> {
         let file = File::open(path).await
             .map_err(|e| RTDBError::Io(format!("Failed to open file for counting: {}", e)))?;
@@ -263,6 +270,7 @@ pub struct ParquetReader {
     path: std::path::PathBuf,
     total_count: Option<u64>,
     current_position: usize,
+    #[allow(dead_code)]
     batch_size: usize,
 }
 
@@ -765,7 +773,10 @@ impl FormatWriter for Hdf5Writer {
 
 // Fallback implementations when HDF5 feature is not enabled
 #[cfg(not(feature = "hdf5"))]
+/// Fallback HDF5 reader when HDF5 feature is not enabled
 pub struct Hdf5Reader {
+    /// Path to the HDF5 file
+    #[allow(dead_code)]
     path: std::path::PathBuf,
 }
 
@@ -797,7 +808,10 @@ impl FormatReader for Hdf5Reader {
 }
 
 #[cfg(not(feature = "hdf5"))]
+/// HDF5 writer implementation (stub when hdf5 feature is disabled)
 pub struct Hdf5Writer {
+    /// Path to the HDF5 file
+    #[allow(dead_code)]
     path: std::path::PathBuf,
 }
 

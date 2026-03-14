@@ -308,6 +308,7 @@ impl MemStorageCore {
 /// like RocksDB or dedicated WAL implementation.
 #[derive(Debug)]
 pub struct FileStorage {
+    #[allow(dead_code)]
     path: std::path::PathBuf,
     inner: RwLock<FileStorageCore>,
 }

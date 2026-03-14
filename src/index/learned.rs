@@ -4,13 +4,16 @@
 
 use crate::Result;
 
-/// Piecewise Linear Index (Learned Index)
+/// Piecewise Linear Learned Index for efficient range queries and lookups.
+/// 
+/// Implements learned indexing using piecewise linear models to predict
+/// data positions, reducing search complexity for sorted data access.
 pub struct LearnedIndex {
-    /// Number of pieces (linear models)
+    /// Number of linear model pieces for data approximation
     num_pieces: usize,
     /// Linear models (slope, intercept) for each piece
     models: Vec<(f64, f64)>,
-    /// Boundaries between pieces
+    /// Boundaries between different linear model pieces
     boundaries: Vec<f64>,
 }
 

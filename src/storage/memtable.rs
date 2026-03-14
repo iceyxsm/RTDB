@@ -17,9 +17,12 @@ pub enum MemTableEntry {
     Delete,
 }
 
-/// MemTable for in-memory buffering
+/// MemTable for in-memory buffering of vector operations before persistence.
+/// 
+/// Provides fast in-memory storage for recent vector operations with efficient
+/// lookups and ordered iteration, serving as a write buffer before SSTable creation.
 pub struct MemTable {
-    /// Skip list storing entries
+    /// Skip list storing vector entries with efficient ordered access
     entries: SkipMap<VectorId, MemTableEntry>,
     /// Approximate size in bytes
     size: AtomicUsize,
@@ -154,9 +157,12 @@ impl MemTable {
     }
 }
 
-/// Immutable MemTable (after flush trigger)
+/// Immutable MemTable created after flush trigger for background persistence.
+/// 
+/// Read-only snapshot of a MemTable that can be safely accessed during
+/// background flushing to SSTable without blocking new writes.
 pub struct ImmutableMemTable {
-    /// Inner table
+    /// Wrapped immutable reference to the original MemTable
     inner: Arc<MemTable>,
 }
 
@@ -202,9 +208,12 @@ impl ImmutableMemTable {
     }
 }
 
-/// MemTable manager handling rotation
+/// MemTable manager handling rotation and background flushing operations.
+/// 
+/// Manages active and immutable MemTables, coordinating rotation when size
+/// limits are reached and background flushing to persistent storage.
 pub struct MemTableManager {
-    /// Active mutable memtable
+    /// Currently active mutable MemTable for new writes
     active: Arc<MemTable>,
     /// Immutable memtables waiting to flush
     immutable: parking_lot::Mutex<Vec<ImmutableMemTable>>,

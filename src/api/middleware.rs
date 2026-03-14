@@ -13,12 +13,15 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tracing::{debug, warn};
 
-/// Rate limiter configuration
+/// Configuration for API rate limiting middleware.
+/// 
+/// Defines rate limiting parameters including request limits, time windows,
+/// and window type (sliding vs fixed) for protecting API endpoints.
 #[derive(Debug, Clone)]
 pub struct RateLimitConfig {
-    /// Maximum requests per window
+    /// Maximum requests allowed per time window
     pub max_requests: u32,
-    /// Time window duration
+    /// Duration of the rate limiting time window
     pub window_duration: Duration,
     /// Whether to use sliding window (true) or fixed window (false)
     pub sliding_window: bool,
@@ -34,11 +37,15 @@ impl Default for RateLimitConfig {
     }
 }
 
-/// Rate limiter state
+/// Rate limiter implementation for tracking and enforcing API request limits.
+/// 
+/// Maintains per-client request counters and time windows to enforce
+/// rate limiting policies and protect against API abuse.
 #[derive(Debug)]
 pub struct RateLimiter {
+    /// Rate limiting configuration parameters
     config: RateLimitConfig,
-    // Client IP -> (request_count, window_start)
+    /// Client IP tracking: maps IP to (request_count, window_start)
     clients: Arc<Mutex<HashMap<String, (u32, Instant)>>>,
 }
 

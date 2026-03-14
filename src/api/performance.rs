@@ -12,10 +12,15 @@ use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use tracing::{debug, info};
 
-/// Cache entry with TTL
+/// Cache entry with time-to-live (TTL) expiration for API response caching.
+/// 
+/// Stores cached values with expiration timestamps to implement
+/// time-based cache invalidation and improve API response times.
 #[derive(Debug, Clone)]
 struct CacheEntry<T> {
+    /// Cached value
     value: T,
+    /// Expiration timestamp for this cache entry
     expires_at: Instant,
 }
 
@@ -32,10 +37,16 @@ impl<T> CacheEntry<T> {
     }
 }
 
-/// LRU cache with TTL for API responses
+/// LRU cache with TTL for API response caching and performance optimization.
+/// 
+/// Implements a thread-safe cache with size limits and time-based expiration
+/// to reduce database load and improve API response times.
 pub struct ApiCache<K, V> {
+    /// Thread-safe cache storage with hash map
     cache: Arc<RwLock<HashMap<K, CacheEntry<V>>>>,
+    /// Maximum number of entries before eviction
     max_size: usize,
+    /// Default time-to-live for cache entries
     default_ttl: Duration,
 }
 

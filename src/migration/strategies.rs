@@ -10,7 +10,8 @@ use crate::migration::{
     MigrationConfig, VectorBatch,
 };
 use crate::{Result, RTDBError};
-use rand::Rng;
+use rand::{Rng, SeedableRng};
+use rand::rngs::StdRng;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::{mpsc, Semaphore};
@@ -324,7 +325,7 @@ impl StrategyExecutor {
 
             // 2. Verify both source and target systems are accessible
             let mut source_client = crate::migration::clients::create_source_client(&self.config).await?;
-            let mut target_client = crate::migration::clients::create_target_client(&self.config).await?;
+            let target_client = crate::migration::clients::create_target_client(&self.config).await?;
 
             // 3. Test connectivity to both systems
             match source_client.get_total_count().await {
@@ -337,7 +338,7 @@ impl StrategyExecutor {
 
             // 4. Verify target system can accept writes
             let test_batch = vec![];
-            match target_client.insert_batch(test_batch).await {
+            match target_client.insert_batch(&test_batch).await {
                 Ok(_) => tracing::info!("Target system write capability verified"),
                 Err(e) => {
                     tracing::error!("Target system write test failed: {}", e);
@@ -370,7 +371,7 @@ impl StrategyExecutor {
             tracing::info!("Verifying dual-write consistency for migration {}", self.config.id);
 
             let mut source_client = crate::migration::clients::create_source_client(&self.config).await?;
-            let mut target_client = crate::migration::clients::create_target_client(&self.config).await?;
+            let target_client = crate::migration::clients::create_target_client(&self.config).await?;
 
             // Get total count from both systems
             let source_count = source_client.get_total_count().await?
@@ -398,7 +399,7 @@ impl StrategyExecutor {
             // Sample-based consistency check
             let sample_size = std::cmp::min(1000, source_count / 100); // Sample 1% or max 1000
             let mut inconsistencies = 0;
-            let mut rng = rand::thread_rng();
+            let mut rng = StdRng::from_entropy(); // Use StdRng which is Send
 
             tracing::info!("Performing sample-based consistency check with {} samples", sample_size);
 
@@ -478,11 +479,11 @@ impl StrategyExecutor {
             tracing::info!("Disabling writes to source system");
 
             // Phase 3: Verify target system is handling all traffic
-            let mut target_client = crate::migration::clients::create_target_client(&self.config).await?;
+            let target_client = crate::migration::clients::create_target_client(&self.config).await?;
 
             // Test write capability
             let test_batch = vec![];
-            match target_client.insert_batch(test_batch).await {
+            match target_client.insert_batch(&test_batch).await {
                 Ok(_) => tracing::info!("Target system confirmed ready for exclusive writes"),
                 Err(e) => {
                     tracing::error!("Target system failed write test during cutover: {}", e);
@@ -639,12 +640,19 @@ struct BatchResult {
 /// Information about a snapshot
 #[derive(Debug, Clone)]
 struct SnapshotInfo {
+    #[allow(dead_code)]
     timestamp: chrono::DateTime<chrono::Utc>,
     total_records: u64,
     snapshot_id: uuid::Uuid,
 }
 
-/// Migration strategy selector
+/// Migration strategy selector that returns the strategy name.
+/// 
+/// # Arguments
+/// * `config` - Migration configuration containing the strategy
+/// 
+/// # Returns
+/// String name of the selected migration strategy
 pub fn select_strategy(config: &MigrationConfig) -> Result<&'static str> {
     match config.strategy {
         crate::migration::MigrationStrategy::Stream => Ok("streaming"),

@@ -4,7 +4,10 @@ use super::{History, OperationType};
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime};
 
-/// History analyzer for extracting insights from test execution
+/// Analyzer for extracting performance and consistency insights from test execution history.
+/// 
+/// Provides methods to analyze operation latencies, throughput patterns, concurrent operations,
+/// and process sequences from Jepsen test execution histories.
 pub struct HistoryAnalyzer;
 
 impl HistoryAnalyzer {
@@ -200,46 +203,67 @@ impl HistoryAnalyzer {
 /// Latency analysis results
 #[derive(Debug, Clone, Default)]
 pub struct LatencyAnalysis {
+    /// Number of operations analyzed
     pub count: usize,
+    /// Minimum latency observed
     pub min: Duration,
+    /// Maximum latency observed
     pub max: Duration,
+    /// Mean latency
     pub mean: Duration,
+    /// Median latency
     pub median: Duration,
+    /// 95th percentile latency
     pub p95: Duration,
+    /// 99th percentile latency
     pub p99: Duration,
 }
 
 /// Throughput analysis results
 #[derive(Debug, Clone)]
 pub struct ThroughputAnalysis {
+    /// Throughput measurements over time windows
     pub windows: Vec<ThroughputWindow>,
 }
 
 /// Throughput window
 #[derive(Debug, Clone)]
 pub struct ThroughputWindow {
+    /// Window start time
     pub start_time: SystemTime,
+    /// Window end time
     pub end_time: SystemTime,
+    /// Total operations in window
     pub total_ops: usize,
+    /// Successful operations in window
     pub successful_ops: usize,
+    /// Operations per second in window
     pub ops_per_second: f64,
 }
 
 /// Group of concurrent operations
 #[derive(Debug, Clone)]
 pub struct ConcurrentGroup {
+    /// Operation IDs in this concurrent group
     pub operations: Vec<uuid::Uuid>,
+    /// Group start time
     pub start_time: SystemTime,
+    /// Group end time
     pub end_time: SystemTime,
 }
 
 /// Error rate statistics
 #[derive(Debug, Clone, Default)]
 pub struct ErrorRate {
+    /// Total operations
     pub total: usize,
+    /// Successful operations
     pub successes: usize,
+    /// Failed operations
     pub errors: usize,
+    /// Success rate (0.0 to 1.0)
     pub success_rate: f64,
+    /// Error rate (0.0 to 1.0)
     pub error_rate: f64,
 }
 

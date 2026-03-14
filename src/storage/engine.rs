@@ -15,9 +15,12 @@ use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
-/// Storage Engine
+/// Storage engine coordinating all storage components and operations.
+/// 
+/// Orchestrates MemTables, SSTables, WAL, and other storage components
+/// to provide a unified storage interface with ACID properties.
 pub struct StorageEngine {
-    /// Configuration
+    /// Storage configuration parameters
     config: StorageConfig,
     /// Write-ahead log
     wal: parking_lot::Mutex<super::WAL>,

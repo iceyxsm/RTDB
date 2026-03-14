@@ -28,10 +28,13 @@ use std::time::Duration;
 
 use super::performance::{ObservabilityPerfConfig, TraceBatchConfig, SamplingDecision};
 
-/// Extended tracing configuration with performance options
+/// Extended tracing configuration with performance options for observability.
+/// 
+/// Configures distributed tracing with service identification, sampling rates,
+/// and performance monitoring for comprehensive system observability.
 #[derive(Debug, Clone)]
 pub struct TracingConfig {
-    /// Service name for trace identification
+    /// Service name for trace identification in distributed systems
     pub service_name: String,
     /// Service version
     pub service_version: String,

@@ -17,7 +17,7 @@
 //! - Data validation and integrity checks
 //! - Zero-downtime migration strategies
 
-use crate::{Result, RTDBError};
+use crate::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -41,15 +41,25 @@ mod parquet_integration_test;
 /// Migration source types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SourceType {
+    /// Qdrant vector database
     Qdrant,
+    /// Milvus vector database
     Milvus,
+    /// Weaviate vector database
     Weaviate,
+    /// Pinecone vector database
     Pinecone,
+    /// LanceDB vector database
     LanceDB,
+    /// JSON Lines format
     Jsonl,
+    /// Apache Parquet format
     Parquet,
+    /// HDF5 format
     Hdf5,
+    /// CSV format
     Csv,
+    /// Binary format
     Binary,
 }
 
@@ -123,37 +133,64 @@ pub enum MigrationStrategy {
 /// Authentication configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AuthConfig {
+    /// API key authentication
     ApiKey(String),
+    /// Bearer token authentication
     Bearer(String),
-    Basic { username: String, password: String },
+    /// Basic authentication with username and password
+    Basic { 
+        /// Username for basic auth
+        username: String, 
+        /// Password for basic auth
+        password: String 
+    },
+    /// Custom headers authentication
     Headers(HashMap<String, String>),
 }
 
 /// Data transformation rule
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TransformationRule {
+    /// Reduce vector dimensions using specified method
     DimensionReduction {
+        /// Original vector dimension
         from_dimension: usize,
+        /// Target vector dimension
         to_dimension: usize,
+        /// Reduction method (e.g., "pca", "truncate")
         method: String,
     },
+    /// Filter records based on metadata query
     MetadataFilter {
+        /// Filter query expression
         query: String,
     },
+    /// Rename a field in the record
     FieldRename {
+        /// Original field name
         field: String,
+        /// New field name
         new_name: String,
     },
+    /// Map field values using a lookup table
     FieldMap {
+        /// Field name to map
         field: String,
+        /// Value mapping table
         mapping: HashMap<String, String>,
     },
+    /// Convert field to a different data type
     FieldConvert {
+        /// Field name to convert
         field: String,
+        /// Type conversion to apply
         conversion: ConversionType,
     },
+    /// Filter records based on field condition
     FieldFilter {
+        /// Field name to filter on
         field: String,
+        /// Filter condition to apply
         condition: FilterCondition,
     },
 }
@@ -161,83 +198,126 @@ pub enum TransformationRule {
 /// Transformation operations
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TransformOperation {
+    /// Rename operation with new name
     Rename(String),
+    /// Map operation with value mappings
     Map(HashMap<String, String>),
+    /// Convert operation with type conversion
     Convert(ConversionType),
+    /// Filter operation with condition
     Filter(FilterCondition),
 }
 
 /// Data type conversions
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ConversionType {
+    /// Convert string to number
     StringToNumber,
+    /// Convert number to string
     NumberToString,
+    /// Convert array to string representation
     ArrayToString,
+    /// Convert string to array
     StringToArray,
 }
 
 /// Filter conditions
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum FilterCondition {
+    /// Field must exist
     Exists,
+    /// Field must not be null
     NotNull,
+    /// Field must have minimum length
     MinLength(usize),
+    /// Field must have maximum length
     MaxLength(usize),
+    /// Field must match regex pattern
     Regex(String),
 }
 
 /// Validation configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ValidationConfig {
+    /// Whether to validate vector data
     pub validate_vectors: bool,
+    /// Whether to validate metadata
     pub validate_metadata: bool,
+    /// Whether to check for duplicate records
     pub check_duplicates: bool,
+    /// Expected vector dimension (None for any)
     pub vector_dimension: Option<usize>,
+    /// List of required metadata fields
     pub required_fields: Vec<String>,
 }
 
 /// Migration progress information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MigrationProgress {
+    /// Unique migration identifier
     pub id: Uuid,
+    /// Current migration status
     pub status: MigrationStatus,
+    /// Source system type
     pub source_type: SourceType,
+    /// Target collection name
     pub target_collection: String,
+    /// Total number of records to migrate (if known)
     pub total_records: Option<u64>,
+    /// Number of records processed so far
     pub processed_records: u64,
+    /// Number of records that failed processing
     pub failed_records: u64,
+    /// Current batch number being processed
     pub current_batch: u64,
+    /// Migration start timestamp
     pub start_time: chrono::DateTime<chrono::Utc>,
+    /// Last progress update timestamp
     pub last_update: chrono::DateTime<chrono::Utc>,
+    /// Estimated completion time (if available)
     pub estimated_completion: Option<chrono::DateTime<chrono::Utc>>,
+    /// Current processing throughput (records per second)
     pub throughput_per_second: f64,
+    /// List of error messages encountered
     pub error_messages: Vec<String>,
 }
 
-/// Migration status
+/// Migration status tracking
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MigrationStatus {
+    /// Migration is queued but not started
     Pending,
+    /// Migration is currently running
     Running,
+    /// Migration is temporarily paused
     Paused,
+    /// Migration completed successfully
     Completed,
+    /// Migration failed with errors
     Failed,
+    /// Migration was cancelled by user
     Cancelled,
 }
 
-/// Vector record for migration
+/// Vector record for migration operations
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VectorRecord {
+    /// Unique identifier for the vector
     pub id: String,
+    /// Vector embeddings as f32 array
     pub vector: Vec<f32>,
+    /// Associated metadata as key-value pairs
     pub metadata: HashMap<String, serde_json::Value>,
 }
 
-/// Batch of vector records
+/// Batch of vector records for efficient processing
 #[derive(Debug, Clone)]
 pub struct VectorBatch {
+    /// Vector records in this batch
     pub records: Vec<VectorRecord>,
+    /// Unique identifier for this batch
     pub batch_id: u64,
+    /// Optional checkpoint data for resumable migrations
     pub checkpoint_data: Option<serde_json::Value>,
 }
 
@@ -504,7 +584,7 @@ impl BatchProcessor {
             }
 
             // Update progress
-            self.progress_tracker.update_progress(processed_records, failed_records).await;
+            let _ = self.progress_tracker.update_progress(processed_records, failed_records).await;
         }
 
         Ok(())

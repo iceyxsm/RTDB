@@ -29,8 +29,13 @@ use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::time::Instant;
 
-/// Wrapper for f32 that implements Ord using total ordering
+/// Wrapper for f32 that implements total ordering for use in data structures requiring Ord.
+/// 
+/// Provides a total ordering implementation for floating-point numbers by treating
+/// NaN values consistently, enabling use in BTreeMap, BinaryHeap, and similar structures.
 #[derive(Debug, Clone, Copy, PartialEq)]
+/// Ordered float wrapper for sorting (used in HNSW algorithms)
+#[allow(dead_code)]
 struct OrderedFloat(f32);
 
 impl Eq for OrderedFloat {}
@@ -457,6 +462,8 @@ impl HnswIndex {
     }
 
     /// Select neighbors using simple heuristic (closest M)
+    /// Select neighbors for HNSW construction (internal algorithm)
+    #[allow(dead_code)]
     fn select_neighbors(&self, candidates: &[(usize, f32)], m: usize) -> Vec<usize> {
         candidates.iter().take(m).map(|(id, _)| *id).collect()
     }
@@ -670,6 +677,7 @@ pub struct IndexMetrics {
 pub struct MultiVectorIndex {
     index_type: IndexType,
     dimension: usize,
+    #[allow(dead_code)]
     metric: SimilarityMetric,
     /// Flat index for small datasets
     flat: Option<FlatIndex>,
@@ -678,6 +686,7 @@ pub struct MultiVectorIndex {
     /// Metrics tracking
     query_count: AtomicU64,
     total_latency_us: AtomicU64,
+    #[allow(dead_code)]
     metrics_history: RwLock<Vec<(Instant, IndexMetrics)>>,
 }
 

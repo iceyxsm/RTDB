@@ -87,16 +87,22 @@ impl EntryHeader {
     }
 }
 
-/// WAL entry
+/// Write-Ahead Log entry containing operation data and metadata.
+/// 
+/// Represents a single logged operation in the WAL with serialized data
+/// and optional metadata for recovery and replication purposes.
 #[derive(Debug, Clone)]
 pub struct WALEntry {
-    /// Entry data
+    /// Serialized entry data
     pub data: Vec<u8>,
 }
 
-/// Write-Ahead Log
+/// Write-Ahead Log for durability and crash recovery.
+/// 
+/// Provides persistent logging of operations before they are applied to storage,
+/// enabling crash recovery and maintaining data consistency guarantees.
 pub struct WAL {
-    /// Current log file
+    /// Current active log file handle
     current_file: File,
     /// Log directory
     path: PathBuf,

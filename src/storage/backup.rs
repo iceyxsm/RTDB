@@ -6,9 +6,12 @@ use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 use tar::Builder;
 
-/// Backup manager
+/// Backup manager for creating and restoring database backups.
+/// 
+/// Handles backup creation, storage, restoration, and cleanup operations
+/// with support for incremental backups and remote storage integration.
 pub struct BackupManager {
-    /// Storage base path
+    /// Base storage path for backup operations
     storage_path: PathBuf,
     /// Backup destination path
     backup_path: PathBuf,
@@ -138,10 +141,13 @@ impl BackupManager {
     }
 }
 
-/// Backup information
+/// Backup information for tracking and managing database backups.
+/// 
+/// Contains metadata about backups including names, creation times,
+/// sizes, and status for backup management and restoration operations.
 #[derive(Debug, Clone)]
 pub struct BackupInfo {
-    /// Backup name
+    /// Human-readable backup identifier
     pub name: String,
     /// Backup file path
     pub path: PathBuf,

@@ -28,10 +28,13 @@ const SNAPSHOT_VERSION: u32 = 1;
 /// Default compression level (1-22, higher = smaller but slower)
 const DEFAULT_COMPRESSION_LEVEL: i32 = 3;
 
-/// Snapshot metadata stored in each snapshot
+/// Snapshot metadata stored in each snapshot for version tracking and validation.
+/// 
+/// Contains version information, creation timestamps, and other metadata
+/// required for snapshot compatibility and integrity verification.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SnapshotMetadata {
-    /// Snapshot format version
+    /// Snapshot format version for compatibility checking
     pub version: u32,
     /// Snapshot UUID
     pub id: String,
@@ -73,10 +76,13 @@ pub enum CompressionType {
     Zstd,
 }
 
-/// Snapshot description for API responses
+/// Snapshot description for API responses and snapshot listing.
+/// 
+/// Provides human-readable information about snapshots including names,
+/// creation times, sizes, and status for management interfaces.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SnapshotDescription {
-    /// Snapshot name
+    /// Human-readable snapshot name
     pub name: String,
     /// Collection name
     pub collection: String,
@@ -90,10 +96,13 @@ pub struct SnapshotDescription {
     pub snapshot_type: SnapshotType,
 }
 
-/// Snapshot manager configuration
+/// Snapshot manager configuration for backup and restore operations.
+/// 
+/// Defines storage paths, retention policies, and other settings
+/// for managing database snapshots and backup operations.
 #[derive(Debug, Clone)]
 pub struct SnapshotConfig {
-    /// Base path for local snapshots
+    /// Base filesystem path for storing local snapshots
     pub local_path: PathBuf,
     /// S3-compatible storage endpoint (optional)
     pub s3_endpoint: Option<String>,
@@ -126,8 +135,13 @@ impl Default for SnapshotConfig {
     }
 }
 
-/// Snapshot data file header
+/// Header structure for snapshot data files containing version and metadata information.
+/// 
+/// Provides versioning and metadata length information for snapshot file format
+/// compatibility and proper deserialization of snapshot data.
 #[derive(Debug, Serialize, Deserialize)]
+/// Snapshot header for binary format (internal use)
+#[allow(dead_code)]
 struct SnapshotHeader {
     version: u32,
     metadata_len: u64,
@@ -143,10 +157,14 @@ struct VectorEntry {
     deleted: bool,
 }
 
-/// Snapshot manager
+/// Snapshot manager for creating, storing, and restoring database snapshots.
+/// 
+/// Manages the lifecycle of database snapshots including creation, storage,
+/// restoration, and cleanup with support for local and remote storage.
 pub struct SnapshotManager {
+    /// Snapshot configuration settings
     config: SnapshotConfig,
-    /// In-memory index of snapshots
+    /// In-memory index of available snapshots
     snapshots: Arc<RwLock<HashMap<String, SnapshotMetadata>>>,
 }
 

@@ -6,7 +6,9 @@
 //! - Payload filtering with nested key support
 //! - Optimized evaluation order
 
-use crate::{Condition, FieldCondition, Filter, HasIdCondition, Match, MatchValue, Range, Vector, VectorId};
+use crate::{Condition, FieldCondition, Filter, Match, MatchValue, Range, Vector, VectorId};
+#[cfg(test)]
+use crate::HasIdCondition;
 use serde_json::Value;
 
 /// Filter evaluator for applying filters to vectors
