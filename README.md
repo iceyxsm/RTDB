@@ -7,7 +7,7 @@ RTDB is a next-generation vector database written in Rust that delivers **sub-5m
 [![Build](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/iceyxsm/RTDB)
 [![Tests](https://img.shields.io/badge/tests-196%2F196-brightgreen)](https://github.com/iceyxsm/RTDB)
 [![Completion](https://img.shields.io/badge/completion-98%25-brightgreen)](https://github.com/iceyxsm/RTDB)
-[![Advanced Features](https://img.shields.io/badge/advanced%20features-✓%20complete-brightgreen)](https://github.com/iceyxsm/RTDB)
+[![Advanced Features](https://img.shields.io/badge/advanced%20features-complete-brightgreen)](https://github.com/iceyxsm/RTDB)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ## Why RTDB?
@@ -250,7 +250,7 @@ let results = replicator.search_in_region(
 ).await?;
 ```
 
-### ⚡ **WebAssembly Runtime**
+### **WebAssembly Runtime**
 - **Custom Similarity Functions** - Deploy custom distance metrics via WASM
 - **Edge Computing** - Run RTDB with custom logic in edge environments
 - **Sandboxed Execution** - Safe execution of user-defined functions
@@ -273,7 +273,7 @@ let results = client.search_with_custom_similarity(
 ).await?;
 ```
 
-### 🎭 **Multi-Modal Search Engine**
+###  **Multi-Modal Search Engine**
 - **Text Encoding** - Transformer-based text embeddings with contextual understanding
 - **Image Encoding** - Vision model integration for image-to-vector conversion
 - **Audio Encoding** - Audio feature extraction and embedding generation
@@ -302,7 +302,7 @@ let results = multimodal.hybrid_search(
 ).await?;
 ```
 
-### 🔧 **Production HTTP Client**
+###  **Production HTTP Client**
 - **Circuit Breaker** - Automatic failure detection and recovery
 - **Connection Pooling** - Efficient HTTP/2 connection management
 - **Retry Logic** - Exponential backoff with jitter for resilience
@@ -326,7 +326,7 @@ client.create_collection("advanced", 768, Some(quantization_config)).await?;
 client.create_multimodal_collection("multimodal").await?;
 ```
 
-### 📊 **Advanced Features Demo**
+### **Advanced Features Demo**
 
 Run the comprehensive demo to see all features in action:
 
@@ -335,22 +335,22 @@ Run the comprehensive demo to see all features in action:
 cargo run --example advanced_features_demo
 
 # Output shows:
-# 🚀 RTDB Advanced Features Demo
-# 📊 Advanced Quantization Demo
+#  RTDB Advanced Features Demo
+#  Advanced Quantization Demo
 #   Testing additive quantization...
 #   Testing neural quantization...
 #   Testing residual quantization...
-# 🌍 Cross-Region Replication Demo
+#   Cross-Region Replication Demo
 #   Replication status: {"us-east-1": "healthy", "eu-west-1": "healthy"}
-# 🔧 WebAssembly Runtime Demo
+#   WebAssembly Runtime Demo
 #   WASM search found 10 results
-# 🎭 Multi-Modal Search Demo
+#   Multi-Modal Search Demo
 #   Text query 'machine learning algorithms' found 8 cross-modal results
 #   Hybrid search found 10 results
-# ✅ All advanced features demonstrated successfully!
+#   All advanced features demonstrated successfully!
 ```
 
-> **📋 Implementation Details**: See [ADVANCED_FEATURES_SUMMARY.md](ADVANCED_FEATURES_SUMMARY.md) for complete technical implementation details, architecture decisions, and integration points.
+> ** Implementation Details**: See [ADVANCED_FEATURES_SUMMARY.md](docs/ADVANCED_FEATURES_SUMMARY.md) for complete technical implementation details, architecture decisions, and integration points.
 
 ## Core Features
 
@@ -1023,12 +1023,12 @@ cd sdk/javascript && npm test
 
 # Sample Results:
 # Single Vector Latency (768D):
-#   P50: 1.2ms, P95: 2.8ms, P99: 4.1ms ✓ (Target: <5ms)
+#   P50: 1.2ms, P95: 2.8ms, P99: 4.1ms (Target: <5ms)
 # 
 # Batch Throughput:
-#   10 vectors: 85,000 QPS ✓ (Target: >50K QPS)
-#   100 vectors: 62,000 QPS ✓
-#   1000 vectors: 51,000 QPS ✓
+#   10 vectors: 85,000 QPS (Target: >50K QPS)
+#   100 vectors: 62,000 QPS
+#   1000 vectors: 51,000 QPS
 #
 # SIMDX Acceleration:
 #   AVX-512: 12.8x faster than scalar
@@ -1043,7 +1043,7 @@ cargo bench --bench competitive_benchmark
 
 # Results vs Industry Leaders (1M vectors, 1536D):
 # Database    | P99 Latency | QPS     | Memory  | Recall@10
-# RTDB        | 4.1ms      | 51,000  | 485MB   | 99.2%    ✓
+# RTDB        | 4.1ms      | 51,000  | 485MB   | 99.2%
 # Qdrant      | 14.0ms     | 12,000  | 650MB   | 98.5%
 # Pinecone    | 18.0ms     | 8,000   | 700MB   | 98.2%
 # Milvus      | 24.0ms     | 15,000  | 920MB   | 97.8%
