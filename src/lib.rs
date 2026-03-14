@@ -25,6 +25,12 @@ pub mod filter;
 pub mod migration;
 pub mod jepsen;
 pub mod simdx;
+pub mod gpu;
+pub mod replication;
+pub mod wasm;
+pub mod multimodal;
+pub mod client;
+pub mod cross_region;
 // pub mod k8s;
 // pub mod sdk;
 // pub mod testing;
@@ -141,6 +147,10 @@ pub enum RTDBError {
     /// Connection errors
     #[error("Connection error: {0}")]
     ConnectionError(String),
+    
+    /// API errors
+    #[error("API error: {0}")]
+    ApiError(String),
 }
 
 impl From<std::io::Error> for RTDBError {

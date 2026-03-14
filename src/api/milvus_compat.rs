@@ -1017,6 +1017,7 @@ fn rtdb_error_to_milvus_code(error: &RTDBError) -> i32 {
         RTDBError::Internal(_) => 19,
         RTDBError::InvalidConfiguration(_) => 20,
         RTDBError::ConnectionError(_) => 21,
+        RTDBError::ApiError(_) => 22,
     }
 }
 

@@ -80,6 +80,19 @@ nalgebra = { version = "0.32", features = ["serde-serialize"] }
 wide = "0.7"
 simsimd = "5.9"  # Industry-leading SIMD library for 200x performance gains
 
+# GPU acceleration (optional, for production deployment)
+# cudarc = { version = "0.11", optional = true }
+# candle-core = { version = "0.6", optional = true }
+# tch = { version = "0.15", optional = true }
+
+# WebAssembly runtime
+wasmtime = { version = "25.0", features = ["component-model", "async"] }
+wasmtime-wasi = "25.0"
+
+# Advanced quantization and load testing
+rand = "0.8"
+rand_distr = "0.4"
+
 # Kubernetes operator dependencies
 kube = { version = "0.95", features = ["runtime", "derive", "client"] }
 k8s-openapi = { version = "0.23", features = ["latest"] }
@@ -87,8 +100,6 @@ schemars = "0.8"
 
 # Load testing and benchmarking
 criterion = { version = "0.5", features = ["html_reports"] }
-rand = "0.8"
-rand_distr = "0.4"
 
 # Production-grade error handling and resilience
 backoff = "0.4"
