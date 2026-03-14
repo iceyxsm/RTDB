@@ -4,14 +4,19 @@
 //! across different GPU backends (CUDA, ROCm, Metal).
 
 use super::{GPUError, GPUBackend as GPUBackendEnum};
-use tracing::{debug, info, warn, error};
+use tracing::debug;
 
 /// Kernel configuration for GPU operations
+/// Configuration for GPU kernel execution
 #[derive(Debug, Clone)]
 pub struct KernelConfig {
+    /// Number of threads per block
     pub block_size: usize,
+    /// Number of blocks in the grid
     pub grid_size: usize,
+    /// Amount of shared memory per block in bytes
     pub shared_memory_size: usize,
+    /// Whether to use mixed precision (FP16/FP32)
     pub use_mixed_precision: bool,
 }
 
@@ -33,6 +38,7 @@ pub struct KernelLauncher {
 }
 
 impl KernelLauncher {
+    /// Create a new kernel launcher for the specified GPU backend
     pub fn new(backend: GPUBackendEnum, config: Option<KernelConfig>) -> Self {
         Self {
             backend,
@@ -175,6 +181,7 @@ pub struct KernelOptimizer {
 }
 
 impl KernelOptimizer {
+    /// Create a new kernel optimizer for the specified GPU backend
     pub fn new(backend: GPUBackendEnum) -> Self {
         Self { backend }
     }
@@ -218,7 +225,7 @@ impl KernelOptimizer {
 
     /// Calculate optimal grid size for given problem size and block size
     pub fn calculate_optimal_grid_size(&self, problem_size: usize, block_size: usize) -> usize {
-        (problem_size + block_size - 1) / block_size
+        problem_size.div_ceil(block_size)
     }
 
     /// Estimate shared memory requirements
@@ -238,16 +245,23 @@ pub struct KernelProfiler {
     measurements: Vec<KernelMeasurement>,
 }
 
+/// GPU kernel performance measurement data
 #[derive(Debug, Clone)]
 pub struct KernelMeasurement {
+    /// Name of the measured kernel
     pub kernel_name: String,
+    /// Execution time in milliseconds
     pub execution_time_ms: f64,
+    /// Memory bandwidth utilization in GB/s
     pub memory_bandwidth_gbps: f32,
+    /// Compute unit utilization percentage
     pub compute_utilization: f32,
+    /// GPU occupancy percentage
     pub occupancy: f32,
 }
 
 impl KernelProfiler {
+    /// Create a new kernel profiler for the specified GPU backend
     pub fn new(backend: GPUBackendEnum) -> Self {
         Self {
             backend,

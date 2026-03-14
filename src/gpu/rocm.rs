@@ -3,7 +3,7 @@
 //! High-performance ROCm implementation optimized for AMD GPUs with HIP kernels.
 
 use super::{GPUBackendTrait, GPUCapabilities, GPUConfig, GPUError, GPUBackend as GPUBackendEnum};
-use tracing::{debug, info, warn, error, instrument};
+use tracing::{debug, warn};
 
 /// ROCm Backend Implementation
 pub struct RocmBackend {
@@ -12,6 +12,7 @@ pub struct RocmBackend {
 }
 
 impl RocmBackend {
+    /// Create a new ROCm backend instance
     pub fn new(config: &GPUConfig) -> Result<Self, GPUError> {
         let device_id = config.device_id.unwrap_or(0) as i32;
         

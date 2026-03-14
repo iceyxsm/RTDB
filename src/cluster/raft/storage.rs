@@ -368,7 +368,7 @@ impl Storage for FileStorage {
         }
 
         let offset = core.entries[0].index;
-        let lo = ((low.saturating_sub(offset)).max(0)) as usize;
+        let lo = (low.saturating_sub(offset)) as usize;
         let hi = ((high - offset).min(core.entries.len() as u64)) as usize;
 
         Ok(core.entries[lo..hi].to_vec())

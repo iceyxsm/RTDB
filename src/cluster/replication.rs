@@ -210,13 +210,13 @@ impl ReplicaTracker {
         // Add to shard replicas
         self.shard_replicas
             .entry(shard_id)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(replica);
 
         // Add to node shards
         self.node_shards
             .entry(node_id)
-            .or_insert_with(HashSet::new)
+            .or_default()
             .insert(shard_id);
     }
 
@@ -621,8 +621,10 @@ pub trait ReplicationClient: Send + Sync + std::fmt::Debug {
 
 /// Read consistency level for follower reads
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum ReadConsistency {
     /// Strong consistency - read from leader
+    #[default]
     Strong,
     /// Bounded staleness - read from follower if lag is within bound
     BoundedStaleness(Duration),
@@ -632,11 +634,6 @@ pub enum ReadConsistency {
     Local,
 }
 
-impl Default for ReadConsistency {
-    fn default() -> Self {
-        ReadConsistency::Strong
-    }
-}
 
 /// Load balancer for read operations
 #[derive(Debug)]

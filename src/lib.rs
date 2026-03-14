@@ -151,6 +151,11 @@ pub enum RTDBError {
     /// API errors
     #[error("API error: {0}")]
     ApiError(String),
+    
+    /// HDF5 errors
+    #[cfg(feature = "hdf5")]
+    #[error("HDF5 error: {0}")]
+    Hdf5(String),
 }
 
 impl From<std::io::Error> for RTDBError {
@@ -174,6 +179,20 @@ impl From<parquet::errors::ParquetError> for RTDBError {
 impl From<arrow_schema::ArrowError> for RTDBError {
     fn from(err: arrow_schema::ArrowError) -> Self {
         RTDBError::Migration(format!("Arrow error: {}", err))
+    }
+}
+
+#[cfg(feature = "hdf5")]
+impl From<hdf5::Error> for RTDBError {
+    fn from(err: hdf5::Error) -> Self {
+        RTDBError::Hdf5(err.to_string())
+    }
+}
+
+#[cfg(feature = "hdf5")]
+impl From<ndarray::ShapeError> for RTDBError {
+    fn from(err: ndarray::ShapeError) -> Self {
+        RTDBError::Migration(format!("Array shape error: {}", err))
     }
 }
 

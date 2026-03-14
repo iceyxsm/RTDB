@@ -13,7 +13,7 @@ rust-version = "1.75"
 [features]
 default = []
 grpc = ["tonic", "prost", "dep:warp"]
-hdf5 = ["dep:hdf5", "dep:ndarray"]
+hdf5 = ["dep:hdf5", "dep:hdf5-sys", "dep:ndarray"]
 # Regenerate protobuf code from .proto files (requires protoc)
 regenerate-proto = []
 tonic = ["dep:tonic"]
@@ -55,9 +55,9 @@ prost-types = "0.12"
 # HTTP/gRPC
 axum = { version = "0.7", features = ["http2", "tokio"] }
 warp = { version = "0.3", optional = true }
-tonic = { version = "0.11", features = ["transport", "codegen", "prost"], optional = true }
+tonic = { version = "0.10", features = ["transport", "codegen", "prost"], optional = true }
 tower = { version = "0.4", features = ["full"] }
-tower-http = { version = "0.5", features = ["compression-gzip", "cors", "trace"] }
+tower-http = { version = "0.4", features = ["compression-gzip", "cors", "trace"] }
 hyper = { version = "1.1", features = ["full"] }
 reqwest = { version = "0.11", features = ["json", "gzip"] }
 regex = "1.10"
@@ -162,6 +162,7 @@ arrow = { version = "53.0", features = ["csv", "json"] }
 arrow-array = "53.0"
 arrow-schema = "53.0"
 hdf5 = { version = "0.8", optional = true }
+hdf5-sys = { version = "0.8", optional = true, features = ["static"] }
 ndarray = { version = "0.15", optional = true }
 csv = "1.3"
 base64 = "0.22"
@@ -179,7 +180,7 @@ reqwest = { version = "0.11", features = ["json"] }
 futures = "0.3"
 
 [build-dependencies]
-tonic-build = "0.11"
+tonic-build = "0.12"
 
 [[bench]]
 name = "standalone_simdx_benchmark"

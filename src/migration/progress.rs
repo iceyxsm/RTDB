@@ -150,7 +150,7 @@ impl ProgressTracker {
                 stats.total_records.map(|t| t.to_string()).unwrap_or_else(|| "?".to_string()),
                 stats.current_throughput,
                 stats.estimated_time_remaining
-                    .map(|eta| format_duration(eta))
+                    .map(format_duration)
                     .unwrap_or_else(|| "unknown".to_string())
             );
             

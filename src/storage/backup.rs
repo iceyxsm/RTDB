@@ -123,7 +123,7 @@ impl BackupManager {
         let src = src.as_ref();
         let dst = dst.as_ref();
 
-        fs::create_dir_all(&dst).map_err(into_storage_error)?;
+        fs::create_dir_all(dst).map_err(into_storage_error)?;
 
         for entry in fs::read_dir(src).map_err(into_storage_error)? {
             let entry = entry.map_err(into_storage_error)?;

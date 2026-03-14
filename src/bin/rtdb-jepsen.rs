@@ -9,7 +9,6 @@ use rtdb::jepsen::{run_jepsen_cli, JepsenConfig, ConsistencyModel};
 use rtdb::RTDBError;
 use std::time::Duration;
 use tracing::{error, info, Level};
-use tracing_subscriber;
 
 /// RTDB Jepsen Testing CLI
 #[derive(Parser)]

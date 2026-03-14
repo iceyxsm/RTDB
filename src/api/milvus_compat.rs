@@ -821,7 +821,7 @@ async fn search_entities_v2(
                         if req.output_fields.as_ref().map(|f| f.contains(&"vector".to_string())).unwrap_or(false) {
                             if let Some(vector) = result.vector {
                                 fields.insert("vector".to_string(), 
-                                    serde_json::Value::Array(vector.into_iter().map(|f| serde_json::Value::from(f)).collect()));
+                                    serde_json::Value::Array(vector.into_iter().map(serde_json::Value::from).collect()));
                             }
                         }
                         
@@ -1018,6 +1018,8 @@ fn rtdb_error_to_milvus_code(error: &RTDBError) -> i32 {
         RTDBError::InvalidConfiguration(_) => 20,
         RTDBError::ConnectionError(_) => 21,
         RTDBError::ApiError(_) => 22,
+        #[cfg(feature = "hdf5")]
+        RTDBError::Hdf5(_) => 23,
     }
 }
 

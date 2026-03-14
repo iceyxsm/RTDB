@@ -156,6 +156,7 @@ impl Default for PqConfig {
 
 /// Combined IVF-PQ configuration
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub struct IvfPqConfig {
     /// IVF configuration
     pub ivf: IvfConfig,
@@ -163,14 +164,6 @@ pub struct IvfPqConfig {
     pub pq: PqConfig,
 }
 
-impl Default for IvfPqConfig {
-    fn default() -> Self {
-        Self {
-            ivf: IvfConfig::default(),
-            pq: PqConfig::default(),
-        }
-    }
-}
 
 /// Index type selection
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

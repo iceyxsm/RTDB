@@ -2,8 +2,8 @@
 //!
 //! High-performance Metal implementation optimized for Apple Silicon and AMD GPUs on macOS.
 
-use super::{GPUBackendTrait, GPUCapabilities, GPUConfig, GPUError, GPUBackend as GPUBackendEnum};
-use tracing::{debug, info, warn, error, instrument};
+use super::{GPUBackendTrait, GPUCapabilities, GPUConfig, GPUError};
+use tracing::{debug, warn};
 
 /// Metal Backend Implementation
 pub struct MetalBackend {
@@ -12,6 +12,7 @@ pub struct MetalBackend {
 }
 
 impl MetalBackend {
+    /// Create a new Metal backend instance
     pub fn new(config: &GPUConfig) -> Result<Self, GPUError> {
         let device_id = config.device_id.unwrap_or(0) as i32;
         
@@ -72,9 +73,9 @@ pub fn detect_metal_capabilities() -> Result<GPUCapabilities, GPUError> {
     // Check if we're on macOS
     #[cfg(not(target_os = "macos"))]
     {
-        return Err(GPUError::BackendNotAvailable {
+        Err(GPUError::BackendNotAvailable {
             backend: "Metal".to_string(),
-        });
+        })
     }
     
     #[cfg(target_os = "macos")]

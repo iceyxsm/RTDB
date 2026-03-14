@@ -422,7 +422,7 @@ impl SamplingDecision {
         use std::num::Wrapping;
         
         thread_local! {
-            static RNG: RefCell<Wrapping<u64>> = RefCell::new(Wrapping(1));
+            static RNG: RefCell<Wrapping<u64>> = const { RefCell::new(Wrapping(1)) };
         }
         
         RNG.with(|rng_cell| {

@@ -484,11 +484,10 @@ impl SnapshotManager {
         
         let mut deleted = 0;
         for (id, meta) in snapshots {
-            if meta.created_at < cutoff {
-                if self.delete_snapshot(&id).await? {
+            if meta.created_at < cutoff
+                && self.delete_snapshot(&id).await? {
                     deleted += 1;
                 }
-            }
         }
         
         if deleted > 0 {

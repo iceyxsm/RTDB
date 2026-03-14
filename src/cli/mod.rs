@@ -3,9 +3,8 @@
 //! Provides commands: start, stop, status, backup, restore, bench, doctor, jepsen
 
 use crate::config::ConfigManager;
-use crate::{Result, RTDBError};
+use crate::Result;
 use clap::{Parser, Subcommand};
-use std::sync::Arc;
 
 /// RTDB CLI arguments
 #[derive(Parser)]

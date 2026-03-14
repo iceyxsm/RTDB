@@ -14,7 +14,7 @@ use std::sync::Arc;
 use std::collections::HashMap;
 use thiserror::Error;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, info, warn, error, instrument};
+use tracing::{info, warn, instrument};
 
 pub mod cuda;
 pub mod rocm;
@@ -64,13 +64,21 @@ pub struct GPUCapabilities {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Configuration for GPU acceleration settings
 pub struct GPUConfig {
+    /// Preferred GPU backend (None for auto-detection)
     pub preferred_backend: Option<GPUBackend>,
+    /// Optional GPU device ID to use (None for auto-selection)
     pub device_id: Option<usize>,
+    /// Size of GPU memory pool in bytes
     pub memory_pool_size: usize,
+    /// Enable mixed precision (FP16/FP32) for better performance
     pub enable_mixed_precision: bool,
+    /// Maximum batch size for GPU operations
     pub batch_size_limit: usize,
+    /// Number of concurrent GPU streams
     pub stream_count: usize,
+    /// Enable GPU profiling and metrics collection
     pub enable_profiling: bool,
 }
 
@@ -88,16 +96,26 @@ impl Default for GPUConfig {
     }
 }
 
+/// GPU performance and usage metrics
 #[derive(Debug, Clone)]
 pub struct GPUMetrics {
+    /// Total number of GPU operations performed
     pub operations_count: u64,
+    /// Total compute time in milliseconds
     pub total_compute_time_ms: f64,
+    /// Current GPU memory usage in bytes
     pub memory_usage_bytes: usize,
+    /// Number of GPU kernel launches
     pub kernel_launches: u64,
+    /// Number of memory transfers between CPU and GPU
     pub memory_transfers: u64,
+    /// Number of cache hits
     pub cache_hits: u64,
+    /// Number of cache misses
     pub cache_misses: u64,
+    /// Average batch size processed
     pub average_batch_size: f32,
+    /// Throughput in GFLOPS (Giga Floating Point Operations Per Second)
     pub throughput_gflops: f32,
 }
 
@@ -291,11 +309,16 @@ impl GPUEngine {
 }
 
 /// Trait for GPU backend implementations
+/// Trait for GPU backend implementations
 #[async_trait::async_trait]
 pub trait GPUBackendTrait {
+    /// Calculate cosine distance between two vectors on GPU
     async fn cosine_distance(&self, a: &[f32], b: &[f32]) -> Result<f32, GPUError>;
+    /// Calculate cosine distances between a query vector and multiple vectors on GPU
     async fn batch_cosine_distance(&self, query: &[f32], vectors: &[Vec<f32>]) -> Result<Vec<f32>, GPUError>;
+    /// Get current GPU memory usage in bytes
     fn get_memory_usage(&self) -> Result<usize, GPUError>;
+    /// Synchronize all pending GPU operations
     async fn synchronize(&self) -> Result<(), GPUError>;
 }
 

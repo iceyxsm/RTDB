@@ -167,7 +167,7 @@ impl MigrationCli {
         from_url: &str,
         to_url: &str,
         collection: &str,
-        resume: bool,
+        _resume: bool,
         config: SimdMigrationConfig,
     ) -> Result<(), RTDBError> {
         info!("Migrating from Qdrant: {} -> {}", from_url, to_url);
@@ -211,7 +211,7 @@ impl MigrationCli {
         from_url: &str,
         to_url: &str,
         collection: &str,
-        resume: bool,
+        _resume: bool,
         config: SimdMigrationConfig,
     ) -> Result<(), RTDBError> {
         info!("Migrating from Milvus: {} -> {}", from_url, to_url);
@@ -245,7 +245,7 @@ impl MigrationCli {
         from_url: &str,
         to_url: &str,
         class: &str,
-        resume: bool,
+        _resume: bool,
         config: SimdMigrationConfig,
     ) -> Result<(), RTDBError> {
         info!("Migrating from Weaviate: {} -> {}", from_url, to_url);
@@ -279,7 +279,7 @@ impl MigrationCli {
         from_path: &PathBuf,
         to_url: &str,
         table: &str,
-        resume: bool,
+        _resume: bool,
         config: SimdMigrationConfig,
     ) -> Result<(), RTDBError> {
         info!("Migrating from LanceDB: {:?} -> {}", from_path, to_url);
@@ -432,7 +432,7 @@ pub struct MilvusMigrationSource {
 }
 
 impl MilvusMigrationSource {
-    pub async fn new(url: &str, collection: &str) -> Result<Self, RTDBError> {
+    pub async fn new(_url: &str, collection: &str) -> Result<Self, RTDBError> {
         Ok(Self {
             collection_name: collection.to_string(),
         })
@@ -466,7 +466,7 @@ pub struct WeaviateMigrationSource {
 }
 
 impl WeaviateMigrationSource {
-    pub async fn new(url: &str, class: &str) -> Result<Self, RTDBError> {
+    pub async fn new(_url: &str, class: &str) -> Result<Self, RTDBError> {
         Ok(Self {
             class_name: class.to_string(),
         })
@@ -500,7 +500,7 @@ pub struct LanceDbMigrationSource {
 }
 
 impl LanceDbMigrationSource {
-    pub async fn new(path: &PathBuf, table: &str) -> Result<Self, RTDBError> {
+    pub async fn new(_path: &PathBuf, table: &str) -> Result<Self, RTDBError> {
         Ok(Self {
             table_name: table.to_string(),
         })
@@ -536,7 +536,7 @@ pub struct RtdbMigrationTarget {
 }
 
 impl RtdbMigrationTarget {
-    pub async fn new(url: &str, collection: &str) -> Result<Self, RTDBError> {
+    pub async fn new(_url: &str, collection: &str) -> Result<Self, RTDBError> {
         Ok(Self {
             collection_name: collection.to_string(),
         })

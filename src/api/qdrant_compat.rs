@@ -326,9 +326,9 @@ async fn get_collection(
                     optimizer_status: "ok".to_string(),
                 },
                 optimizer_status: OptimizerStatus { status: "ok".to_string() },
-                vectors_count: collection.vector_count() as u64,
-                indexed_vectors_count: collection.vector_count() as u64,
-                points_count: collection.vector_count() as u64,
+                vectors_count: collection.vector_count(),
+                indexed_vectors_count: collection.vector_count(),
+                points_count: collection.vector_count(),
                 segments_count: 1,
                 config: collection.config().clone(),
                 payload_schema: HashMap::new(),
@@ -948,19 +948,16 @@ async fn retrieve_points(
             
             for id in request.ids {
                 if let Some(id_num) = id.as_u64() {
-                    match collection.get(id_num) {
-                        Ok(Some(vector)) => {
-                            points.push(PointStruct {
-                                id,
-                                vector: VectorInput::Plain(if request.with_vector.unwrap_or(false) {
-                                    vector.vector.clone()
-                                } else {
-                                    vec![]
-                                }),
-                                payload: vector.payload,
-                            });
-                        }
-                        _ => {}
+                    if let Ok(Some(vector)) = collection.get(id_num) {
+                        points.push(PointStruct {
+                            id,
+                            vector: VectorInput::Plain(if request.with_vector.unwrap_or(false) {
+                                vector.vector.clone()
+                            } else {
+                                vec![]
+                            }),
+                            payload: vector.payload,
+                        });
                     }
                 }
             }
@@ -1145,7 +1142,7 @@ async fn count_points(
     
     match state.collections.get_collection(&name) {
         Ok(collection) => {
-            let count = collection.vector_count() as u64;
+            let count = collection.vector_count();
             Json(ApiResponse::success(CountResult { count }, start.elapsed().as_secs_f64()))
         }
         Err(e) => Json(ApiResponse::error(e.to_string(), start.elapsed().as_secs_f64()))

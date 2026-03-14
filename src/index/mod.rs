@@ -25,7 +25,6 @@ pub use hybrid_search::{
 
 use crate::{Result, ScoredVector, SearchRequest, Vector, VectorId};
 use crate::simdx::SIMDXEngine;
-use std::sync::Arc;
 
 /// Index trait for vector search with SIMDX optimization
 pub trait VectorIndex: Send + Sync {
@@ -49,7 +48,7 @@ pub trait VectorIndex: Send + Sync {
     
     /// SIMDX-optimized batch search for maximum throughput
     fn batch_search(&self, requests: &[SearchRequest]) -> Result<Vec<Vec<ScoredVector>>> {
-        let simdx_engine = SIMDXEngine::new(None);
+        let _simdx_engine = SIMDXEngine::new(None);
         let mut results = Vec::with_capacity(requests.len());
         
         // Process searches in parallel using SIMDX optimization

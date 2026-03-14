@@ -569,8 +569,8 @@ impl HealthMonitor {
                     if let Some(last) = detector.last_heartbeat() {
                         let elapsed = Instant::now().duration_since(last);
 
-                        if elapsed > self.config.suspicion_timeout {
-                            if current_health != NodeHealth::Failed {
+                        if elapsed > self.config.suspicion_timeout
+                            && current_health != NodeHealth::Failed {
                                 warn!(
                                     "Node {} suspected failed (timeout: {:?})",
                                     node_id, elapsed
@@ -580,7 +580,6 @@ impl HealthMonitor {
                                 self.health_status.insert(node_id, NodeHealth::Failed);
                                 self.broadcast_health();
                             }
-                        }
                     }
                 }
             }

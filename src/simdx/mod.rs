@@ -1,11 +1,10 @@
 // Advanced SIMDX integration module for production-grade vector operations
 // Integrates SimSIMD library with custom optimizations for RTDB
 
-use simsimd::SpatialSimilarity;
 use std::arch::x86_64::*;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use tracing::{debug, info, warn};
+use tracing::info;
 
 pub mod advanced_optimizations;
 pub use advanced_optimizations::*;

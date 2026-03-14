@@ -79,21 +79,6 @@ pub fn create_enhanced_router(state: EnhancedApiState) -> Router {
             state.performance_monitor.clone(),
             performance_monitoring_middleware,
         ))
-        // Add compression middleware
-        .layer(tower_http::compression::CompressionLayer::new())
-        // Add CORS middleware
-        .layer(
-            tower_http::cors::CorsLayer::new()
-                .allow_origin(tower_http::cors::Any)
-                .allow_methods([
-                    axum::http::Method::GET,
-                    axum::http::Method::POST,
-                    axum::http::Method::PUT,
-                    axum::http::Method::DELETE,
-                    axum::http::Method::OPTIONS,
-                ])
-                .allow_headers(tower_http::cors::Any),
-        )
         // Add existing middleware stack
         .layer(middleware::from_fn(security_headers_middleware))
         .layer(middleware::from_fn(request_logging_middleware))

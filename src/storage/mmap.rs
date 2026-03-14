@@ -224,7 +224,7 @@ impl MmapVectorStorage {
         }
         
         // Write to mmap
-        (&mut self.mmap[offset..offset + self.vector_size]).copy_from_slice(bytes);
+        self.mmap[offset..offset + self.vector_size].copy_from_slice(bytes);
         
         self.count += 1;
         Ok(idx)
@@ -383,7 +383,7 @@ impl DiskANNIndex {
     pub fn stats(&self) -> DiskANNStats {
         DiskANNStats {
             num_vectors: self.pq_vectors.len(),
-            pq_memory_bytes: self.pq_vectors.len() * self.pq_vectors.get(0).map(|v| v.len()).unwrap_or(0),
+            pq_memory_bytes: self.pq_vectors.len() * self.pq_vectors.first().map(|v| v.len()).unwrap_or(0),
             graph_memory_bytes: self.graph.len() * std::mem::size_of::<Vec<u64>>(),
             disk_bytes: self.vector_storage.file_size(),
         }

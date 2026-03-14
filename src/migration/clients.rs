@@ -1228,7 +1228,7 @@ impl ParquetTargetClient {
                 max_memory_usage: 512 * 1024 * 1024, // 512MB
             };
             
-            let writer = ParquetStreamWriter::new(&std::path::Path::new(&self.path), config).await?;
+            let writer = ParquetStreamWriter::new(std::path::Path::new(&self.path), config).await?;
             self.writer = Some(writer);
         }
         

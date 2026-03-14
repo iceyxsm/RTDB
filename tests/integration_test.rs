@@ -51,13 +51,11 @@ async fn test_advanced_quantization() {
     let simdx_engine = Arc::new(SIMDXEngine::new(None));
     
     let config = AdvancedQuantizationConfig {
-        method: QuantizationMethod::Binary {
-            use_rotation: false,
-            rotation_bits: 8,
-        },
-        dimension: 128,
-        num_subspaces: 8,
-        bits_per_subspace: 8,
+        method: QuantizationMethod::Additive,
+        num_codebooks: 8,
+        codebook_size: 256,
+        vector_dim: 128,
+        bits_per_code: 8,
         training_iterations: 10, // Reduced for testing
         convergence_threshold: 1e-3,
         use_simdx: true,
@@ -76,25 +74,29 @@ async fn test_advanced_quantization() {
         })
         .collect();
     
+    // Add training data
+    quantizer.add_training_data(training_vectors).expect("Failed to add training data");
+    
     // Train quantizer
-    quantizer.train(&training_vectors, "test_codebook").await.expect("Training failed");
+    quantizer.train().expect("Training failed");
     println!("Quantization training completed");
     
     // Test quantization
-    let test_vector = &training_vectors[0];
-    let quantized = quantizer.quantize(test_vector, "test_codebook").expect("Quantization failed");
+    let test_vector = &quantizer.training_data.as_ref().unwrap()[0];
+    let quantized = quantizer.quantize(test_vector).expect("Quantization failed");
     
     println!("Original vector length: {}", test_vector.len());
     println!("Quantized codes length: {}", quantized.codes.len());
-    println!("Compression ratio: {:.2}x", quantized.metadata.compression_ratio);
+    println!("Reconstruction error: {:.6}", quantized.reconstruction_error);
     
     // Test reconstruction
-    let reconstructed = quantizer.reconstruct(&quantized).expect("Reconstruction failed");
+    let reconstructed = quantizer.reconstruct_vector(&quantized.codes).expect("Reconstruction failed");
     println!("Reconstructed vector length: {}", reconstructed.len());
     
-    // Test distance computation
-    let distance = quantizer.compute_distance(test_vector, &quantized).expect("Distance computation failed");
-    println!("Distance to quantized: {}", distance);
+    // Verify reconstruction quality
+    let original_norm: f32 = test_vector.iter().map(|x| x * x).sum::<f32>().sqrt();
+    let reconstructed_norm: f32 = reconstructed.iter().map(|x| x * x).sum::<f32>().sqrt();
+    println!("Original norm: {:.6}, Reconstructed norm: {:.6}", original_norm, reconstructed_norm);
 }
 
 #[test]

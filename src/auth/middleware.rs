@@ -46,7 +46,7 @@ pub async fn auth_middleware(
     }
     
     // Extract API key from headers
-    let api_key = extract_api_key(request.headers(), &config)
+    let api_key = extract_api_key(request.headers(), config)
         .ok_or_else(|| {
             warn!(path, "No API key provided");
             AuthError::unauthorized("API key required. Provide X-API-Key header or Authorization: Bearer token")

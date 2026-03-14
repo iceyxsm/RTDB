@@ -19,7 +19,7 @@ pub enum SimilarityMetric {
 
 /// Compute L2 distance using SIMDX optimization
 pub fn l2_distance(a: &[f32], b: &[f32]) -> Result<f32> {
-    let simdx_engine = SIMDXEngine::new(None);
+    let _simdx_engine = SIMDXEngine::new(None);
     // Calculate Euclidean distance: sqrt(sum((a[i] - b[i])^2))
     let mut sum = 0.0f32;
     for i in 0..a.len() {
@@ -31,7 +31,7 @@ pub fn l2_distance(a: &[f32], b: &[f32]) -> Result<f32> {
 
 /// Compute dot product using SIMDX optimization
 pub fn dot_product(a: &[f32], b: &[f32]) -> Result<f32> {
-    let simdx_engine = SIMDXEngine::new(None);
+    let _simdx_engine = SIMDXEngine::new(None);
     Ok(a.iter().zip(b.iter()).map(|(x, y)| x * y).sum())
 }
 

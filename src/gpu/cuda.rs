@@ -4,9 +4,8 @@
 //! Supports modern NVIDIA GPUs with Tensor Cores and mixed precision.
 
 use super::{GPUBackendTrait, GPUCapabilities, GPUConfig, GPUError, GPUBackend as GPUBackendEnum};
-use std::ffi::CString;
 use std::ptr;
-use tracing::{debug, info, warn, error, instrument};
+use tracing::{debug, warn};
 
 /// CUDA Backend Implementation
 pub struct CudaBackend {
@@ -30,6 +29,7 @@ unsafe impl Send for CudaStream {}
 unsafe impl Sync for CudaStream {}
 
 impl CudaBackend {
+    /// Create a new CUDA backend instance
     pub fn new(config: &GPUConfig) -> Result<Self, GPUError> {
         // Initialize CUDA runtime
         let device_id = config.device_id.unwrap_or(0) as i32;

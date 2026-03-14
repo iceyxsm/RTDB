@@ -168,12 +168,12 @@ impl MetadataIndex {
             // Get or create field index
             let field_index = self.indexes
                 .entry(field.clone())
-                .or_insert_with(DashMap::new);
+                .or_default();
             
             // Add to value set
             field_index
                 .entry(value.clone())
-                .or_insert_with(HashSet::new)
+                .or_default()
                 .insert(id);
             
             // Update count
@@ -488,7 +488,7 @@ impl<I: VectorIndex> HybridSearchEngine<I> {
         };
         
         // Get candidate IDs from metadata index
-        let candidate_ids = self.metadata_index.get_matching_ids(&filter)
+        let candidate_ids = self.metadata_index.get_matching_ids(filter)
             .ok_or_else(|| RTDBError::Query("Filter not indexable".to_string()))?;
         
         if candidate_ids.is_empty() {

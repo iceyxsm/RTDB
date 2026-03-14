@@ -1,15 +1,24 @@
+//! Multi-Modal Search Engine
+//!
+//! This module provides support for searching across multiple modalities including
+//! text, images, and audio. It supports hybrid search with weighted scoring across
+//! different embedding types.
+
 use anyhow::Result;
 use serde_json::Value;
 
+/// Multi-modal search engine for text, image, and audio embeddings
 pub struct MultiModalSearchEngine {
     // In a real implementation, this would contain ML models for different modalities
 }
 
 impl MultiModalSearchEngine {
+    /// Create a new multi-modal search engine
     pub async fn new() -> Result<Self> {
         Ok(Self {})
     }
     
+    /// Encode text into a vector embedding
     pub async fn encode_text(&self, text: &str) -> Result<Vec<f32>> {
         // Simulate text encoding using a transformer model
         // In reality, this would use models like BERT, RoBERTa, or sentence-transformers
@@ -25,6 +34,7 @@ impl MultiModalSearchEngine {
         Ok(result)
     }
     
+    /// Encode an image file into a vector embedding
     pub async fn encode_image_path(&self, _path: &str) -> Result<Vec<f32>> {
         // Simulate image encoding using a vision model like CLIP or ResNet
         // In reality, this would load the image and process it through a CNN
@@ -34,6 +44,7 @@ impl MultiModalSearchEngine {
         Ok(embedding)
     }
     
+    /// Encode an audio file into a vector embedding
     pub async fn encode_audio_path(&self, _path: &str) -> Result<Vec<f32>> {
         // Simulate audio encoding using models like Wav2Vec or similar
         // In reality, this would process audio features like MFCCs or spectrograms
@@ -43,9 +54,10 @@ impl MultiModalSearchEngine {
         Ok(embedding)
     }
     
+    /// Perform hybrid search across multiple modalities with weighted scoring
     pub async fn hybrid_search(
         &self,
-        collection_name: &str,
+        _collection_name: &str,
         embeddings: Vec<(&str, Vec<f32>)>,
         weights: Vec<f32>,
         limit: usize,
@@ -89,9 +101,14 @@ impl MultiModalSearchEngine {
 }
 
 #[derive(Debug, Clone)]
+/// Result from a hybrid multi-modal search
 pub struct HybridSearchResult {
+    /// Unique identifier of the result
     pub id: String,
+    /// Combined similarity score across all modalities
     pub score: f32,
+    /// Optional metadata associated with the result
     pub metadata: Option<Value>,
+    /// Individual scores for each modality
     pub modality_scores: std::collections::HashMap<String, f32>,
 }

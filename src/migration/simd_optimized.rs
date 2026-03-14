@@ -5,8 +5,8 @@ use crate::migration::VectorRecord;
 use crate::simdx::SIMDXEngine;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use tokio::sync::{mpsc, RwLock, Semaphore};
-use tracing::{debug, error, info, warn};
+use tokio::sync::{RwLock, Semaphore};
+use tracing::{debug, info};
 
 /// SIMD-optimized migration engine configuration
 #[derive(Debug, Clone)]
@@ -112,7 +112,7 @@ impl SimdVectorBatch {
 
     /// SIMDX-optimized vector normalization for the entire batch
     pub fn normalize_vectors_simdx(&mut self) -> Result<(), RTDBError> {
-        let simdx_engine = SIMDXEngine::new(None);
+        let _simdx_engine = SIMDXEngine::new(None);
         
         // Use SIMDX batch normalization for optimal performance
         for vector in &mut self.vectors {
@@ -127,7 +127,7 @@ impl SimdVectorBatch {
 
     /// SIMDX-optimized vector quantization for memory efficiency
     pub fn quantize_vectors_simdx(&self, scale: f32, offset: f32) -> Result<Vec<Vec<i8>>, RTDBError> {
-        let simdx_engine = SIMDXEngine::new(None);
+        let _simdx_engine = SIMDXEngine::new(None);
         let mut quantized_vectors = Vec::with_capacity(self.vectors.len());
         
         for vector in &self.vectors {
@@ -143,7 +143,7 @@ impl SimdVectorBatch {
 
     /// SIMDX-optimized binary quantization for maximum compression
     pub fn binary_quantize_simdx(&self) -> Result<Vec<Vec<u8>>, RTDBError> {
-        let simdx_engine = SIMDXEngine::new(None);
+        let _simdx_engine = SIMDXEngine::new(None);
         let mut binary_vectors = Vec::with_capacity(self.vectors.len());
         
         for vector in &self.vectors {
@@ -219,7 +219,7 @@ impl SimdMigrationEngine {
         }
     }
 
-    pub async fn migrate<S, T>(&self, source: S, target: T) -> Result<MigrationSummary, RTDBError>
+    pub async fn migrate<S, T>(&self, _source: S, _target: T) -> Result<MigrationSummary, RTDBError>
     where
         S: MigrationSource + Send + Sync + 'static,
         T: MigrationTarget + Send + Sync + 'static,
@@ -331,6 +331,12 @@ pub struct MigrationSummary {
 #[derive(Debug)]
 pub struct CheckpointManager {
     last_checkpoint: u64,
+}
+
+impl Default for CheckpointManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl CheckpointManager {

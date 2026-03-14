@@ -7,10 +7,9 @@
 //! - SIMDX-optimized implementations for maximum performance
 
 use std::sync::Arc;
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tracing::{debug, info, warn, error, instrument};
+use tracing::{debug, info, warn, instrument};
 use rand::Rng;
 use crate::simdx::SIMDXEngine;
 
@@ -211,10 +210,10 @@ impl AdvancedQuantizer {
         let beam_width = 16; // Configurable beam width
         let mut beam = vec![(vec![], 0.0f32)]; // (codes, error)
 
-        for codebook_idx in 0..self.config.num_codebooks {
+        for _codebook_idx in 0..self.config.num_codebooks {
             let mut candidates = Vec::new();
 
-            for (codes, current_error) in &beam {
+            for (codes, _current_error) in &beam {
                 for code_idx in 0..self.config.codebook_size {
                     let mut new_codes = codes.clone();
                     new_codes.push(code_idx);
@@ -288,7 +287,7 @@ impl AdvancedQuantizer {
             let mut total_loss = 0.0;
 
             for vector in &self.training_data {
-                let (codes, reconstruction) = self.neural_encode_decode(vector)?;
+                let (_codes, reconstruction) = self.neural_encode_decode(vector)?;
                 let loss = self.calculate_reconstruction_error(vector, &reconstruction);
                 total_loss += loss;
 
@@ -324,7 +323,7 @@ impl AdvancedQuantizer {
             self.train_codebook_kmeans(codebook_idx, &residuals)?;
             
             // Update residuals by subtracting quantized vectors
-            for (i, residual) in residuals.iter_mut().enumerate() {
+            for residual in residuals.iter_mut() {
                 let code = self.find_nearest_code(codebook_idx, residual)?;
                 let codeword = &self.codebooks[codebook_idx].vectors[code];
                 
@@ -514,11 +513,11 @@ impl AdvancedQuantizer {
         match self.config.method {
             QuantizationMethod::Neural => {
                 if let Some(ref network) = self.neural_network {
-                    return network.decode(codes);
+                    network.decode(codes)
                 } else {
-                    return Err(QuantizationError::QuantizationFailed {
+                    Err(QuantizationError::QuantizationFailed {
                         reason: "Neural network not initialized".to_string(),
-                    });
+                    })
                 }
             }
             _ => {
@@ -603,7 +602,7 @@ impl AdvancedQuantizer {
         Ok(total_error / self.training_data.len() as f32)
     }
 
-    fn optimize_codebook(&mut self, codebook_idx: usize) -> Result<(), QuantizationError> {
+    fn optimize_codebook(&mut self, _codebook_idx: usize) -> Result<(), QuantizationError> {
         // Simplified optimization - in practice would use more sophisticated methods
         let mut assignments = Vec::new();
         
@@ -680,7 +679,7 @@ impl NeuralCodebook {
     
     fn encode(&self, vector: &[f32]) -> Result<Vec<usize>, QuantizationError> {
         // Forward pass through network
-        let mut activations = vector.to_vec();
+        let activations = vector.to_vec();
         
         // Hidden layer
         let mut hidden = vec![0.0; self.weights[0][0].len()];

@@ -2,10 +2,9 @@
 // Implements industry-leading techniques for P99 <5ms and 50K+ QPS targets
 
 use std::arch::x86_64::*;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use rayon::prelude::*;
-use crate::simdx::{SIMDXEngine, SIMDXError, SIMDCapabilities};
+use crate::simdx::{SIMDXEngine, SIMDXError};
 
 /// Advanced SIMDX optimizer with production-grade techniques
 pub struct AdvancedSIMDXOptimizer {

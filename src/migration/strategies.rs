@@ -382,11 +382,7 @@ impl StrategyExecutor {
             tracing::info!("Record counts - Source: {}, Target: {}", source_count, target_count);
 
             // Allow for small differences due to ongoing writes
-            let count_diff = if source_count > target_count {
-                source_count - target_count
-            } else {
-                target_count - source_count
-            };
+            let count_diff = source_count.abs_diff(target_count);
 
             let max_allowed_diff = (source_count as f64 * 0.01) as u64; // 1% tolerance
             if count_diff > max_allowed_diff {

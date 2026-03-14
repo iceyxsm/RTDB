@@ -11,44 +11,64 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tracing::{debug, info, warn, error, instrument};
+use tracing::{debug, info, warn, instrument};
 use tokio::sync::{RwLock, mpsc};
 use uuid::Uuid;
 
+/// Errors that can occur during cross-region replication
 #[derive(Debug, Error)]
 pub enum ReplicationError {
+    /// The specified region was not found
     #[error("Region not found: {region}")]
-    RegionNotFound { region: String },
+    RegionNotFound { 
+        /// The region identifier that was not found
+        region: String 
+    },
+    /// Conflict resolution between replicas failed
     #[error("Conflict resolution failed: {reason}")]
-    ConflictResolutionFailed { reason: String },
+    ConflictResolutionFailed { 
+        /// The reason why conflict resolution failed
+        reason: String 
+    },
+    /// Network partition detected between regions
     #[error("Network partition detected")]
     NetworkPartition,
+    /// Replication operation timed out
     #[error("Replication timeout")]
     ReplicationTimeout,
+    /// Vector clock is invalid or corrupted
     #[error("Invalid vector clock")]
     InvalidVectorClock,
+    /// Error during data serialization/deserialization
     #[error("Serialization error: {message}")]
-    SerializationError { message: String },
+    SerializationError { 
+        /// The serialization error message
+        message: String 
+    },
 }
 
 /// Vector clock for distributed conflict detection
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VectorClock {
+    /// Map of node IDs to their logical clock values
     pub clocks: BTreeMap<String, u64>,
 }
 
 impl VectorClock {
+    /// Create a new empty vector clock
     pub fn new() -> Self {
         Self {
             clocks: BTreeMap::new(),
         }
     }
 
+    /// Increment the clock for a specific node
     pub fn increment(&mut self, node_id: &str) {
         let counter = self.clocks.entry(node_id.to_string()).or_insert(0);
         *counter += 1;
     }
 
+    /// Update this vector clock with values from another clock
     pub fn update(&mut self, other: &VectorClock) {
         for (node_id, &timestamp) in &other.clocks {
             let current = self.clocks.entry(node_id.clone()).or_insert(0);
@@ -56,6 +76,7 @@ impl VectorClock {
         }
     }
 
+    /// Compare this vector clock with another to determine ordering
     pub fn compare(&self, other: &VectorClock) -> VectorClockOrdering {
         let mut self_greater = false;
         let mut other_greater = false;
@@ -85,51 +106,78 @@ impl VectorClock {
     }
 }
 
+/// Ordering relationship between two vector clocks
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VectorClockOrdering {
+    /// This clock is less than the other (happened before)
     Less,
+    /// This clock is greater than the other (happened after)
     Greater,
+    /// Both clocks are equal (same state)
     Equal,
+    /// Clocks are concurrent (no causal relationship)
     Concurrent,
 }
 
-/// Replicated operation with vector clock
+/// Replicated operation with vector clock for conflict resolution
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReplicatedOperation {
+    /// Unique identifier for this operation
     pub id: Uuid,
+    /// Type of operation being performed
     pub operation_type: OperationType,
+    /// Serialized operation data
     pub data: Vec<u8>,
+    /// Vector clock for ordering and conflict detection
     pub vector_clock: VectorClock,
+    /// Unix timestamp when operation was created
     pub timestamp: u64,
+    /// Region where operation originated
     pub region: String,
 }
 
+/// Type of operation being replicated across regions
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OperationType {
+    /// Insert a new vector into a collection
     Insert,
+    /// Update an existing vector
     Update,
+    /// Delete a vector from a collection
     Delete,
+    /// Create a new collection
     CreateCollection,
+    /// Delete an entire collection
     DeleteCollection,
 }
 
-/// Conflict resolution strategy
+/// Conflict resolution strategy for handling concurrent updates
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ConflictResolution {
+    /// Use the most recent write based on timestamp
     LastWriterWins,
+    /// Use the first write that was received
     FirstWriterWins,
+    /// Merge operations using vector clock ordering
     VectorClockMerge,
+    /// Use a custom resolver function
     CustomResolver(String),
 }
 
-/// Region configuration
+/// Configuration for a specific region in the replication topology
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegionConfig {
+    /// Unique identifier for this region
     pub region_id: String,
+    /// List of endpoints for this region
     pub endpoints: Vec<String>,
+    /// Priority level for conflict resolution (higher = more priority)
     pub priority: u8,
+    /// Whether this region is the primary region
     pub is_primary: bool,
+    /// Maximum acceptable replication lag in milliseconds
     pub replication_lag_threshold_ms: u64,
+    /// Strategy for resolving conflicts in this region
     pub conflict_resolution: ConflictResolution,
 }
 
@@ -144,6 +192,7 @@ pub struct CrossRegionReplicator {
 }
 
 impl CrossRegionReplicator {
+    /// Create a new cross-region replicator for the specified local region
     pub fn new(local_region: String) -> Self {
         Self {
             local_region: local_region.clone(),
@@ -162,7 +211,7 @@ impl CrossRegionReplicator {
         let region_id = config.region_id.clone();
         
         // Create replication channel for this region
-        let (tx, mut rx) = mpsc::channel::<ReplicatedOperation>(1000);
+        let (tx, rx) = mpsc::channel::<ReplicatedOperation>(1000);
         self.replication_channels.insert(region_id.clone(), tx);
         
         // Start replication task for this region
@@ -412,7 +461,7 @@ impl CrossRegionReplicator {
     /// Replication task for a specific region
     async fn replication_task(
         config: RegionConfig,
-        local_region: String,
+        _local_region: String,
         mut rx: mpsc::Receiver<ReplicatedOperation>,
     ) {
         info!("Starting replication task for region: {}", config.region_id);
@@ -465,20 +514,29 @@ impl CrossRegionReplicator {
         status
     }
 }
-/// Replication status information
+/// Replication status information for a specific region
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReplicationStatus {
+    /// Unique identifier for the region
     pub region_id: String,
+    /// Whether this region is the primary region
     pub is_primary: bool,
+    /// Current status of the replication channel
     pub channel_status: ChannelStatus,
+    /// Unix timestamp of last successful synchronization
     pub last_sync_timestamp: u64,
+    /// Current replication lag in milliseconds
     pub replication_lag_ms: u64,
 }
 
+/// Status of a replication channel between regions
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ChannelStatus {
+    /// Channel is active and replicating
     Active,
+    /// Channel is closed or disconnected
     Closed,
+    /// Channel was not found or never established
     NotFound,
 }
 
@@ -488,6 +546,7 @@ pub struct ConflictResolver {
 }
 
 impl ConflictResolver {
+    /// Create a new conflict resolver
     pub fn new() -> Self {
         Self {
             custom_resolvers: HashMap::new(),
@@ -580,8 +639,10 @@ impl ConflictResolver {
 }
 
 /// Trait for custom conflict resolvers
+/// Trait for implementing custom conflict resolution strategies
 #[async_trait::async_trait]
 pub trait CustomResolver {
+    /// Resolve conflicts between operations using custom logic
     async fn resolve(
         &self,
         operation: ReplicatedOperation,
@@ -595,6 +656,7 @@ pub struct PriorityResolver {
 }
 
 impl PriorityResolver {
+    /// Create a new priority-based resolver with region priorities
     pub fn new(region_priorities: HashMap<String, u8>) -> Self {
         Self { region_priorities }
     }
@@ -627,7 +689,7 @@ impl CustomResolver for PriorityResolver {
     }
 }
 
-/// Network partition detector
+/// Network partition detector for monitoring region connectivity
 pub struct PartitionDetector {
     regions: HashMap<String, RegionHealth>,
     check_interval: Duration,
@@ -641,6 +703,7 @@ struct RegionHealth {
 }
 
 impl PartitionDetector {
+    /// Create a new partition detector with specified check interval
     pub fn new(check_interval: Duration) -> Self {
         Self {
             regions: HashMap::new(),

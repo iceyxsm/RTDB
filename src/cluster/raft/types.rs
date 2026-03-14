@@ -87,6 +87,7 @@ pub enum EntryType {
 
 /// Hard state - must be persisted atomically
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct HardState {
     /// Current term
     pub term: Term,
@@ -96,15 +97,6 @@ pub struct HardState {
     pub commit_index: LogIndex,
 }
 
-impl Default for HardState {
-    fn default() -> Self {
-        Self {
-            term: 0,
-            voted_for: 0,
-            commit_index: 0,
-        }
-    }
-}
 
 /// Configuration state - cluster membership
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

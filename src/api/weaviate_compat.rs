@@ -463,7 +463,7 @@ async fn execute_explore_query(
     let collections_count = collection_names.len();
     
     for collection_name in &collection_names {
-        if let Ok(collection) = state.collections.get_collection(&collection_name) {
+        if let Ok(collection) = state.collections.get_collection(collection_name) {
             match &search_params {
                 SearchParams::NearVector(params) => {
                     let search_req = SearchRequest {

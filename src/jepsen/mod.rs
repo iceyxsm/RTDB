@@ -12,7 +12,7 @@
 //! - Production-grade failure injection patterns
 
 use crate::RTDBError;
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -225,23 +225,20 @@ impl HistoryAnalyzer {
         // SIMDX optimization: Vectorized operation comparison
         // Use AVX-512 for parallel analysis of operation properties
         
-        match (&op1.operation, &op2.operation) {
-            (JepsenOperation::Write { vector: v1, .. }, JepsenOperation::Read { .. }) => {
-                // Check if read operation sees the write
-                if op2.start_time > op1.end_time && !op2.success {
-                    return Ok(Some(ConsistencyViolation {
-                        violation_type: ViolationType::ReadAfterWrite,
-                        description: format!(
-                            "Read operation failed to see write for vector {}",
-                            vector_id
-                        ),
-                        operation1: op1.clone(),
-                        operation2: op2.clone(),
-                        detected_at: Instant::now(),
-                    }));
-                }
+        if let (JepsenOperation::Write { vector: _v1, .. }, JepsenOperation::Read { .. }) = (&op1.operation, &op2.operation) {
+            // Check if read operation sees the write
+            if op2.start_time > op1.end_time && !op2.success {
+                return Ok(Some(ConsistencyViolation {
+                    violation_type: ViolationType::ReadAfterWrite,
+                    description: format!(
+                        "Read operation failed to see write for vector {}",
+                        vector_id
+                    ),
+                    operation1: op1.clone(),
+                    operation2: op2.clone(),
+                    detected_at: Instant::now(),
+                }));
             }
-            _ => {}
         }
 
         Ok(None)
@@ -552,8 +549,8 @@ impl JepsenTestExecutor {
 
     /// Execute operation against cluster (mock implementation)
     async fn execute_operation(
-        operation: &JepsenOperation,
-        node_id: &str,
+        _operation: &JepsenOperation,
+        _node_id: &str,
     ) -> (bool, Option<String>, Option<Vec<u8>>) {
         // Mock implementation - in real scenario, this would make HTTP/gRPC calls
         tokio::time::sleep(Duration::from_millis(rand::random::<u64>() % 50)).await;

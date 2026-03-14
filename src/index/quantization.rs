@@ -202,7 +202,7 @@ impl BinaryQuantization {
 
     /// Encode vector to binary
     pub fn encode(&self, vector: &Vector) -> Vec<u8> {
-        let num_bytes = (self.dimension + 7) / 8;
+        let num_bytes = self.dimension.div_ceil(8);
         let mut binary = vec![0u8; num_bytes];
 
         for (i, &val) in vector.data.iter().enumerate() {
@@ -270,7 +270,7 @@ impl ScalarQuantization {
                 .collect()
         } else {
             // 4-bit
-            let mut codes = vec![0u8; (self.dimension + 1) / 2];
+            let mut codes = vec![0u8; self.dimension.div_ceil(2)];
             for (i, &v) in vector.data.iter().enumerate() {
                 let norm = if self.max[i] > self.min[i] {
                     (v - self.min[i]) / (self.max[i] - self.min[i])

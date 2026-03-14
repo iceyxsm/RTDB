@@ -119,7 +119,7 @@ impl ObservabilitySystem {
     pub fn init(&self) -> Result<(), ObservabilityError> {
         // Initialize metrics
         self.metrics.init(self.config.process_metrics_enabled)
-            .map_err(|e| ObservabilityError::MetricsInit(e))?;
+            .map_err(ObservabilityError::MetricsInit)?;
         
         // Start background collection
         self.start_collection();

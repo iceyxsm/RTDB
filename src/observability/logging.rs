@@ -369,7 +369,7 @@ fn redact_pii(mut record: LogRecord) -> LogRecord {
 // ============================================================================
 
 thread_local! {
-    static REQUEST_ID: std::cell::RefCell<Option<String>> = std::cell::RefCell::new(None);
+    static REQUEST_ID: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
 }
 
 /// Set request ID for current thread

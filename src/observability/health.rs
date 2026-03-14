@@ -121,6 +121,12 @@ pub struct LivenessCheck {
     started_at: Instant,
 }
 
+impl Default for LivenessCheck {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LivenessCheck {
     pub fn new() -> Self {
         Self {
@@ -149,6 +155,12 @@ impl HealthCheck for LivenessCheck {
 /// Readiness check - verifies the application is ready to serve traffic
 pub struct ReadinessCheck {
     checks: RwLock<Vec<Box<dyn HealthCheck>>>,
+}
+
+impl Default for ReadinessCheck {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ReadinessCheck {
@@ -206,6 +218,12 @@ impl HealthCheck for ReadinessCheck {
 pub struct StartupCheck {
     is_ready: ParkingRwLock<bool>,
     startup_time: ParkingRwLock<Option<Instant>>,
+}
+
+impl Default for StartupCheck {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl StartupCheck {
@@ -359,6 +377,12 @@ pub struct HealthChecker {
     startup: Arc<StartupCheck>,
     check_results: ParkingRwLock<HashMap<String, HealthCheckResult>>,
     update_tx: broadcast::Sender<HealthStatus>,
+}
+
+impl Default for HealthChecker {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl HealthChecker {

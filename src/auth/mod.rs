@@ -211,7 +211,7 @@ impl ApiKeyStore {
                 
                 return Some(AuthContext {
                     key_name: api_key.name.clone(),
-                    role: api_key.role.clone(),
+                    role: api_key.role,
                     authenticated_at: Instant::now(),
                 });
             }
@@ -234,7 +234,7 @@ impl ApiKeyStore {
     pub fn list_keys(&self) -> Vec<(String, Role, bool)> {
         self.keys
             .values()
-            .map(|k| (k.name.clone(), k.role.clone(), k.active))
+            .map(|k| (k.name.clone(), k.role, k.active))
             .collect()
     }
     
