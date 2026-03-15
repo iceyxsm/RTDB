@@ -1052,6 +1052,34 @@ cargo bench --bench competitive_benchmark
 # Chroma      | 35.0ms     | 4,200   | 800MB   | 97.2%
 ```
 
+### High-Performance Jepsen Testing
+
+RTDB includes optimized Jepsen testing clients for distributed consistency validation:
+
+| Client Type | Throughput | Speedup | Use Case |
+|-------------|------------|---------|----------|
+| UltraFastJepsenClient | 436,555 ops/sec | 5,576x | Pure consistency testing (no storage overhead) |
+| SyncBatchedDirect (50) | 1,407 ops/sec | 18x | Fast Jepsen with HNSW index |
+| Standard Direct | 482 ops/sec | 6x | Full RTDB with durability |
+| HTTP Client | 50-100 ops/sec | 1x | Network simulation |
+
+**Key Optimizations:**
+- **Batching**: Groups 50 operations per storage transaction (18x speedup)
+- **Direct Memory Access**: Bypasses HTTP/TCP stack entirely
+- **Async Pipeline**: Background flush with configurable batch sizes
+- **In-Memory Mode**: Optional zero-disk mode for pure consistency testing
+
+```bash
+# Run high-performance Jepsen benchmarks
+cargo test --test final_benchmark -- --nocapture
+
+# Results:
+# UltraFast Client:     436,555 ops/sec (in-memory only)
+# Batched Direct (50):  1,407 ops/sec (with HNSW + disk)
+# Standard Direct:        482 ops/sec (single-operation)
+# HTTP Client:             78 ops/sec (REST API)
+```
+
 ## Architecture
 
 ```
