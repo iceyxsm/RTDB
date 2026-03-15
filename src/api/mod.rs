@@ -119,7 +119,7 @@ pub async fn start_all(
         }
     });
     
-    // Start Milvus-compatible REST server (port 19530 - Milvus default)
+    // Start Milvus-compatible REST server (port 18530)
     let _milvus_handle = tokio::spawn({
         let collections = collections.clone();
         let snapshot_manager = snapshot_manager.clone();
@@ -127,7 +127,7 @@ pub async fn start_all(
             let state = milvus_compat::MilvusState::new(collections, snapshot_manager);
             let app = milvus_compat::create_milvus_router(state);
             
-            let listener = match tokio::net::TcpListener::bind("0.0.0.0:19530").await {
+            let listener = match tokio::net::TcpListener::bind("0.0.0.0:18530").await {
                 Ok(l) => l,
                 Err(e) => {
                     tracing::error!(error = %e, "Failed to bind Milvus server");
@@ -135,14 +135,14 @@ pub async fn start_all(
                 }
             };
             
-            tracing::info!("Starting Milvus-compatible REST server on port 19530");
+            tracing::info!("Starting Milvus-compatible REST server on port 18530");
             if let Err(e) = axum::serve(listener, app).await {
                 tracing::error!(error = %e, "Milvus server error");
             }
         }
     });
     
-    // Start Weaviate-compatible GraphQL/REST server (port 8080 - Weaviate default)
+    // Start Weaviate-compatible GraphQL/REST server (port 8080)
     let _weaviate_handle = tokio::spawn({
         let collections = collections.clone();
         let snapshot_manager = snapshot_manager.clone();
@@ -205,7 +205,7 @@ pub async fn start_all(
     // Mark startup as complete
     health.startup_check().mark_ready();
     
-    tracing::info!("All servers started successfully - Qdrant API on {}, Milvus API on 19530, Weaviate API on 8080, gRPC on {}", 
+    tracing::info!("All servers started successfully - Qdrant API on {}, Milvus API on 18530, Weaviate API on 8080, gRPC on {}", 
                   config.http_port, config.grpc_port);
     
     Ok(ServerHandle {

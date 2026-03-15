@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 use tracing::{error, info, warn};
 
 use crate::{
@@ -47,9 +48,13 @@ pub fn create_qdrant_router(state: QdrantState) -> Router {
         request_logging_middleware, timeout_middleware, request_size_limit_middleware
     };
     
-    // Create rate limiter
+    // Create rate limiter with high limits for performance testing
     let rate_limiter = Arc::new(crate::api::middleware::RateLimiter::new(
-        crate::api::middleware::RateLimitConfig::default()
+        crate::api::middleware::RateLimitConfig {
+            max_requests: 100000, // 100K requests per minute for testing
+            window_duration: Duration::from_secs(60),
+            sliding_window: true,
+        }
     ));
     
     Router::new()

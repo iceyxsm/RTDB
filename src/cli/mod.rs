@@ -97,9 +97,54 @@ impl CliHandler {
     }
 
     /// Start the server
-    async fn start(&self, _daemon: bool) -> Result<()> {
+    async fn start(&self, daemon: bool) -> Result<()> {
+        use crate::api::{start_all, ApiConfig};
+        use crate::collection::CollectionManager;
+        use crate::observability::{MetricsCollector, HealthChecker};
+        use std::sync::Arc;
+        
         println!("Starting RTDB server...");
-        println!("Server started successfully!");
+        
+        // Initialize tracing
+        tracing_subscriber::fmt()
+            .with_env_filter("rtdb=info,warn")
+            .init();
+        
+        // Create core components
+        let collections = Arc::new(CollectionManager::new("./data")?);
+        let metrics = Arc::new(MetricsCollector::new("rtdb".to_string(), "0.1.0".to_string()));
+        let health = Arc::new(HealthChecker::new());
+        
+        // Configure API server with completely unique ports
+        let api_config = ApiConfig {
+            http_port: 8333,  // Changed to 8333
+            grpc_port: 8334,  // Changed to 8334
+            metrics_bind: "0.0.0.0:8090".to_string(),  // Changed to 8090
+            enable_cors: true,
+            api_key: None,
+        };
+        
+        // Start all servers
+        let server_handle = start_all(api_config, collections, metrics, health).await?;
+        
+        println!("✓ RTDB server started successfully!");
+        println!("  - Qdrant-compatible REST API: http://localhost:{}", server_handle.rest_port);
+        println!("  - Milvus-compatible API: http://localhost:18530");  // Changed to 18530
+        println!("  - Weaviate-compatible API: http://localhost:8080");  // Changed to 8080
+        println!("  - gRPC API: http://localhost:{}", server_handle.grpc_port);
+        println!("  - Metrics: http://localhost:{}", server_handle.metrics_port);
+        
+        if daemon {
+            println!("Running in daemon mode...");
+            // Keep the server running
+            tokio::signal::ctrl_c().await.expect("Failed to listen for ctrl+c");
+            println!("Shutting down...");
+        } else {
+            println!("Press Ctrl+C to stop the server");
+            tokio::signal::ctrl_c().await.expect("Failed to listen for ctrl+c");
+            println!("Server stopped.");
+        }
+        
         Ok(())
     }
 

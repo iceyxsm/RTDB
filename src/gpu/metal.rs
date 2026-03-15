@@ -164,6 +164,8 @@ kernel void batch_cosine_distance_kernel(
 }
 "#;
 
+use crate::gpu::GPUBackend;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -173,7 +175,7 @@ mod tests {
         let result = detect_metal_capabilities();
         match result {
             Ok(caps) => {
-                assert_eq!(caps.backend, GPUBackendEnum::Metal);
+                assert_eq!(caps.backend, GPUBackend::Metal);
                 assert!(caps.device_count > 0);
             }
             Err(_) => {
