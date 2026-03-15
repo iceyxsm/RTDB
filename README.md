@@ -1,6 +1,6 @@
-# RTDB - Production-Grade Smart Vector Database
+# RTDB - Smart Vector Database
 
-**The fastest, most efficient vector database for edge computing and production workloads.**
+**A Fast and efficient vector database for edge computing and production workloads.**
 
 RTDB is a next-generation vector database written in Rust that delivers **sub-5ms P99 latency**, **zero-dependency deployment**, and **intelligent retrieval without AI models**. Built for production with enterprise-grade clustering, observability, and drop-in compatibility with Qdrant, Milvus, and Weaviate.
 
