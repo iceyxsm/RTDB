@@ -31,6 +31,7 @@ pub mod wasm;
 pub mod multimodal;
 pub mod client;
 pub mod cross_region;
+pub mod streaming;
 // pub mod k8s;
 // pub mod sdk;
 // pub mod testing;
