@@ -464,9 +464,9 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Support
 
-- 📖 [Documentation](https://github.com/iceyxsm/RTDB/tree/main/sdk/javascript)
-- 🐛 [Issue Tracker](https://github.com/iceyxsm/RTDB/issues)
-- 💬 [Discussions](https://github.com/iceyxsm/RTDB/discussions)
+-  [Documentation](https://github.com/iceyxsm/RTDB/tree/main/sdk/javascript)
+-  [Issue Tracker](https://github.com/iceyxsm/RTDB/issues)
+-  [Discussions](https://github.com/iceyxsm/RTDB/discussions)
 
 ## Related Projects
 

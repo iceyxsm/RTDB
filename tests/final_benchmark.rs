@@ -80,7 +80,7 @@ async fn final_comprehensive_benchmark() {
         ultra_read_ops, direct_read_ops, ultra_read_ops / direct_read_ops);
     println!("╚═══════════════════╧══════════════╧════════════╧══════════════╝");
     
-    println!("\n✅ BENCHMARK COMPLETE");
+    println!("\n BENCHMARK COMPLETE");
     println!("   Ultra-fast client: {:.0}x faster for writes", ultra_write_ops / direct_write_ops);
     println!("   Ultra-fast client: {:.1}x faster for reads", ultra_read_ops / direct_read_ops);
 }

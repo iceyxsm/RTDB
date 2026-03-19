@@ -40,20 +40,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             
             // Validate performance expectations
             if result.throughput_ops_per_sec > 100.0 {
-                println!("✅ PERFORMANCE VALIDATION PASSED: {:.2} ops/sec > 100 ops/sec", result.throughput_ops_per_sec);
+                println!(" PERFORMANCE VALIDATION PASSED: {:.2} ops/sec > 100 ops/sec", result.throughput_ops_per_sec);
             } else {
-                println!("❌ PERFORMANCE VALIDATION FAILED: {:.2} ops/sec < 100 ops/sec", result.throughput_ops_per_sec);
+                println!(" PERFORMANCE VALIDATION FAILED: {:.2} ops/sec < 100 ops/sec", result.throughput_ops_per_sec);
             }
             
             if result.linearizability_result.is_linearizable {
-                println!("✅ CONSISTENCY VALIDATION PASSED: No linearizability violations");
+                println!(" CONSISTENCY VALIDATION PASSED: No linearizability violations");
             } else {
-                println!("❌ CONSISTENCY VALIDATION FAILED: {} violations found", 
+                println!(" CONSISTENCY VALIDATION FAILED: {} violations found",
                         result.linearizability_result.violations.len());
             }
         }
         Err(e) => {
-            eprintln!("❌ Jepsen test failed: {}", e);
+            eprintln!(" Jepsen test failed: {}", e);
             std::process::exit(1);
         }
     }

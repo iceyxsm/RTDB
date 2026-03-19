@@ -77,7 +77,7 @@ async fn test_performance_comparison() {
         "Direct client should achieve reasonable performance: write >100 ops/sec OR read >10,000 ops/sec",
     );
     
-    println!("\n✅ Performance test passed!");
+    println!("\n Performance test passed!");
     println!("   Note: Debug mode has ~10-50x lower performance than release mode.");
     println!("   Expected release mode performance: 10,000+ ops/sec");
 }

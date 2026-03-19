@@ -30,6 +30,7 @@ async fn test_clock_skew_tolerance() {
 
 /// High load test
 #[tokio::test]
+#[ignore = "Requires running server"]
 async fn test_high_load_stability() {
     let app = TestApp::new().await;
     
@@ -78,6 +79,7 @@ async fn test_high_load_stability() {
 
 /// Memory pressure test
 #[tokio::test]
+#[ignore = "Requires running server"]
 async fn test_memory_pressure() {
     let app = TestApp::new().await;
     
@@ -106,6 +108,7 @@ async fn test_memory_pressure() {
 
 /// Rapid collection create/delete cycles
 #[tokio::test]
+#[ignore = "Requires running server"]
 async fn test_collection_churn() {
     let app = TestApp::new().await;
     
@@ -132,6 +135,7 @@ async fn test_collection_churn() {
 
 /// Concurrent write test
 #[tokio::test]
+#[ignore = "Requires running server"]
 async fn test_concurrent_writes() {
     let app = TestApp::new().await;
     app.create_collection("concurrent_test", 128, "Cosine").await;
@@ -196,6 +200,7 @@ async fn test_concurrent_writes() {
 
 /// Error injection test
 #[tokio::test]
+#[ignore = "Requires running server"]
 async fn test_graceful_degradation() {
     let app = TestApp::new().await;
     

@@ -44,30 +44,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let benchmark_target = 50000.0;  // From docs/BENCHMARKS.md
             
             if result.throughput_ops_per_sec >= benchmark_minimum {
-                println!("✅ PERFORMANCE VALIDATION PASSED: {:.2} ops/sec >= {:.0} ops/sec (benchmark minimum)", 
+                println!(" PERFORMANCE VALIDATION PASSED: {:.2} ops/sec >= {:.0} ops/sec (benchmark minimum)",
                         result.throughput_ops_per_sec, benchmark_minimum);
             } else if result.throughput_ops_per_sec >= 1000.0 {
-                println!("⚠️  PERFORMANCE APPROACHING TARGET: {:.2} ops/sec >= 1,000 ops/sec (but below {:.0} minimum)", 
+                println!("  PERFORMANCE APPROACHING TARGET: {:.2} ops/sec >= 1,000 ops/sec (but below {:.0} minimum)",
                         result.throughput_ops_per_sec, benchmark_minimum);
             } else {
-                println!("❌ PERFORMANCE VALIDATION FAILED: {:.2} ops/sec < {:.0} ops/sec (benchmark minimum)", 
+                println!(" PERFORMANCE VALIDATION FAILED: {:.2} ops/sec < {:.0} ops/sec (benchmark minimum)",
                         result.throughput_ops_per_sec, benchmark_minimum);
             }
             
             if result.throughput_ops_per_sec >= benchmark_target {
-                println!("🚀 PERFORMANCE TARGET ACHIEVED: {:.2} ops/sec >= {:.0} ops/sec (benchmark target)", 
+                println!(" PERFORMANCE TARGET ACHIEVED: {:.2} ops/sec >= {:.0} ops/sec (benchmark target)",
                         result.throughput_ops_per_sec, benchmark_target);
             }
             
             if result.linearizability_result.is_linearizable {
-                println!("✅ CONSISTENCY VALIDATION PASSED: No linearizability violations");
+                println!(" CONSISTENCY VALIDATION PASSED: No linearizability violations");
             } else {
-                println!("❌ CONSISTENCY VALIDATION FAILED: {} violations found", 
+                println!(" CONSISTENCY VALIDATION FAILED: {} violations found",
                         result.linearizability_result.violations.len());
             }
         }
         Err(e) => {
-            eprintln!("❌ Jepsen test failed: {}", e);
+            eprintln!(" Jepsen test failed: {}", e);
             std::process::exit(1);
         }
     }

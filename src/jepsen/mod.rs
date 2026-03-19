@@ -1495,31 +1495,31 @@ mod direct_lookup_tests {
         // Try to create a client (may fail if server not running)
         match RtdbClient::new_optimized(config).await {
             Ok(client) => {
-                println!("✅ Client created successfully");
+                println!(" Client created successfully");
 
                 // Test direct point lookup method exists and is callable
                 match client.get_point_by_id("test_collection", "1").await {
-                    Ok(_) => println!("✅ Direct point lookup method works"),
-                    Err(e) => println!("⚠️  Direct point lookup failed (expected if server not running): {}", e),
+                    Ok(_) => println!(" Direct point lookup method works"),
+                    Err(e) => println!("  Direct point lookup failed (expected if server not running): {}", e),
                 }
             }
             Err(e) => {
-                println!("⚠️  Client creation failed (expected if server not running): {}", e);
+                println!("  Client creation failed (expected if server not running): {}", e);
             }
         }
 
         // Verify that execute_operation_optimized uses get_point_by_id for reads
-        println!("✅ Code analysis confirms:");
+        println!(" Code analysis confirms:");
         println!("  - Read operations use client.get_point_by_id()");
         println!("  - Direct HTTP GET to /collections/{{name}}/points/{{id}}");
         println!("  - No dummy vector creation for point reads");
         println!("  - O(1) retrieval from storage engine");
 
         println!("=== TASK 3.2 IMPLEMENTATION STATUS ===");
-        println!("✅ Direct point lookup API is ALREADY IMPLEMENTED");
-        println!("✅ Search API replaced with direct HTTP GET requests");
-        println!("✅ get_point_by_id method used instead of search()");
-        println!("✅ Dummy vector creation eliminated");
-        println!("✅ O(1) point retrieval achieved");
+        println!(" Direct point lookup API is ALREADY IMPLEMENTED");
+        println!(" Search API replaced with direct HTTP GET requests");
+        println!(" get_point_by_id method used instead of search()");
+        println!(" Dummy vector creation eliminated");
+        println!(" O(1) point retrieval achieved");
     }
 }
