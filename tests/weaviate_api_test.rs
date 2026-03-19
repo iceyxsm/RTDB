@@ -185,7 +185,7 @@ async fn test_object_management() {
     assert_eq!(object["class"], "Article");
     
     // Update the object
-    let mut updated_object = test_object.clone();
+    let mut updated_object = serde_json::from_value::<WeaviateObject>(serde_json::to_value(&test_object).unwrap()).unwrap();
     updated_object.properties = json!({
         "title": "Updated Test Article",
         "content": "This is an updated test article about vector databases."
@@ -279,7 +279,7 @@ async fn test_graphql_get_query() {
         .method("POST")
         .uri("/v1/graphql")
         .header("content-type", "application/json")
-        .body(Body::from(serde_json::to_string(&graphql_query).unwrap()))
+        .body(Body::from(serde_json::to_string(&serde_json::json!({"query": graphql_query.query, "variables": graphql_query.variables, "operationName": graphql_query.operation_name})).unwrap()))
         .unwrap();
     
     let response = router.clone().oneshot(request).await.unwrap();
@@ -331,7 +331,7 @@ async fn test_graphql_aggregate_query() {
         .method("POST")
         .uri("/v1/graphql")
         .header("content-type", "application/json")
-        .body(Body::from(serde_json::to_string(&graphql_query).unwrap()))
+        .body(Body::from(serde_json::to_string(&serde_json::json!({"query": graphql_query.query, "variables": graphql_query.variables, "operationName": graphql_query.operation_name})).unwrap()))
         .unwrap();
     
     let response = router.oneshot(request).await.unwrap();
@@ -477,7 +477,7 @@ async fn test_error_handling() {
         .method("POST")
         .uri("/v1/graphql")
         .header("content-type", "application/json")
-        .body(Body::from(serde_json::to_string(&graphql_query).unwrap()))
+        .body(Body::from(serde_json::to_string(&serde_json::json!({"query": graphql_query.query, "variables": graphql_query.variables, "operationName": graphql_query.operation_name})).unwrap()))
         .unwrap();
     
     let response = router.clone().oneshot(request).await.unwrap();

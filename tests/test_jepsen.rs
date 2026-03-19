@@ -25,7 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  - Duration: {}s", config.test_duration_secs);
     println!("  - Rate: {} ops/sec per client", config.operation_rate);
     println!("  - SIMDX: {}", config.enable_simdx);
-    println!("  - Expected total ops: ~{}", config.client_count * config.operation_rate * config.test_duration_secs);
+    println!("  - Expected total ops: ~{}", config.client_count * (config.operation_rate as usize) * (config.test_duration_secs as usize));
 
     // Test against localhost (RTDB server is running on port 8333)
     let cluster_nodes = vec![

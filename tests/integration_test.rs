@@ -66,7 +66,7 @@ async fn test_advanced_quantization() {
     let mut quantizer = AdvancedQuantizer::new(config, simdx_engine);
     
     // Generate test training data
-    let training_vectors: Vec<Vec<f32>> = (0..100)
+    let training_vectors: Vec<Vec<f32>> = (0..2048)
         .map(|i| {
             (0..128)
                 .map(|j| ((i * 128 + j) as f32).sin())
@@ -75,14 +75,14 @@ async fn test_advanced_quantization() {
         .collect();
     
     // Add training data
-    quantizer.add_training_data(training_vectors).expect("Failed to add training data");
+    quantizer.add_training_data(training_vectors.clone()).expect("Failed to add training data");
     
     // Train quantizer
     quantizer.train().expect("Training failed");
     println!("Quantization training completed");
     
     // Test quantization
-    let test_vector = &quantizer.training_data.as_ref().unwrap()[0];
+    let test_vector = &training_vectors[0];
     let quantized = quantizer.quantize(test_vector).expect("Quantization failed");
     
     println!("Original vector length: {}", test_vector.len());

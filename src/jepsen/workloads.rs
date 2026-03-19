@@ -6,7 +6,7 @@
 //! - Bank workload (transaction testing)
 //! - Counter workload (increment operations)
 
-use super::{OperationType, TransactionOp, WorkloadType};
+use super::{OperationType, TransactionOp};
 use rand::Rng;
 use serde_json::Value;
 
@@ -14,7 +14,20 @@ use serde_json::Value;
 /// 
 /// Workloads define the pattern of operations to be executed during testing,
 /// including operation generation, naming, and expected consistency models.
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WorkloadType {
+    Register,
+    Set,
+    Append,
+    ReadWrite,
+    Bank,
+    Counter,
+    List,
+}
+
 pub trait Workload: Send + Sync {
+
     /// Generate a random operation based on workload characteristics
     fn generate_operation(&self, rng: &mut dyn rand::RngCore) -> OperationType;
     

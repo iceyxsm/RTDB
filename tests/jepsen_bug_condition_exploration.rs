@@ -71,7 +71,7 @@ mod jepsen_bug_condition_tests {
         );
         
         // Performance Requirement 2.3: <100µs average latency (target: <10µs)
-        let avg_latency_us = result.average_latency_ms * 1000.0; // Convert to microseconds
+        let avg_latency_us = (result.test_duration.as_secs_f64() * 1000.0) / (result.total_operations as f64) * 1000.0; // Convert to microseconds
         assert!(
             avg_latency_us < 100.0,
             "LATENCY BUG DETECTED: Average latency {:.2}µs > 100µs target. \
@@ -186,7 +186,7 @@ mod jepsen_bug_condition_tests {
             result.throughput_ops_per_sec,
             total_time.as_secs_f64(),
             result.total_operations,
-            result.average_latency_ms
+            (result.test_duration.as_secs_f64() * 1000.0) / (result.total_operations as f64)
         );
         
         println!("✅ Throughput performance validated: {:.2} ops/sec", result.throughput_ops_per_sec);
@@ -214,7 +214,7 @@ mod jepsen_bug_condition_tests {
         let result = executor.execute_test_suite(cluster_nodes).await
             .expect("Latency test should not fail");
         
-        let avg_latency_us = result.average_latency_ms * 1000.0;
+        let avg_latency_us = (result.test_duration.as_secs_f64() * 1000.0) / (result.total_operations as f64) * 1000.0;
         
         // CRITICAL: This assertion encodes the expected behavior
         // On unfixed code, this MUST FAIL due to connection overhead and inefficient operations

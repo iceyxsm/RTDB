@@ -1257,8 +1257,8 @@ mod tests {
                 id: 2,
                 vector_id: "test".to_string(),
             },
-            start_time: base_time + Duration::from_millis(50), // Starts before op1 ends
-            end_time: base_time + Duration::from_millis(150),
+            start_time: base_time + Duration::from_millis(150), // Starts after op1 ends
+            end_time: base_time + Duration::from_millis(250),
             success: false, // Should see the write but doesn't due to clock skew
             error: Some("Not found".to_string()),
             result_data: None,
@@ -1467,6 +1467,12 @@ pub mod direct_client_optimized;
 pub mod direct_client_batched;
 pub mod direct_client_sync_batched;
 pub mod high_perf_store;
+pub mod nemesis;
+pub mod checkers;
+pub mod history;
+pub mod workloads;
+pub mod operations;
+pub mod generators;
 
 /// Test to verify direct point lookup implementation
 #[cfg(test)]

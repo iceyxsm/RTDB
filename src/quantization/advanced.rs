@@ -504,10 +504,9 @@ impl AdvancedQuantizer {
 
     /// Reconstruct vector from codes
     pub fn reconstruct_vector(&self, codes: &[usize]) -> Result<Vec<f32>, QuantizationError> {
-        if codes.len() != self.config.num_codebooks {
-            return Err(QuantizationError::QuantizationFailed {
-                reason: format!("Expected {} codes, got {}", self.config.num_codebooks, codes.len()),
-            });
+        // Allow partial reconstruction for beam search
+        if codes.len() > self.config.num_codebooks {
+            return Err(QuantizationError::QuantizationFailed { reason: "Too many codes".to_string() });
         }
 
         match self.config.method {
