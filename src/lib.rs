@@ -23,7 +23,7 @@ pub mod distance;
 pub mod quantization;
 pub mod filter;
 pub mod migration;
-pub mod jepsen;
+
 pub mod simdx;
 pub mod gpu;
 pub mod replication;

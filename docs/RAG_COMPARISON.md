@@ -151,11 +151,11 @@ let smart_results = db.smart_search(SmartSearchRequest {
 
 | Database | Score   | Notes                            |
 |----------|---------|----------------------------------|
-| **RTDB**   | ★★★★★   | 5ms retrieval + fast filtering   |
-| Pinecone   | ★★★★☆   | Good but slower, costly at scale |
-| Weaviate   | ★★★★☆   | Good quality, higher latency     |
-| Qdrant     | ★★★★☆   | Good balance                     |
-| Chroma     | ★★★☆☆   | Too slow for real-time           |
+| **RTDB**   |    | 5ms retrieval + fast filtering   |
+| Pinecone   |    | Good but slower, costly at scale |
+| Weaviate   |    | Good quality, higher latency     |
+| Qdrant     |    | Good balance                     |
+| Chroma     |    | Too slow for real-time           |
 
 ### Scenario 2: Internal Knowledge Base
 
@@ -163,11 +163,11 @@ let smart_results = db.smart_search(SmartSearchRequest {
 
 | Database | Score   | Notes                              |
 |----------|---------|------------------------------------|
-| **RTDB**   | ★★★★★   | RBAC + metadata filtering built-in |
-| Weaviate   | ★★★★★   | Excellent for document search      |
-| Qdrant     | ★★★★☆   | Good metadata support              |
-| Pinecone   | ★★★☆☆   | Metadata filtering limited         |
-| Chroma     | ★★★☆☆   | OK for small scale                 |
+| **RTDB**   |    | RBAC + metadata filtering built-in |
+| Weaviate   |    | Excellent for document search      |
+| Qdrant     |    | Good metadata support              |
+| Pinecone   |    | Metadata filtering limited         |
+| Chroma     |    | OK for small scale                 |
 
 ### Scenario 3: AI Code Assistant
 
@@ -175,11 +175,11 @@ let smart_results = db.smart_search(SmartSearchRequest {
 
 | Database | Score   | Notes                                  |
 |----------|---------|----------------------------------------|
-| **RTDB**   | ★★★★★   | <5ms enables real-time suggestions     |
-| Qdrant     | ★★★★☆   | Good performance                       |
-| Pinecone   | ★★★★☆   | Good but expensive for large codebases |
-| Weaviate   | ★★★☆☆   | Higher latency noticeable              |
-| Chroma     | ★★☆☆☆   | Not suitable                           |
+| **RTDB**   |    | <5ms enables real-time suggestions     |
+| Qdrant     |    | Good performance                       |
+| Pinecone   |    | Good but expensive for large codebases |
+| Weaviate   |    | Higher latency noticeable              |
+| Chroma     |    | Not suitable                           |
 
 ### Scenario 4: E-commerce Product Search
 
@@ -187,11 +187,11 @@ let smart_results = db.smart_search(SmartSearchRequest {
 
 | Database | Score   | Notes                           |
 |----------|---------|---------------------------------|
-| Weaviate   | ★★★★★   | Multi-modal support             |
-| Milvus     | ★★★★★   | GPU for image vectors           |
-| **RTDB**   | ★★★★☆   | Fast text search, image planned |
-| Pinecone   | ★★★★☆   | Good hybrid support             |
-| Qdrant     | ★★★★☆   | Good for text                   |
+| Weaviate   |    | Multi-modal support             |
+| Milvus     |    | GPU for image vectors           |
+| **RTDB**   |    | Fast text search, image planned |
+| Pinecone   |    | Good hybrid support             |
+| Qdrant     |    | Good for text                   |
 
 ---
 
@@ -262,14 +262,14 @@ let smart_results = db.smart_search(SmartSearchRequest {
 │                      User Query                             │
 │              "What's the refund policy?"                    │
 └───────────────────────┬─────────────────────────────────────┘
-                        ▼
+
 ┌─────────────────────────────────────────────────────────────┐
 │                   Query Intelligence                        │
 │  ┌──────────────┬──────────────┬──────────────────────────┐ │
 │  │ Intent: FAQ  │ Entity: Refund│ Expanded: return policy │ │
 │  └──────────────┴──────────────┴──────────────────────────┘ │
 └───────────────────────┬─────────────────────────────────────┘
-                        ▼
+
 ┌─────────────────────────────────────────────────────────────┐
 │                   Hybrid Search                             │
 │  ┌──────────────┬──────────────┬──────────────────────────┐ │
@@ -277,19 +277,19 @@ let smart_results = db.smart_search(SmartSearchRequest {
 │  │ vectors      │ "refund"     │ + user_permissions       │ │
 │  └──────────────┴──────────────┴──────────────────────────┘ │
 └───────────────────────┬─────────────────────────────────────┘
-                        ▼
+
 ┌─────────────────────────────────────────────────────────────┐
 │                   Reranking                                 │
 │  ┌────────────────────────────────────────────────────────┐ │
 │  │  Cross-encoder scores + intent relevance scores         │ │
 │  └────────────────────────────────────────────────────────┘ │
 └───────────────────────┬─────────────────────────────────────┘
-                        ▼
+
 ┌─────────────────────────────────────────────────────────────┐
 │                   Context Assembly                          │
 │  Top-K chunks -> Format for LLM -> Send to OpenAI/Local       │
 └─────────────────────────────────────────────────────────────┘
-                        ▼
+
 ┌─────────────────────────────────────────────────────────────┐
 │                   Generated Response                        │
 │  "You can request a refund within 30 days of purchase..."   │
@@ -309,7 +309,7 @@ Total Latency: <50ms (search) + LLM time
 - Self-hosted or edge deployment
 - Zero external dependencies desired
 
-**Overall RAG Score:** ★★★★★ (4.8/5)
+**Overall RAG Score:**  (4.8/5)
 - Retrieval Quality: 4.5/5
 - Latency: 5/5
 - Cost Efficiency: 5/5

@@ -144,7 +144,7 @@ helm install rtdb ./helm/rtdb \
 | Binary (BQ) | 32x | <2% | 1.2x |
 | Scalar (SQ) | 4x | <0.2% | 0.9x |
 
-## 🛠 Production Deployment Guide
+##  Production Deployment Guide
 
 ### 1. Kubernetes Deployment
 

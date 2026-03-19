@@ -48,31 +48,31 @@
 ### Performance Leaders (P99 Latency)
 
 ```
-1. RTDB         <5ms    ★★★★★
-2. Qdrant      ~10ms    ★★★★☆
-3. Weaviate    ~15ms    ★★★☆☆
-4. Milvus      ~20ms    ★★★☆☆
-5. LanceDB     ~50ms    ★★☆☆☆
+1. RTDB         <5ms
+2. Qdrant      ~10ms
+3. Weaviate    ~15ms
+4. Milvus      ~20ms
+5. LanceDB     ~50ms
 ```
 
 ### Memory Efficiency Leaders
 
 ```
-1. LanceDB      400MB/1M  ★★★★★
-2. RTDB         500MB/1M  ★★★★☆
-3. Qdrant       700MB/1M  ★★★☆☆
-4. Milvus      1000MB/1M  ★★☆☆☆
-5. Weaviate    1500MB/1M  ★☆☆☆☆
+1. LanceDB      400MB/1M
+2. RTDB         500MB/1M
+3. Qdrant       700MB/1M
+4. Milvus      1000MB/1M
+5. Weaviate    1500MB/1M
 ```
 
 ### Deployment Simplicity
 
 ```
-1. RTDB         Single 15MB binary, zero deps    ★★★★★
-2. LanceDB      Single 50MB binary               ★★★★☆
-3. Qdrant       Single 100MB binary              ★★★★☆
-4. Weaviate     Docker or binary + deps          ★★★☆☆
-5. Milvus       Requires K8s + etcd + MinIO      ★☆☆☆☆
+1. RTDB         Single 15MB binary, zero deps
+2. LanceDB      Single 50MB binary
+3. Qdrant       Single 100MB binary
+4. Weaviate     Docker or binary + deps
+5. Milvus       Requires K8s + etcd + MinIO
 ```
 
 ---
@@ -105,12 +105,12 @@
 
 | Use Case         | RTDB Fit | Notes                                    |
 |------------------|------------|----------------------------------------|
-| Edge/IoT Devices | ★★★★★    | Small binary, low memory               |
-| Real-time Apps   | ★★★★      | <5ms P99 latency                      |
-| Embedded Systems | ★★★★★    | Zero dependencies                      |
-| Semantic Search  | ★★★★☆    | Good, Weaviate has more NLP features   |
-| 10B+ Vectors     | ★★★☆☆    | Needs distributed mode                 |
-| Analytics        | ★★★☆☆    | LanceDB more optimized for this        |
+| Edge/IoT Devices |     | Small binary, low memory               |
+| Real-time Apps   |       | <5ms P99 latency                      |
+| Embedded Systems |     | Zero dependencies                      |
+| Semantic Search  |     | Good, Weaviate has more NLP features   |
+| 10B+ Vectors     |     | Needs distributed mode                 |
+| Analytics        |     | LanceDB more optimized for this        |
 
 ---
 

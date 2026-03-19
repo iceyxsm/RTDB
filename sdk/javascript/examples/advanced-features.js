@@ -31,7 +31,7 @@ async function advancedExample() {
       quantization_config: ConfigHelper.scalarQuantization(0.95),
       on_disk_payload: false
     });
-    console.log('✓ Created collection with advanced configuration');
+    console.log(' Created collection with advanced configuration');
 
     // 2. Batch operations with large datasets
     console.log('\n--- Batch Operations ---');
@@ -64,7 +64,7 @@ async function advancedExample() {
       }
     });
 
-    console.log(`✓ Batch insert completed in ${insertDuration.toFixed(2)}ms`);
+    console.log(` Batch insert completed in ${insertDuration.toFixed(2)}ms`);
     console.log(`  Average: ${(insertDuration / batchSize).toFixed(2)}ms per point`);
 
     // Wait for indexing
@@ -100,7 +100,7 @@ async function advancedExample() {
       score_threshold: 0.1
     });
 
-    console.log(`✓ Complex search returned ${complexSearchResults.result.length} results`);
+    console.log(` Complex search returned ${complexSearchResults.result.length} results`);
     console.log('  Sample results:');
     complexSearchResults.result.slice(0, 3).forEach((result, index) => {
       console.log(`    ${index + 1}. Score: ${result.score.toFixed(4)}, Category: ${result.payload?.category}, Important: ${result.payload?.metadata?.is_important}`);
@@ -120,7 +120,7 @@ async function advancedExample() {
       });
     });
 
-    console.log(`✓ Batch search (${queryVectors.length} queries) completed in ${batchDuration.toFixed(2)}ms`);
+    console.log(` Batch search (${queryVectors.length} queries) completed in ${batchDuration.toFixed(2)}ms`);
     console.log(`  Average: ${(batchDuration / queryVectors.length).toFixed(2)}ms per query`);
 
     // 5. Advanced query with prefetch
@@ -143,7 +143,7 @@ async function advancedExample() {
       with_payload: true
     });
 
-    console.log(`✓ Advanced query with prefetch returned ${advancedQuery.result.length} results`);
+    console.log(` Advanced query with prefetch returned ${advancedQuery.result.length} results`);
 
     // 6. Scroll through large result sets
     console.log('\n--- Scrolling Through Results ---');
@@ -173,7 +173,7 @@ async function advancedExample() {
       }
     }
 
-    console.log(`✓ Scrolled through ${totalScrolled} points total`);
+    console.log(` Scrolled through ${totalScrolled} points total`);
 
     // 7. Performance benchmarking
     console.log('\n--- Performance Benchmarking ---');
@@ -189,7 +189,7 @@ async function advancedExample() {
       10
     );
 
-    console.log(`✓ ${searchBenchmark.name}:`);
+    console.log(` ${searchBenchmark.name}:`);
     console.log(`  Average: ${searchBenchmark.avgDuration.toFixed(2)}ms`);
     console.log(`  Min: ${searchBenchmark.minDuration.toFixed(2)}ms`);
     console.log(`  Max: ${searchBenchmark.maxDuration.toFixed(2)}ms`);
@@ -208,21 +208,21 @@ async function advancedExample() {
     }
     const rateLimitedDuration = Date.now() - rateLimitedStart;
     
-    console.log(`✓ Rate-limited 5 searches completed in ${rateLimitedDuration}ms`);
+    console.log(` Rate-limited 5 searches completed in ${rateLimitedDuration}ms`);
     console.log(`  Expected ~400ms for 10 RPS limit, actual: ${rateLimitedDuration}ms`);
 
     // 9. Snapshot operations
     console.log('\n--- Snapshot Operations ---');
     const snapshotName = await client.createSnapshot(collectionName);
-    console.log(`✓ Created snapshot: ${snapshotName}`);
+    console.log(` Created snapshot: ${snapshotName}`);
 
     const snapshots = await client.listSnapshots(collectionName);
-    console.log(`✓ Collection has ${snapshots.length} snapshots`);
+    console.log(` Collection has ${snapshots.length} snapshots`);
 
     // 10. Collection statistics
     console.log('\n--- Collection Statistics ---');
     const collectionInfo = await client.getCollection(collectionName);
-    console.log(`✓ Collection statistics:`);
+    console.log(` Collection statistics:`);
     console.log(`  Vectors: ${collectionInfo.vectors_count}`);
     console.log(`  Points: ${collectionInfo.points_count}`);
     console.log(`  Segments: ${collectionInfo.segments_count}`);
@@ -241,19 +241,19 @@ async function advancedExample() {
       wait: true
     });
 
-    console.log(`✓ Deleted points with operation ID: ${deleteResponse.operation_id}`);
+    console.log(` Deleted points with operation ID: ${deleteResponse.operation_id}`);
 
     // Final count
     const finalCount = await client.count(collectionName);
-    console.log(`✓ Final point count: ${finalCount}`);
+    console.log(` Final point count: ${finalCount}`);
 
     // Cleanup snapshot
     await client.deleteSnapshot(collectionName, snapshotName);
-    console.log(`✓ Deleted snapshot: ${snapshotName}`);
+    console.log(` Deleted snapshot: ${snapshotName}`);
 
     // Delete collection
     await client.deleteCollection(collectionName);
-    console.log(`✓ Deleted collection: ${collectionName}`);
+    console.log(` Deleted collection: ${collectionName}`);
 
     console.log('\n=== Advanced Demo Completed Successfully ===');
 

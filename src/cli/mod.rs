@@ -127,7 +127,7 @@ impl CliHandler {
         // Start all servers
         let server_handle = start_all(api_config, collections, metrics, health).await?;
         
-        println!("✓ RTDB server started successfully!");
+        println!(" RTDB server started successfully!");
         println!("  - Qdrant-compatible REST API: http://localhost:{}", server_handle.rest_port);
         println!("  - Milvus-compatible API: http://localhost:18530");  // Changed to 18530
         println!("  - Weaviate-compatible API: http://localhost:8080");  // Changed to 8080
@@ -171,7 +171,7 @@ impl CliHandler {
     async fn doctor(&self) -> Result<()> {
         println!("RTDB Health Diagnostics");
         println!("======================");
-        println!("✓ All checks passed!");
+        println!(" All checks passed!");
         Ok(())
     }
 
