@@ -103,7 +103,7 @@ mod jepsen_bug_condition_tests {
             expected_min_ops
         );
         
-        println!("✅ EXPECTED BEHAVIOR VALIDATED:");
+        println!(" EXPECTED BEHAVIOR VALIDATED:");
         println!("  - Throughput: {:.2} ops/sec (target: >10,000)", result.throughput_ops_per_sec);
         println!("  - Latency: {:.2}µs (target: <100µs)", avg_latency_us);
         println!("  - Consistency: {} violations (target: 0)", result.linearizability_result.violations.len());
@@ -147,7 +147,7 @@ mod jepsen_bug_condition_tests {
                 .collect::<Vec<_>>()
         );
         
-        println!("✅ ReadAfterWrite consistency validated: 0 violations");
+        println!(" ReadAfterWrite consistency validated: 0 violations");
     }
 
     /// Focused test for throughput performance degradation
@@ -189,7 +189,7 @@ mod jepsen_bug_condition_tests {
             (result.test_duration.as_secs_f64() * 1000.0) / (result.total_operations as f64)
         );
         
-        println!("✅ Throughput performance validated: {:.2} ops/sec", result.throughput_ops_per_sec);
+        println!(" Throughput performance validated: {:.2} ops/sec", result.throughput_ops_per_sec);
     }
 
     /// Test for latency performance degradation
@@ -226,6 +226,6 @@ mod jepsen_bug_condition_tests {
             avg_latency_us
         );
         
-        println!("✅ Latency performance validated: {:.2}µs average", avg_latency_us);
+        println!(" Latency performance validated: {:.2}µs average", avg_latency_us);
     }
 }

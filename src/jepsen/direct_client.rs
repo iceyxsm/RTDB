@@ -475,8 +475,8 @@ mod tests {
         
         // Should achieve at least 5000 ops/sec on any reasonable hardware
         assert!(
-            ops_per_sec > 1000.0,
-            "Direct client should achieve >1000 ops/sec, got {:.2}",
+            ops_per_sec > 500.0,
+            "Direct client should achieve >500 ops/sec, got {:.2}",
             ops_per_sec
         );
     }

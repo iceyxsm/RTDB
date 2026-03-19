@@ -11,7 +11,7 @@ use tokio;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    println!("🚀 RTDB Advanced Features Demo");
+    println!(" RTDB Advanced Features Demo");
     
     // Initialize configuration
     let config = Config::default()
@@ -36,12 +36,12 @@ async fn main() -> Result<()> {
     // Demo 4: Multi-Modal Search
     demo_multimodal_search(&client).await?;
     
-    println!("✅ All advanced features demonstrated successfully!");
+    println!(" All advanced features demonstrated successfully!");
     Ok(())
 }
 
 async fn demo_advanced_quantization(client: &RtdbClient) -> Result<()> {
-    println!("\n📊 Advanced Quantization Demo");
+    println!("\n Advanced Quantization Demo");
     
     // Configure different quantization strategies
     let quantization_configs = vec![
@@ -108,7 +108,7 @@ async fn demo_advanced_quantization(client: &RtdbClient) -> Result<()> {
 }
 
 async fn demo_cross_region_replication(client: &RtdbClient) -> Result<()> {
-    println!("\n🌍 Cross-Region Replication Demo");
+    println!("\n Cross-Region Replication Demo");
     
     // Initialize cross-region replicator
     let replicator = CrossRegionReplicator::new(vec![
@@ -146,7 +146,7 @@ async fn demo_cross_region_replication(client: &RtdbClient) -> Result<()> {
 }
 
 async fn demo_wasm_runtime(client: &RtdbClient) -> Result<()> {
-    println!("\n🔧 WebAssembly Runtime Demo");
+    println!("\n WebAssembly Runtime Demo");
     
     // Initialize WASM runtime
     let wasm_runtime = WasmRuntime::new().await?;
@@ -197,7 +197,7 @@ async fn demo_wasm_runtime(client: &RtdbClient) -> Result<()> {
 }
 
 async fn demo_multimodal_search(client: &RtdbClient) -> Result<()> {
-    println!("\n🎭 Multi-Modal Search Demo");
+    println!("\n Multi-Modal Search Demo");
     
     // Initialize multi-modal search engine
     let multimodal_engine = MultiModalSearchEngine::new().await?;

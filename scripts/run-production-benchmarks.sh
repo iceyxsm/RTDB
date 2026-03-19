@@ -22,7 +22,7 @@ NC='\033[0m' # No Color
 TARGET_P99_LATENCY_MS=5.0
 TARGET_QPS=50000
 
-echo -e "${BLUE}🚀 Starting RTDB Production Benchmark Suite${NC}"
+echo -e "${BLUE} Starting RTDB Production Benchmark Suite${NC}"
 echo "Timestamp: $(date)"
 echo "Target P99 Latency: <${TARGET_P99_LATENCY_MS}ms"
 echo "Target QPS: >${TARGET_QPS}"
@@ -56,12 +56,12 @@ run_benchmark() {
     local bench_name=$1
     local description=$2
     
-    echo -e "${YELLOW}📊 Running ${bench_name}...${NC}"
+    echo -e "${YELLOW} Running ${bench_name}...${NC}"
     echo "Description: ${description}"
     
     # Run benchmark
     if cargo bench --bench "${bench_name}" -- --output-format json > "${RESULTS_DIR}/${bench_name}_${TIMESTAMP}.json" 2>&1; then
-        echo -e "${GREEN}✅ ${bench_name} completed successfully${NC}"
+        echo -e "${GREEN} ${bench_name} completed successfully${NC}"
         
         # Add to report
         cat >> "${REPORT_FILE}" << EOF
@@ -75,12 +75,12 @@ $(cat "${RESULTS_DIR}/${bench_name}_${TIMESTAMP}.json" | tail -20)
 
 EOF
     else
-        echo -e "${RED}❌ ${bench_name} failed${NC}"
+        echo -e "${RED} ${bench_name} failed${NC}"
         cat >> "${REPORT_FILE}" << EOF
 ### ${bench_name}
 
 **Description:** ${description}  
-**Status:** ❌ FAILED
+**Status:**  FAILED
 
 EOF
     fi
@@ -90,7 +90,7 @@ EOF
 
 # Function to check performance targets
 check_performance_targets() {
-    echo -e "${BLUE}🎯 Checking Performance Targets${NC}"
+    echo -e "${BLUE} Checking Performance Targets${NC}"
     
     local passed=0
     local total=0
@@ -115,27 +115,27 @@ check_performance_targets() {
     echo "Performance targets: ${passed}/${total} passed"
     
     if [ $passed -eq $total ]; then
-        echo -e "${GREEN}🎉 All performance targets met!${NC}"
+        echo -e "${GREEN} All performance targets met!${NC}"
         cat >> "${REPORT_FILE}" << EOF
 
 ## Performance Target Results
 
-✅ **ALL TARGETS MET**
+ **ALL TARGETS MET**
 
-- P99 Latency: <${TARGET_P99_LATENCY_MS}ms ✅
-- QPS: >${TARGET_QPS} ✅
+- P99 Latency: <${TARGET_P99_LATENCY_MS}ms
+- QPS: >${TARGET_QPS}
 
 EOF
     else
-        echo -e "${RED}⚠️  Some performance targets not met${NC}"
+        echo -e "${RED}  Some performance targets not met${NC}"
         cat >> "${REPORT_FILE}" << EOF
 
 ## Performance Target Results
 
-⚠️ **TARGETS NOT MET**
+ **TARGETS NOT MET**
 
-- P99 Latency: <${TARGET_P99_LATENCY_MS}ms ❓
-- QPS: >${TARGET_QPS} ❓
+- P99 Latency: <${TARGET_P99_LATENCY_MS}ms
+- QPS: >${TARGET_QPS}
 
 EOF
     fi
@@ -143,7 +143,7 @@ EOF
 
 # Function to generate competitive comparison
 generate_competitive_comparison() {
-    echo -e "${BLUE}📈 Generating Competitive Comparison${NC}"
+    echo -e "${BLUE} Generating Competitive Comparison${NC}"
     
     cat >> "${REPORT_FILE}" << EOF
 
@@ -154,8 +154,8 @@ generate_competitive_comparison() {
 | P99 Latency (ms) | TBD | ~10-20 | ~15-30 | ~20-40 | ~5-15 |
 | Max QPS | TBD | ~30K | ~25K | ~15K | ~40K |
 | Memory Efficiency | TBD | Good | Fair | Fair | Excellent |
-| SIMD Optimization | ✅ AVX-512 | ✅ AVX2 | ✅ AVX2 | ❌ | ✅ AVX-512 |
-| Production Ready | TBD | ✅ | ✅ | ✅ | ✅ |
+| SIMD Optimization |  AVX-512 |  AVX2 |  AVX2 |  |  AVX-512 |
+| Production Ready | TBD |  |  |  |  |
 
 *Note: Competitor metrics are approximate and may vary based on configuration and workload.*
 
@@ -163,10 +163,10 @@ EOF
 }
 
 # Main benchmark execution
-echo -e "${BLUE}🔧 Building optimized release binary...${NC}"
+echo -e "${BLUE} Building optimized release binary...${NC}"
 RUSTFLAGS="-C target-cpu=native -C target-feature=+avx2,+fma" cargo build --release --features="grpc"
 
-echo -e "${GREEN}✅ Build completed${NC}"
+echo -e "${GREEN} Build completed${NC}"
 echo ""
 
 # Run individual benchmarks
@@ -230,24 +230,24 @@ nodeSelector:
 EOF
 
 # Final summary
-echo -e "${BLUE}📋 Benchmark Summary${NC}"
+echo -e "${BLUE} Benchmark Summary${NC}"
 echo "Results saved to: ${REPORT_FILE}"
 echo "Raw data in: ${RESULTS_DIR}/"
 echo ""
 
 if [ -f "${REPORT_FILE}" ]; then
-    echo -e "${GREEN}✅ Benchmark suite completed successfully${NC}"
+    echo -e "${GREEN} Benchmark suite completed successfully${NC}"
     echo "View the full report: cat ${REPORT_FILE}"
 else
-    echo -e "${RED}❌ Benchmark suite failed${NC}"
+    echo -e "${RED} Benchmark suite failed${NC}"
     exit 1
 fi
 
 # Optional: Open report in browser if available
 if command -v pandoc >/dev/null 2>&1; then
-    echo -e "${BLUE}📄 Converting report to HTML...${NC}"
+    echo -e "${BLUE} Converting report to HTML...${NC}"
     pandoc "${REPORT_FILE}" -o "${RESULTS_DIR}/benchmark_report_${TIMESTAMP}.html"
     echo "HTML report: ${RESULTS_DIR}/benchmark_report_${TIMESTAMP}.html"
 fi
 
-echo -e "${GREEN}🎉 Production benchmark suite completed!${NC}"
+echo -e "${GREEN} Production benchmark suite completed!${NC}"

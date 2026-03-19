@@ -132,11 +132,11 @@ Audit Summary:
 - Security Score: {:.1}/100
 
 Vulnerability Summary:
-- Critical: {} 🔴
-- High: {} 🟠  
-- Medium: {} 🟡
-- Low: {} 🔵
-- Info: {} ⚪
+- Critical: {}
+- High: {}
+- Medium: {}
+- Low: {}
+- Info: {}
 
 Detailed Findings:
 {}
@@ -186,23 +186,23 @@ Recommendations:
         let mut recommendations = Vec::new();
         
         if self.findings.iter().any(|f| f.severity >= Severity::High) {
-            recommendations.push("🔴 URGENT: Address all Critical and High severity vulnerabilities immediately");
+            recommendations.push(" URGENT: Address all Critical and High severity vulnerabilities immediately");
         }
         
         if self.findings.iter().any(|f| f.component.contains("auth")) {
-            recommendations.push("🔐 Review authentication and authorization mechanisms");
+            recommendations.push(" Review authentication and authorization mechanisms");
         }
         
         if self.findings.iter().any(|f| f.component.contains("input")) {
-            recommendations.push("🛡️ Implement comprehensive input validation and sanitization");
+            recommendations.push(" Implement comprehensive input validation and sanitization");
         }
         
         if self.security_score < 80.0 {
-            recommendations.push("📊 Security score below 80 - comprehensive security review recommended");
+            recommendations.push(" Security score below 80 - comprehensive security review recommended");
         }
         
         if recommendations.is_empty() {
-            recommendations.push("✅ No immediate security concerns identified");
+            recommendations.push(" No immediate security concerns identified");
         }
         
         recommendations.join("\n")

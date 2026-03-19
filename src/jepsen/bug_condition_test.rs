@@ -38,13 +38,13 @@ mod tests {
         // On fixed code: should pass
         match result {
             Ok(false) => {
-                println!("✅ Bug condition confirmed - test failed as expected on unfixed code");
+                println!(" Bug condition confirmed - test failed as expected on unfixed code");
             }
             Ok(true) => {
-                println!("⚠️  Unexpected: Test passed - bug may already be fixed or test needs adjustment");
+                println!("  Unexpected: Test passed - bug may already be fixed or test needs adjustment");
             }
             Err(e) => {
-                println!("❌ Test error: {}", e);
+                println!(" Test error: {}", e);
                 panic!("Test execution failed: {}", e);
             }
         }
@@ -90,10 +90,10 @@ async fn test_jepsen_performance_bug_condition(
                     result.linearizability_result.violations.len());
             
             if throughput_bug {
-                println!("🐛 CONFIRMED: Severe throughput degradation detected");
+                println!(" CONFIRMED: Severe throughput degradation detected");
             }
             if consistency_bug {
-                println!("🐛 CONFIRMED: Consistency violations detected");
+                println!(" CONFIRMED: Consistency violations detected");
                 for violation in &result.linearizability_result.violations {
                     println!("   - Violation: {:?}", violation);
                 }
@@ -109,7 +109,7 @@ async fn test_jepsen_performance_bug_condition(
             }
         }
         Err(e) => {
-            println!("❌ Test execution failed: {}", e);
+            println!(" Test execution failed: {}", e);
             Err(e)
         }
     }
@@ -124,13 +124,13 @@ async fn test_bug_condition_concrete_case() {
     // On unfixed code, this should fail (confirming bug exists)
     match result {
         Ok(false) => {
-            println!("✅ Bug condition confirmed - test failed as expected on unfixed code");
+            println!(" Bug condition confirmed - test failed as expected on unfixed code");
         }
         Ok(true) => {
-            println!("⚠️  Unexpected: Test passed - bug may already be fixed or test needs adjustment");
+            println!("  Unexpected: Test passed - bug may already be fixed or test needs adjustment");
         }
         Err(e) => {
-            println!("❌ Test error: {}", e);
+            println!(" Test error: {}", e);
         }
     }
 }

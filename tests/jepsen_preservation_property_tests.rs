@@ -89,7 +89,7 @@ mod jepsen_preservation_tests {
             avg_search_micros
         );
         
-        println!("✅ Vector search performance preserved: {:.2}µs average (baseline: ~4000µs, target: ~8.5µs)", avg_search_micros);
+        println!(" Vector search performance preserved: {:.2}µs average (baseline: ~4000µs, target: ~8.5µs)", avg_search_micros);
     }
     /// Property test that validates SIMDX acceleration performance is preserved
     /// 
@@ -154,7 +154,7 @@ mod jepsen_preservation_tests {
             speedup_ratio, avg_simdx_nanos, avg_scalar_nanos
         );
         
-        println!("✅ SIMDX acceleration preserved: {:.2}ns ({:.2}x speedup, baseline: ~305ns, target: 83ns)", 
+        println!(" SIMDX acceleration preserved: {:.2}ns ({:.2}x speedup, baseline: ~305ns, target: 83ns)",
                  avg_simdx_nanos, speedup_ratio);
     }
 
@@ -213,7 +213,7 @@ mod jepsen_preservation_tests {
             insertion_time
         );
         
-        println!("✅ Collection management preserved: creation {:?}, insertion {:?}", 
+        println!(" Collection management preserved: creation {:?}, insertion {:?}",
                  collection_creation_time, insertion_time);
     }
     /// Property test that validates non-Jepsen API endpoints maintain response times
@@ -295,7 +295,7 @@ mod jepsen_preservation_tests {
              This indicates the Jepsen fix has broken non-Jepsen operations."
         );
         
-        println!("✅ Non-Jepsen API endpoints preserved: search {:.2}µs, point retrieval {:?}", 
+        println!(" Non-Jepsen API endpoints preserved: search {:.2}µs, point retrieval {:?}",
                  avg_response_micros, point_retrieval_time);
     }
 
@@ -377,7 +377,7 @@ mod jepsen_preservation_tests {
             avg_cosine_nanos
         );
         
-        println!("✅ Distance calculations preserved: Euclidean {:.2}ns (baseline: ~511ns, target: 83ns), Dot {:.2}ns (target: 76ns), Cosine {:.2}ns (target: 257ns)", 
+        println!(" Distance calculations preserved: Euclidean {:.2}ns (baseline: ~511ns, target: 83ns), Dot {:.2}ns (target: 76ns), Cosine {:.2}ns (target: 257ns)",
                  avg_euclidean_nanos, avg_dot_nanos, avg_cosine_nanos);
     }
 }
