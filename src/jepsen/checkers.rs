@@ -378,10 +378,11 @@ impl Checker for CombinedChecker {
 /// Create a checker for the specified consistency model
 pub fn create_checker(model: ConsistencyModel) -> Arc<dyn Checker> {
     match model {
-        ConsistencyModel::Linearizability => Arc::new(LinearizabilityChecker::new()),
+        ConsistencyModel::Linearizability | ConsistencyModel::Linearizable => Arc::new(LinearizabilityChecker::new()),
         ConsistencyModel::Serializability => Arc::new(SerializabilityChecker::new()),
         ConsistencyModel::StrictSerializability => Arc::new(SerializabilityChecker::strict()),
-        ConsistencyModel::SequentialConsistency => Arc::new(LinearizabilityChecker::new()), // Simplified
+        ConsistencyModel::SequentialConsistency | ConsistencyModel::Sequential => Arc::new(LinearizabilityChecker::new()), // Simplified
         ConsistencyModel::CausalConsistency => Arc::new(LinearizabilityChecker::new()), // Simplified
+        ConsistencyModel::Eventual => Arc::new(LinearizabilityChecker::new()), // Simplified
     }
 }

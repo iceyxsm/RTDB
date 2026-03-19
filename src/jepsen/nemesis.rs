@@ -306,7 +306,7 @@ impl Nemesis for ProcessNemesis {
         let start_time = SystemTime::now();
         
         match fault {
-            FaultType::Kill => {
+            FaultType::Crash => {
                 for &node_id in &nodes {
                     self.kill_node(node_id).await?;
                 }
@@ -320,7 +320,7 @@ impl Nemesis for ProcessNemesis {
                 self.active_faults.write().await.insert(fault_id, fault_state);
                 
                 Ok(FaultEvent {
-                    fault_type: FaultType::Kill,
+                    fault_type: FaultType::Crash,
                     start_time,
                     end_time: None,
                     affected_nodes: nodes,
@@ -490,13 +490,13 @@ impl Nemesis for ClockSkewNemesis {
 
     async fn inject_fault(&self, fault: FaultType, nodes: Vec<usize>) -> Result<FaultEvent> {
         match fault {
-            FaultType::ClockSkew { max_skew_ms } => {
+            FaultType::ClockSkew => {
                 let fault_id = Uuid::new_v4();
                 let start_time = SystemTime::now();
                 
                 let mut skew_amounts = HashMap::new();
                 for &node_id in &nodes {
-                    let skew = rand::random::<i64>() % max_skew_ms;
+                    let skew = rand::random::<i64>() % self.max_skew_ms;
                     skew_amounts.insert(node_id, skew);
                     self.apply_clock_skew(node_id, skew).await?;
                 }
@@ -510,7 +510,7 @@ impl Nemesis for ClockSkewNemesis {
                 self.active_skews.write().await.insert(fault_id, skew_state);
                 
                 Ok(FaultEvent {
-                    fault_type: FaultType::ClockSkew { max_skew_ms },
+                    fault_type: FaultType::ClockSkew,
                     start_time,
                     end_time: None,
                     affected_nodes: nodes,
@@ -591,7 +591,7 @@ impl Nemesis for CombinedNemesis {
     async fn inject_fault(&self, fault: FaultType, nodes: Vec<usize>) -> Result<FaultEvent> {
         match fault {
             FaultType::Partition(_) => self.network_nemesis.inject_fault(fault, nodes).await,
-            FaultType::Kill | FaultType::Pause => self.process_nemesis.inject_fault(fault, nodes).await,
+            FaultType::Crash | FaultType::Pause => self.process_nemesis.inject_fault(fault, nodes).await,
             FaultType::ClockSkew { .. } => self.clock_nemesis.inject_fault(fault, nodes).await,
             _ => Err(crate::RTDBError::Config("Unsupported fault type".to_string())),
         }

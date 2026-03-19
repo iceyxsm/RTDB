@@ -1467,6 +1467,12 @@ pub mod direct_client_optimized;
 pub mod direct_client_batched;
 pub mod direct_client_sync_batched;
 pub mod high_perf_store;
+pub mod nemesis;
+pub mod checkers;
+pub mod history;
+pub mod workloads;
+pub mod operations;
+pub mod generators;
 
 /// Test to verify direct point lookup implementation
 #[cfg(test)]
