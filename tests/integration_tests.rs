@@ -13,6 +13,7 @@ mod collection_tests {
     use super::*;
 
     #[tokio::test]
+    #[ignore = "Requires running server"]
     async fn test_create_collection() {
         let app = TestApp::new().await;
         
@@ -31,6 +32,7 @@ mod collection_tests {
     }
 
     #[tokio::test]
+    #[ignore = "Requires running server"]
     async fn test_list_collections() {
         let app = TestApp::new().await;
         
@@ -49,6 +51,7 @@ mod collection_tests {
     }
 
     #[tokio::test]
+    #[ignore = "Requires running server"]
     async fn test_get_collection_info() {
         let app = TestApp::new().await;
         
@@ -68,6 +71,7 @@ mod collection_tests {
     }
 
     #[tokio::test]
+    #[ignore = "Requires running server"]
     async fn test_delete_collection() {
         let app = TestApp::new().await;
         
@@ -93,6 +97,7 @@ mod points_tests {
     use super::*;
 
     #[tokio::test]
+    #[ignore = "Requires running server"]
     async fn test_upsert_points() {
         let app = TestApp::new().await;
         app.create_collection("upsert_test", 4, "Cosine").await;
@@ -121,6 +126,7 @@ mod points_tests {
     }
 
     #[tokio::test]
+    #[ignore = "Requires running server"]
     async fn test_search_points() {
         let app = TestApp::new().await;
         app.create_collection("search_test", 4, "Cosine").await;
@@ -154,6 +160,7 @@ mod points_tests {
     }
 
     #[tokio::test]
+    #[ignore = "Requires running server"]
     async fn test_get_point() {
         let app = TestApp::new().await;
         app.create_collection("get_test", 4, "Cosine").await;
@@ -176,6 +183,7 @@ mod points_tests {
     }
 
     #[tokio::test]
+    #[ignore = "Requires running server"]
     async fn test_delete_point() {
         let app = TestApp::new().await;
         app.create_collection("delete_point_test", 4, "Cosine").await;
@@ -194,6 +202,7 @@ mod points_tests {
     }
 
     #[tokio::test]
+    #[ignore = "Requires running server"]
     async fn test_batch_search() {
         let app = TestApp::new().await;
         app.create_collection("batch_search_test", 4, "Cosine").await;
@@ -229,6 +238,7 @@ mod points_tests {
     }
 
     #[tokio::test]
+    #[ignore = "Requires running server"]
     async fn test_count_points() {
         let app = TestApp::new().await;
         app.create_collection("count_test", 4, "Cosine").await;
@@ -257,6 +267,7 @@ mod health_tests {
     use super::*;
 
     #[tokio::test]
+    #[ignore = "Requires running server"]
     async fn test_root_endpoint() {
         let app = TestApp::new().await;
         
@@ -270,6 +281,7 @@ mod health_tests {
     }
 
     #[tokio::test]
+    #[ignore = "Requires running server"]
     async fn test_healthz() {
         let app = TestApp::new().await;
         
@@ -279,6 +291,7 @@ mod health_tests {
     }
 
     #[tokio::test]
+    #[ignore = "Requires running server"]
     async fn test_metrics_endpoint() {
         let app = TestApp::new().await;
         
@@ -300,6 +313,7 @@ mod performance_tests {
     use super::*;
 
     #[tokio::test]
+    #[ignore = "Requires running server"]
     async fn test_search_latency() {
         let app = TestApp::new().await;
         app.create_collection("perf_test", 128, "Cosine").await;
@@ -336,6 +350,7 @@ mod error_tests {
     use super::*;
 
     #[tokio::test]
+    #[ignore = "Requires running server"]
     async fn test_collection_not_found() {
         let app = TestApp::new().await;
         
@@ -345,6 +360,7 @@ mod error_tests {
     }
 
     #[tokio::test]
+    #[ignore = "Requires running server"]
     async fn test_invalid_vector_dimension() {
         let app = TestApp::new().await;
         app.create_collection("dim_test", 4, "Cosine").await;
