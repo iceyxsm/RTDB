@@ -19,10 +19,10 @@ NC='\033[0m' # No Color
 check_protoc() {
     if command -v protoc &> /dev/null; then
         PROTOC_VERSION=$(protoc --version)
-        echo -e "${GREEN}✓ protoc found: $PROTOC_VERSION${NC}"
+        echo -e "${GREEN} protoc found: $PROTOC_VERSION${NC}"
         return 0
     else
-        echo -e "${RED}✗ protoc not found${NC}"
+        echo -e "${RED} protoc not found${NC}"
         return 1
     fi
 }

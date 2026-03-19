@@ -13,12 +13,12 @@ RTDB is a **production-grade smart vector database** designed for **edge computi
 ```
 Database     | P99 Latency | Rating
 -------------|-------------|--------
-RTDB         |    <5ms     | ★★★★★
-Qdrant       |   ~10ms     | ★★★★☆
-Weaviate     |   ~15ms     | ★★★☆☆
-Milvus       |   ~20ms     | ★★★☆☆
-Pinecone     |   ~20ms     | ★★★☆☆
-LanceDB      |   ~50ms     | ★★☆☆☆
+RTDB         |    <5ms     |
+Qdrant       |   ~10ms     |
+Weaviate     |   ~15ms     |
+Milvus       |   ~20ms     |
+Pinecone     |   ~20ms     |
+LanceDB      |   ~50ms     |
 ```
 
 **Winner: RTDB** - Optimized for sub-5ms P99 latency through memory-mapped indices and lock-free data structures.
@@ -30,12 +30,12 @@ LanceDB      |   ~50ms     | ★★☆☆☆
 ```
 Database     | Memory | Compression | Rating
 -------------|--------|-------------|--------
-LanceDB      | 400MB  | Columnar    | ★★★★★
-RTDB         | 500MB  | PQ+BQ+LZ4   | ★★★★☆
-Qdrant       | 700MB  | Scalar      | ★★★☆☆
-Pinecone     | 800MB  | Managed     | ★★★☆☆
-Milvus       | 1GB    | Scalar      | ★★☆☆☆
-Weaviate     | 1.5GB  | None        | ★☆☆☆☆
+LanceDB      | 400MB  | Columnar    |
+RTDB         | 500MB  | PQ+BQ+LZ4   |
+Qdrant       | 700MB  | Scalar      |
+Pinecone     | 800MB  | Managed     |
+Milvus       | 1GB    | Scalar      |
+Weaviate     | 1.5GB  | None        |
 ```
 
 **Note:** RTDB achieves near-LanceDB efficiency while providing much faster query performance through aggressive quantization.
@@ -47,12 +47,12 @@ Weaviate     | 1.5GB  | None        | ★☆☆☆☆
 ```
 Database     | Standalone | Dependencies | Binary Size | Rating
 -------------|------------|--------------|-------------|--------
-RTDB         |    Yes     |     None     |   ~15MB     | ★★★★★
-LanceDB      |    Yes     |     None     |   ~50MB     | ★★★★☆
-Qdrant       |    Yes     |     None     |  ~100MB     | ★★★★☆
-Weaviate     |    Yes     |  Optional    |  ~200MB     | ★★★☆☆
-Milvus       |    No      | etcd,MinIO   |  ~500MB     | ★☆☆☆☆
-Pinecone     |    No      |    Cloud     |    N/A      | ★☆☆☆☆
+RTDB         |    Yes     |     None     |   ~15MB     |
+LanceDB      |    Yes     |     None     |   ~50MB     |
+Qdrant       |    Yes     |     None     |  ~100MB     |
+Weaviate     |    Yes     |  Optional    |  ~200MB     |
+Milvus       |    No      | etcd,MinIO   |  ~500MB     |
+Pinecone     |    No      |    Cloud     |    N/A      |
 ```
 
 **Winner: RTDB** - Single binary with zero external dependencies.

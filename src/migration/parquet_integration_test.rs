@@ -108,7 +108,7 @@ async fn test_parquet_roundtrip_small() -> Result<()> {
         }
     }
     
-    println!("✓ Small Parquet roundtrip test passed ({} records)", original_count);
+    println!(" Small Parquet roundtrip test passed ({} records)", original_count);
     Ok(())
 }
 
@@ -172,7 +172,7 @@ async fn test_parquet_roundtrip_large() -> Result<()> {
     }
     
     assert_eq!(total_read, original_count);
-    println!("✓ Large Parquet roundtrip test passed ({} records)", original_count);
+    println!(" Large Parquet roundtrip test passed ({} records)", original_count);
     Ok(())
 }
 
@@ -244,7 +244,7 @@ async fn test_parquet_streaming_performance() -> Result<()> {
     assert!(write_rate > 3000.0, "Write rate should be > 3K records/sec, got {:.0}", write_rate);
     assert!(read_rate > 10000.0, "Read rate should be > 10K records/sec, got {:.0}", read_rate);
     
-    println!("✓ Parquet streaming performance test passed");
+    println!(" Parquet streaming performance test passed");
     Ok(())
 }
 
@@ -278,7 +278,7 @@ async fn test_parquet_file_validation() -> Result<()> {
     let result = utils::validate_parquet_file(&invalid_path).await;
     assert!(result.is_err(), "Should fail for non-existent file");
     
-    println!("✓ Parquet file validation test passed");
+    println!(" Parquet file validation test passed");
     Ok(())
 }
 
@@ -298,7 +298,7 @@ async fn test_parquet_error_handling() -> Result<()> {
     let result = ParquetSourceClient::new(invalid_path.to_str().unwrap()).await;
     assert!(result.is_err(), "Should fail for invalid Parquet file");
     
-    println!("✓ Parquet error handling test passed");
+    println!(" Parquet error handling test passed");
     Ok(())
 }
 
@@ -379,6 +379,6 @@ async fn test_parquet_migration_scenario() -> Result<()> {
         assert_eq!(record.metadata.get("normalized"), Some(&serde_json::Value::Bool(true)));
     }
     
-    println!("✓ Parquet migration scenario test passed ({} records)", total_count);
+    println!(" Parquet migration scenario test passed ({} records)", total_count);
     Ok(())
 }

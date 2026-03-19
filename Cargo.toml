@@ -30,10 +30,6 @@ path = "src/main.rs"
 name = "rtdb-migrate"
 path = "src/bin/rtdb-migrate.rs"
 
-[[bin]]
-name = "rtdb-jepsen"
-path = "src/bin/rtdb-jepsen.rs"
-
 [lib]
 name = "rtdb"
 path = "src/lib.rs"
@@ -235,7 +231,6 @@ strip = true
 [profile.dev]
 opt-level = 0
 debug = true
-
 
 [profile.bench-test]
 inherits = 'release'
